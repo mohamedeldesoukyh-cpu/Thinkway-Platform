@@ -9,11 +9,9 @@ import { HomeDashboardMasthead } from "@/features/home/components/home-dashboard
 import {
   HomeDashboardCard,
   HomeDashboardGrid,
-  HomeDashboardPoRing,
   HomeDashboardQuickAccess,
   HomeDashboardRow,
   HomeDashboardSuite,
-  HomeDashboardTileGo,
   HOME_QUEUE_COLS,
   avatarTone,
   formatCompactCount,
@@ -101,9 +99,9 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
 
   const focusMessage =
     unbilled > 0
-      ? `${money(unbilled)} is earned but not billed`
+      ? "Went-live revenue is ready for billing"
       : snapshot.outstanding_revenue > 0
-        ? `${money(snapshot.outstanding_revenue)} outstanding`
+        ? "Client invoices are awaiting payment"
         : "No unbilled or outstanding client balance";
   const focusSub =
     pendingInvoiceCount > 0
@@ -117,7 +115,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
         : `${snapshot.active_campaigns} active campaigns`;
 
   return (
-    <HomeDashboardSuite>
+    <HomeDashboardSuite className="home-overview">
       <HomeDashboardMasthead
         page="home"
         id="HOME"
@@ -125,7 +123,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
         badgeLabel="Current records"
         userHandle={snapshot.userHandle}
         metrics={[
-          { label: "Actual revenue", value: money(snapshot.total_revenue), description: "Went-live activity · before VAT" },
+          { label: "Went-live revenue", value: money(snapshot.total_revenue), description: "Published activity through today · before VAT" },
           { label: "Actual cost", value: money(actualCost), description: "Costs matching went-live activity · before VAT" },
           { label: "Actual gross profit", value: money(snapshot.gross_profit), description: "Actual revenue − actual cost · before revenue share" },
           { label: "Gross margin", value: formatPercent(snapshot.margin_percent), description: "Actual gross profit ÷ actual revenue", tone: snapshot.margin_percent >= 20 ? "g" : undefined },
@@ -155,8 +153,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
         }
         jumps={[
           { href: "#needs-action", label: "Needs action", count: alertCount },
-          { href: "#conflicts", label: "Conflicts", count: conflicts.length },
-          { href: "#position", label: "Financial position" },
+          { href: "#revenue-basis", label: "Revenue basis" },
           { href: "#campaigns", label: "Campaigns" },
           { href: "#vendors", label: "Vendors" },
           { href: "#quick-access", label: "Quick access" },
@@ -165,81 +162,27 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
 
       <div className="tw-main">
         {vat && <HomeVatCard data={vat}/>}
-        <div className="tw-tiles" style={{ marginBottom: 14 }}>
-          <Link className="tw-tile" href="/billing">
-            <div className="tw-tl">
-              <i>Unbilled revenue · before VAT</i>
-              <span className="tw-big">{money(unbilled)}</span>
-              <p>
-                Earned from went-live activity, not yet invoiced.
-                {pendingInvoiceCount > 0 ? ` ${pendingInvoiceCount} campaigns need billing.` : ""}
-              </p>
-              <HomeDashboardTileGo>Review billing queue</HomeDashboardTileGo>
-            </div>
-          </Link>
-
-          <Link className="tw-tile alt" href="/dashboard">
-            <div className="tw-tl">
-              <i>Needs action</i>
-              <span className="tw-big">{alertCount}</span>
-              <p>
-                Across {queue.length || 0} alert group
-                {queue.length === 1 ? "" : "s"}
-                {overdue.count > 0 ? ` · past due invoices` : ""}
-              </p>
-              <HomeDashboardTileGo>Open dashboard</HomeDashboardTileGo>
-            </div>
-          </Link>
-
-          <Link className="tw-tile" href="/finance/po-tracker">
-            <div className="tw-tl">
-              <i>PO / budget consumption</i>
-              <div
-                style={{
-                  display: "flex",
-                  gap: 13,
-                  alignItems: "center",
-                  margin: "6px 0 2px",
-                }}
-              >
-                <HomeDashboardPoRing percent={snapshot.po_consumed_percent} />
-                <p style={{ flex: 1 }}>
-                  {money(snapshot.po_consumed)} of {money(snapshot.po_total)}.
-                  <br />
-                  {snapshot.po_consumed_percent >= 90 ? (
-                    <>
-                      <b>{money(poHeadroom)}</b> remaining on PO and campaign budgets.
-                    </>
-                  ) : (
-                    <>{money(poHeadroom)} remaining on PO and campaign budgets.</>
-                  )}
-                <span className="block">{snapshot.missing_po} campaigns have no header PO; campaign budgets are used.</span></p>
-              </div>
-              <HomeDashboardTileGo>Open PO tracker</HomeDashboardTileGo>
-            </div>
-          </Link>
-
-          <Link className="tw-tile soft" href="/campaigns">
-            <div className="tw-tl">
-              <i>Active campaigns</i>
-              <span className="tw-big">{liveCampaigns}</span>
-              <p>
-                {snapshot.active_campaigns} active · {snapshot.assignments_count}{" "}
-                assignments · {snapshot.active_vendors} vendors
-              </p>
-              <HomeDashboardTileGo>All campaigns</HomeDashboardTileGo>
-            </div>
-          </Link>
+        <div className="home-summary-grid">
+          <HomeDashboardCard title="Overdue invoices" subtitle="Part of unpaid client invoices" right={<Link className="tw-b sm" href="/collections?tab=overdue">Review</Link>}>
+            <div className="home-summary-body"><strong className="home-summary-value">{money(overdue.amount)}</strong><p>{overdue.count} invoices past due · including VAT</p></div>
+          </HomeDashboardCard>
+          <HomeDashboardCard title="PO / budget used" subtitle="Commercial commitments" right={<Link className="tw-b sm" href="/finance/po-tracker">PO tracker</Link>}>
+            <div className="home-summary-body"><strong className="home-summary-value">{snapshot.po_consumed_percent}%</strong><p>{money(snapshot.po_consumed)} used of {money(snapshot.po_total)} · {money(poHeadroom)} remaining.</p><p>{snapshot.missing_po} campaigns have no header PO; campaign budgets are used.</p></div>
+          </HomeDashboardCard>
+          <HomeDashboardCard title="Active campaigns" subtitle="Campaign operations" right={<Link className="tw-b sm" href="/campaigns">View all</Link>}>
+            <div className="home-summary-body"><strong className="home-summary-value">{liveCampaigns}</strong><p>{snapshot.assignments_count} assignments · {snapshot.active_vendors} assigned vendors across non-cancelled campaigns.</p></div>
+          </HomeDashboardCard>
+          <HomeDashboardCard title="Approved pipeline" subtitle="Approved client IOs · not yet live" right={<Link className="tw-b sm" href="/dashboard#pipeline">View details</Link>}>
+            <div className="home-summary-body"><strong className="home-summary-value">{money(snapshot.pipeline_revenue)}</strong><p>{snapshot.pipeline_campaigns} campaigns · before VAT. Approval-based pipeline is a different scope from all not-yet-live campaign value.</p></div>
+          </HomeDashboardCard>
         </div>
-
-        <Link className="tw-tile soft" href="/dashboard#pipeline" style={{ display: "block", marginBottom: 16 }}>
-          <div className="tw-tl">
-            <i>Pipeline revenue</i>
-            <span className="tw-big">{money(snapshot.pipeline_revenue)}</span>
-            <p>Approved client IOs · ads not yet live · excluding VAT · {snapshot.pipeline_campaigns} campaigns</p>
-            <HomeDashboardTileGo>View pipeline details</HomeDashboardTileGo>
+        <HomeDashboardCard id="revenue-basis" title="How revenue is counted" subtitle="Before VAT" right={<Link className="tw-b sm" href={`/reports/overview?currency=${currency}`}>Reports Overview</Link>}>
+          <div className="home-revenue-basis">
+            <p><b>Went live (actual)</b> Revenue allocated to posts marked posted, published, live or verified, with a live date through today. A schedule, invoice or payment alone does not count.</p>
+            <p><b>Not yet live (Acc.)</b> Reports Overview calls this “accrued”: total campaign value minus went-live value. It is not earned-but-unbilled revenue. Total = went live + not yet live.</p>
+            <p><b>Unbilled</b> Went-live revenue less issued invoice revenue, calculated per campaign. It has already gone live.</p>
           </div>
-        </Link>
+        </HomeDashboardCard>
 
         <div className="tw-two">
           <div>
@@ -334,73 +277,14 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
               <div id="conflicts" />
             )}
 
-            <HomeDashboardCard
-              id="position"
-              title="Financial position"
-              subtitle={`All-time · ${currency} · actuals from went-live activity`}
-            >
-              <div className="tw-pad">
-                <div className="tw-jr">
-                  <div className="tw-jn ok">
-                    <i>Actual revenue · before VAT</i>
-                    <b>{money(snapshot.total_revenue)}</b>
-                    <u>Went-live activity</u>
-                  </div>
-                  <div className="tw-jn">
-                    <i>Actual cost · before VAT</i>
-                    <b>{money(actualCost)}</b>
-                    <u>Costs matching actual revenue</u>
-                  </div>
-                  <div className="tw-jn ok">
-                    <i>Actual gross profit · before VAT</i>
-                    <b>{money(snapshot.gross_profit)}</b>
-                    <u>{formatPercent(snapshot.margin_percent)} margin</u>
-                  </div>
-                  <div
-                    className={
-                      snapshot.outstanding_revenue > 0 ? "tw-jn miss" : "tw-jn"
-                    }
-                  >
-                    <i>Unpaid client invoices</i>
-                    <b>{money(snapshot.outstanding_revenue)}</b>
-                    <u>
-                      Including VAT · issued invoices less payments
-                    </u>
-                  </div>
-                  <div className="tw-jn">
-                    <i>Overdue client invoices</i>
-                    <b>{money(overdue.amount)}</b>
-                    <u>{overdue.count} past due · included in unpaid invoices · including VAT</u>
-                  </div>
-                  <div className="tw-jn">
-                    <i>Assigned vendors</i>
-                    <b>{snapshot.active_vendors}</b>
-                    <u>across campaigns</u>
-                  </div>
-                  <div className="tw-jn">
-                    <i>Assignments</i>
-                    <b>{snapshot.assignments_count}</b>
-                    <u>all campaigns</u>
-                  </div>
-                  <div
-                    className={
-                      snapshot.po_consumed_percent >= 90 ? "tw-jn miss" : "tw-jn"
-                    }
-                  >
-                    <i>PO / budget used</i>
-                    <b>{snapshot.po_consumed_percent}%</b>
-                    <u>{money(poHeadroom)} left</u>
-                  </div>
-                </div>
-              </div>
-            </HomeDashboardCard>
+
           </div>
 
           <div>
             <HomeDashboardCard
               id="campaigns"
               title="Recent campaigns"
-              subtitle={`${liveCampaigns} active · amounts below are actual revenue`}
+              subtitle="Went-live revenue · campaign currency"
               right={
                 <>
                   <span className="tw-live on" />

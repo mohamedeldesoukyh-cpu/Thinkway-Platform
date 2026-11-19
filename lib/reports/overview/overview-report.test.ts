@@ -52,7 +52,7 @@ test("exports follow selected columns, escape labels and shade accrual header/da
   const sheet = book.worksheets[0];
   let headerRow = 0;
   sheet.eachRow((r, i) => { if (r.getCell(1).value === "Campaign Name") headerRow = i; });
-  assert.ok(headerRow > 0); assert.equal(sheet.getCell(headerRow, 2).value, "Acc. Rev.");
+  assert.ok(headerRow > 0); assert.equal(sheet.getCell(headerRow, 2).value, "Not-live Revenue");
   assert.equal(sheet.getCell(headerRow + 1, 2).value, 907.5);
   assert.equal(sheet.getCell(headerRow + 2, 3).value, 570);
   for (const i of [headerRow, headerRow + 1, headerRow + 2]) assert.equal(sheet.getCell(i, 2).fill.type, "pattern");

@@ -33,7 +33,7 @@ export function OverviewReportView({ report, savedPreferences }: { report: Overv
 
 const LEGEND: { kind: OverviewColumnKind; label: string; detail: string }[] = [
   { kind: "actual", label: "Actual", detail: "went-live activity" },
-  { kind: "accrued", label: "Acc.", detail: "accrued, not yet live" },
+  { kind: "accrued", label: "Not yet live", detail: "Acc. = total minus went-live value" },
   { kind: "total", label: "Total", detail: "actual + accrued" },
   { kind: "share", label: "Rev. Share", detail: "campaign revenue share" },
 ];
@@ -178,7 +178,7 @@ function OverviewReportContent({
 
         <footer className="space-y-1 px-4 py-3 text-xs leading-relaxed text-muted-foreground md:px-5">
           <p>
-            Actual: went-live activity. Acc.: not yet live. Total = actual + accrued. GP = revenue − cost. Rev. Share = campaign revenue share.
+            Actual = went-live activity through the as-of date. Acc. (called accrued in this report) = total campaign value minus actual; it has not yet gone live. This is different from earned-but-unbilled revenue. Total = actual + not yet live. GP = revenue − cost. Rev. Share = campaign revenue share.
             GP after RS = Total GP − Rev. Share. Totals cover all filtered campaigns.
           </p>
           <p>Dates filter campaign start dates. The as-of date splits current campaign values by publication date; it is not a historical accounting snapshot.</p>
