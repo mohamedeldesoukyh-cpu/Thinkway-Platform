@@ -759,3 +759,40 @@
 @media (max-width: 700px) { .home-dashboard-suite .home-vat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 .home-dashboard-suite .home-vat-amount, .home-dashboard-suite .home-vat-number { font-family: "Geist Mono", ui-monospace, monospace; }
+
+/* Keep financial definitions readable beside the values they explain. */
+.home-dashboard-suite .tw-ms2 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.home-dashboard-suite .tw-ms2 > div { padding: 16px; border-bottom: 1px solid var(--tw-hair); }
+.home-dashboard-suite .tw-ms2 i,
+.home-dashboard-suite .tw-jn i { font-size: 12px; color: var(--tw-ink2); letter-spacing: .02em; }
+.home-dashboard-suite .tw-ms2 b { font-size: clamp(17px, 1.3vw, 22px); line-height: 1.5; font-variant-numeric: tabular-nums; }
+.home-dashboard-suite .home-metric-description { display: block; margin-top: 4px; font-size: 12px; line-height: 1.5; color: var(--tw-ink2); }
+.home-dashboard-suite .tw-mh { background: #1245b5; }
+.home-dashboard-suite .tw-mb { background: #174ebf; }
+.home-dashboard-suite .tw-mh .sub,
+.home-dashboard-suite .tw-mb .sub,
+.home-dashboard-suite .tw-mb .lb { color: #fff; }
+.home-dashboard-suite .tw-tile:not(.soft) { background: #1245b5; color: #fff; }
+.home-dashboard-suite .tw-tile.alt { background: #142343; }
+.home-dashboard-suite .tw-tile::before,
+.home-dashboard-suite .tw-tile::after { display: none; }
+.home-dashboard-suite .tw-tile .tw-tl i,
+.home-dashboard-suite .tw-tile .tw-tl p,
+.home-dashboard-suite .tw-tile .tw-go { color: inherit; font-size: 13px; line-height: 1.5; }
+.home-dashboard-suite .tw-big { font-size: clamp(20px, 1.65vw, 28px); font-variant-numeric: tabular-nums; }
+.home-dashboard-suite .tw-jn b { font-size: 18px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.home-dashboard-suite .tw-jn u { font-size: 12px; line-height: 1.5; color: var(--tw-ink2); }
+.home-dashboard-suite .tw-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 700px) {
+  .home-dashboard-suite .tw-ms2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-dashboard-suite .tw-tiles { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 420px) {
+  .home-dashboard-suite .tw-ms2 { grid-template-columns: minmax(0, 1fr); }
+}
+
+.home-dashboard-suite .tw-jr { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.home-dashboard-suite .tw-tl .tw-big { font-family: Arial, sans-serif; font-size: clamp(20px, 1.65vw, 28px); font-weight: 600; line-height: 1.3; letter-spacing: -.02em; }
+.home-dashboard-suite .tw-tl p > .block { display: block; margin-top: 6px; }

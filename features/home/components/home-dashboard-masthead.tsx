@@ -20,7 +20,7 @@ export type HomeDashboardMastheadProps = {
   badgeLabel: string;
   badgeTone?: "r" | "";
   userHandle: string;
-  metrics: DiscoverySuiteMetric[];
+  metrics: (DiscoverySuiteMetric & { description?: string })[];
   bandMessage: string;
   bandSub: string;
   bandHref: string;
@@ -65,6 +65,7 @@ export function HomeDashboardMasthead({
                 <div key={metric.label}>
                   <i>{metric.label}</i>
                   <b className={metric.tone}>{metric.value}</b>
+                  {metric.description ? <span className="home-metric-description">{metric.description}</span> : null}
                 </div>
               ))}
           </div>

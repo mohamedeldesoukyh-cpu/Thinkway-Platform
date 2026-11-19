@@ -57,6 +57,7 @@ function formatPeriodLabel(date: Date): string {
 
 function formatDateLabel(date: Date): string {
   return date.toLocaleDateString("en-US", {
+    timeZone: "Africa/Cairo",
     weekday: "long",
     day: "2-digit",
     month: "short",
@@ -67,12 +68,12 @@ function formatDateLabel(date: Date): string {
 export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
   const now = new Date();
   const currency = snapshot.currency_code;
-  const money = (value: number) => formatMoneyKpi(value, currency);
+  const money = (value: number) => `${currency} ${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}`;
   const alerts = snapshot.alerts;
   const alertCount = alerts?.alerts.length ?? 0;
   const unbilled = snapshot.unbilled;
   const overdue = snapshot.overdue;
-  const moneyAtRisk = unbilled + overdue.amount;
+  const actualCost = snapshot.total_revenue - snapshot.gross_profit;
   const liveCampaigns = snapshot.active_campaigns;
   const poHeadroom = Math.max(0, snapshot.po_total - snapshot.po_consumed);
   const conflicts: ReturnType<typeof collectHomeConflicts> = [];
@@ -113,47 +114,23 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
         }`
       : overdue.count > 0
         ? `${overdue.count} invoice${overdue.count === 1 ? "" : "s"} past due`
-        : `${snapshot.active_campaigns} live campaigns`;
+        : `${snapshot.active_campaigns} active campaigns`;
 
   return (
     <HomeDashboardSuite>
       <HomeDashboardMasthead
         page="home"
         id="HOME"
-        subtitle={`${formatDateLabel(now)} · All-time totals · FX converted to ${currency} · MENA`}
-        badgeLabel="Live"
+        subtitle={`${formatDateLabel(now)} · All-time · Amounts in ${currency}`}
+        badgeLabel="Current records"
         userHandle={snapshot.userHandle}
         metrics={[
-          { label: "Needs action", value: alertCount, tone: alertCount > 0 ? "r" : undefined },
-          {
-            label: "Money at risk",
-            value: money(moneyAtRisk),
-            tone: moneyAtRisk > 0 || snapshot.outstanding_revenue > 0 ? "r" : undefined,
-          },
-          { label: "Recognized revenue", value: money(snapshot.total_revenue) },
-          { label: "Gross profit", value: money(snapshot.gross_profit) },
-          {
-            label: "Margin",
-            value: formatPercent(snapshot.margin_percent),
-            tone: snapshot.margin_percent >= 20 ? "g" : undefined,
-          },
-          {
-            label: "Outstanding",
-            value: money(snapshot.outstanding_revenue),
-            tone: snapshot.outstanding_revenue > 0 ? "r" : undefined,
-          },
-          { label: "Vendors", value: snapshot.active_vendors },
-          { label: "Assignments", value: snapshot.assignments_count },
-          {
-            label: "PO / budget used",
-            value: `${snapshot.po_consumed_percent}%`,
-            tone: snapshot.po_consumed_percent >= 90 ? "r" : undefined,
-          },
-          {
-            label: "Campaigns live",
-            value: snapshot.active_campaigns,
-            tone: snapshot.active_campaigns > 0 ? "g" : undefined,
-          },
+          { label: "Actual revenue", value: money(snapshot.total_revenue), description: "Went-live activity · before VAT" },
+          { label: "Actual cost", value: money(actualCost), description: "Costs matching went-live activity · before VAT" },
+          { label: "Actual gross profit", value: money(snapshot.gross_profit), description: "Actual revenue − actual cost · before revenue share" },
+          { label: "Gross margin", value: formatPercent(snapshot.margin_percent), description: "Actual gross profit ÷ actual revenue", tone: snapshot.margin_percent >= 20 ? "g" : undefined },
+          { label: "Unbilled revenue", value: money(unbilled), description: "Earned revenue less invoiced revenue · before VAT" },
+          { label: "Unpaid client invoices", value: money(snapshot.outstanding_revenue), description: "Issued invoices less payments · including VAT", tone: snapshot.outstanding_revenue > 0 ? "r" : undefined },
         ]}
         bandMessage={focusMessage}
         bandSub={focusSub}
@@ -170,6 +147,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
             <Link className="tw-b sm" href="/collections">
               Chase collections
             </Link>
+            <Link className="tw-b sm" href={`/reports/overview?currency=${currency}`}>Reports Overview</Link>
             <Link className="tw-b sm" href="/studio">
               Open Studio
             </Link>
@@ -178,7 +156,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
         jumps={[
           { href: "#needs-action", label: "Needs action", count: alertCount },
           { href: "#conflicts", label: "Conflicts", count: conflicts.length },
-          { href: "#position", label: "Position" },
+          { href: "#position", label: "Financial position" },
           { href: "#campaigns", label: "Campaigns" },
           { href: "#vendors", label: "Vendors" },
           { href: "#quick-access", label: "Quick access" },
@@ -189,15 +167,12 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
         {vat && <HomeVatCard data={vat}/>}
         <div className="tw-tiles" style={{ marginBottom: 14 }}>
           <Link className="tw-tile" href="/billing">
-            <button type="button" className="tw-star" tabIndex={-1} aria-hidden>
-              ★
-            </button>
             <div className="tw-tl">
-              <i>Money at risk</i>
-              <span className="tw-big">{money(moneyAtRisk)}</span>
+              <i>Unbilled revenue · before VAT</i>
+              <span className="tw-big">{money(unbilled)}</span>
               <p>
-                Unbilled {money(unbilled)}
-                {overdue.amount > 0 ? ` + overdue ${money(overdue.amount)}` : ""}
+                Earned from went-live activity, not yet invoiced.
+                {pendingInvoiceCount > 0 ? ` ${pendingInvoiceCount} campaigns need billing.` : ""}
               </p>
               <HomeDashboardTileGo>Review billing queue</HomeDashboardTileGo>
             </div>
@@ -246,7 +221,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
 
           <Link className="tw-tile soft" href="/campaigns">
             <div className="tw-tl">
-              <i>Live campaigns</i>
+              <i>Active campaigns</i>
               <span className="tw-big">{liveCampaigns}</span>
               <p>
                 {snapshot.active_campaigns} active · {snapshot.assignments_count}{" "}
@@ -361,18 +336,23 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
 
             <HomeDashboardCard
               id="position"
-              title="Position"
-              subtitle={`All-time · ${currency} · live-ad revenue and matching costs · excluding VAT`}
+              title="Financial position"
+              subtitle={`All-time · ${currency} · actuals from went-live activity`}
             >
               <div className="tw-pad">
                 <div className="tw-jr">
                   <div className="tw-jn ok">
-                    <i>Recognized revenue</i>
+                    <i>Actual revenue · before VAT</i>
                     <b>{money(snapshot.total_revenue)}</b>
-                    <u>{formatPercent(snapshot.margin_percent)} margin</u>
+                    <u>Went-live activity</u>
+                  </div>
+                  <div className="tw-jn">
+                    <i>Actual cost · before VAT</i>
+                    <b>{money(actualCost)}</b>
+                    <u>Costs matching actual revenue</u>
                   </div>
                   <div className="tw-jn ok">
-                    <i>Gross profit</i>
+                    <i>Actual gross profit · before VAT</i>
                     <b>{money(snapshot.gross_profit)}</b>
                     <u>{formatPercent(snapshot.margin_percent)} margin</u>
                   </div>
@@ -381,14 +361,19 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
                       snapshot.outstanding_revenue > 0 ? "tw-jn miss" : "tw-jn"
                     }
                   >
-                    <i>Outstanding</i>
+                    <i>Unpaid client invoices</i>
                     <b>{money(snapshot.outstanding_revenue)}</b>
                     <u>
-                      {snapshot.outstanding_revenue > 0 ? "needs action" : "clear"}
+                      Including VAT · issued invoices less payments
                     </u>
                   </div>
                   <div className="tw-jn">
-                    <i>Active vendors</i>
+                    <i>Overdue client invoices</i>
+                    <b>{money(overdue.amount)}</b>
+                    <u>{overdue.count} past due · included in unpaid invoices · including VAT</u>
+                  </div>
+                  <div className="tw-jn">
+                    <i>Assigned vendors</i>
                     <b>{snapshot.active_vendors}</b>
                     <u>across campaigns</u>
                   </div>
@@ -415,7 +400,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
             <HomeDashboardCard
               id="campaigns"
               title="Recent campaigns"
-              subtitle={`${liveCampaigns} live`}
+              subtitle={`${liveCampaigns} active · amounts below are actual revenue`}
               right={
                 <>
                   <span className="tw-live on" />
