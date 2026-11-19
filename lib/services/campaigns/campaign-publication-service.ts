@@ -1,3 +1,4 @@
+import { tryCreateServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { publicationCollabLabel, uniqueCollabPublications } from "@/lib/campaigns/publication-content-url";
 import { attachReportVideoCounters } from "@/lib/performance/report/report-video-counters";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -577,11 +578,14 @@ export async function getCampaignPerformanceBundle(
   const publicationsRaw = rows.map((r) =>
     mapPublicationRecord(r, influencerMeta.names, influencerMeta.avatars, apifyAuthorAvatars)
   );
+  // Rows above have already passed campaign RLS. Sign only their stored media
+  // with the storage service client; user storage policies may deny signing.
+  const mediaClient = tryCreateServiceRoleClient().client ?? supabase;
   const publicationsSigned = await Promise.all(
     publicationsRaw.map(async (row) => {
       const [thumbnail_url, screenshot_url] = await Promise.all([
-        createPublicationMediaSignedUrl(supabase, row.thumbnail_url),
-        createPublicationMediaSignedUrl(supabase, row.screenshot_url),
+        createPublicationMediaSignedUrl(mediaClient, row.thumbnail_url),
+        createPublicationMediaSignedUrl(mediaClient, row.screenshot_url),
       ]);
       return {
         ...row,
