@@ -26,6 +26,7 @@ import { CampaignWorkspaceFrame, type WorkspaceSummaryStat } from '@/features/ca
 import '@/app/styles/creator-payments.css';
 import '@/app/styles/creator-payments-redesign.css';
 import { PaymentMoney } from './planning-row';
+import { BalanceSummary } from './balance-summary';
 import { ExportSelection } from './export-selection';
 const fmt = (n: number, c: string) => `${Number.isFinite(n) ? new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) : '—'} ${c}`;
 const inputClass = 'h-9 rounded-md border bg-background px-2 text-sm';
@@ -88,7 +89,7 @@ function Totals({ rows, drafts, selected = false, floating = false, tools }: {
     if (floating) return <div className="tw-selbar-sum">{stats.filter(stat => ["fee", "vat", "total", "pay-now", "remaining"].includes(stat.key)).map(stat => <span key={stat.key} className="tw-selbar-metric"><i>{stat.label}</i><b className={stat.key === "pay-now" ? "g" : undefined}>{stat.value}</b></span>)}</div>;
     if (!selected) return <section className="card tot" aria-label="Creator payment totals">
       <div className="cp-summary-heading"><h2>Creator payment totals</h2>{tools}</div>
-      {[...totals].map(([currency,total])=><section className="ccy" key={currency} aria-label={`Totals in ${currency}`}><header className="ccy__h"><b>{currency}</b><span>{new Set(rows.filter(row=>row.currency===currency).map(row=>row.creatorId)).size} creators · {rows.filter(row=>row.currency===currency).length} payment lines</span></header><div className="ccy__g">{(['total','paid','outstanding','fee','vat','earned','advance'] as const).map(key=><div key={key} className={`fig ${['total','paid','outstanding'].includes(key)?'fig--lead':''} ${key==='paid'?'fig--paid':key==='outstanding'?'fig--rem':''}`}><u>{metrics.find(metric=>metric.key===key)?.label}</u><b><PaymentMoney value={money(total[key])} currency={currency}/></b></div>)}</div></section>)}
+      {[...totals].map(([currency,total])=><section className="ccy" key={currency} aria-label={`Totals in ${currency}`}><header className="ccy__h"><b>{currency}</b><span>{new Set(rows.filter(row=>row.currency===currency).map(row=>row.creatorId)).size} creators · {rows.filter(row=>row.currency===currency).length} payment lines</span></header><div className="ccy__g">{(['total','paid','outstanding','fee','vat','earned','advance'] as const).map(key=><div key={key} className={`fig ${['total','paid','outstanding'].includes(key)?'fig--lead':''} ${key==='paid'?'fig--paid':key==='outstanding'?'fig--rem':''}`}>{key==='outstanding'?<BalanceSummary rows={rows}><u>Remaining to pay</u><b><PaymentMoney value={money(total[key])} currency={currency}/></b></BalanceSummary>:<><u>{metrics.find(metric=>metric.key===key)?.label}</u><b><PaymentMoney value={money(total[key])} currency={currency}/></b></>}</div>)}</div></section>)}
       {!totals.size&&<p className="tot__hint">No creator payment totals yet.</p>}
       <p className="tot__hint">Totals include VAT. Pending bank exports are excluded from paid amounts.</p>
     </section>;

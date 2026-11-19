@@ -579,3 +579,36 @@
 .cp-redesign .cp-revision-pending .row>.num[data-l=Paid],.cp-redesign .cp-held-payment{opacity:.55}
 .cp-redesign .cp-revision-pending{border-left:3px solid #b58128}
 .cp-redesign .cp-revision-pending .row{background:#fffaf0}
+.cp-redesign .cp-balance-link{display:block;text-align:left;border:0;background:transparent;padding:0;min-height:44px;color:inherit;cursor:pointer}
+.cp-redesign .fig .cp-balance-link u{text-decoration:underline;text-underline-offset:4px}
+.cp-redesign .cp-balance-link:focus-visible{outline:2px solid #0057ff;outline-offset:5px;border-radius:4px}
+.cp-balance-dialog{max-height:85dvh;font-family:var(--font-geist-sans,'Segoe UI'),sans-serif;font-size:13px}
+.cp-balance-scroll{overflow-y:auto;min-height:0;max-height:60dvh}
+.cp-balance-group+ .cp-balance-group{margin-top:20px}
+.cp-balance-group h3{font-size:13px;font-weight:700;margin-bottom:10px}
+.cp-balance-group h3 span{font-weight:400;color:#64748b}
+.cp-balance-table-scroll{overflow-x:auto;border:1px solid #dce3ed;border-radius:10px}
+.cp-balance-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.cp-balance-table th,.cp-balance-table td{padding:12px;text-align:right;white-space:nowrap;border-bottom:1px solid #e5eaf1}
+.cp-balance-table th:first-child{text-align:left;white-space:normal;min-width:150px}
+.cp-balance-table thead th{font-size:12px;color:#536176;background:#f4f6fa;font-weight:600}
+.cp-balance-table tbody th{font-weight:500}
+.cp-balance-table tfoot{background:#f4f6fa;font-weight:700}
+.cp-balance-table tfoot th,.cp-balance-table tfoot td{border-bottom:0}
+.cp-balance-table small{display:block;font-size:11px;font-weight:400;color:#64748b;margin-top:3px}
+.cp-balance-paid{color:#087f5b}
+.cp-balance-outstanding{color:#946000}
+
+/* Compact type and a quiet boundary around each complete creator section. */
+.thinkway-creator-payments.cp-redesign{--mono:var(--sans);--fs-value:13px;--fs-bal:15px;font-variant-numeric:tabular-nums}
+.cp-redesign .grp + .grp{border-top:6px solid var(--bg);box-shadow:0 -1px 0 var(--line)}
+.cp-redesign .grp + .grp>.row{border-top:1px solid var(--line)}
+.cp-redesign .thinkway-campaign-cr-name{font-size:13px;font-weight:600}
+.cp-redesign .num .m{font-size:13px;font-weight:600;letter-spacing:0}
+.cp-redesign .num--bal .m{font-size:15px}
+.cp-redesign .fig--lead b{font-size:15px;font-weight:600}
+.cp-redesign .thead{font-size:12px;text-transform:none;letter-spacing:0}
+@media(max-width:640px){
+  .cp-redesign .entry input,.cp-redesign .entry select{font-size:16px}
+  .cp-balance-dialog{padding:18px}
+}
