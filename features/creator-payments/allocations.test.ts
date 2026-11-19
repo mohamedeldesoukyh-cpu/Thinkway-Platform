@@ -29,7 +29,17 @@ test('90000 / three units: 75000 paid, two live gives 60000 earned and 15000 adv
  const settled=paymentAllocation({fee:90000,vat:0,paid:75000,units:units.map(u=>({...u,live:true}))});
  assert.deepEqual([settled.earned,settled.advance,settled.remaining,settled.fullyPaid],[90000,0,15000,false]);
  assert.equal(paymentAllocation({fee:90000,vat:0,paid:90000,units:units.map(u=>({...u,live:true}))}).fullyPaid,true);
- assert.equal(paymentAllocation({fee:90000,vat:0,paid:90000,units}).fullyPaid,false);
+ assert.equal(paymentAllocation({fee:90000,vat:0,paid:90000,units}).fullyPaid,true);
+});
+test('fully paid depends on confirmed money, not deliverable publication',()=>{
+ for(const items of [[],units,units.map(u=>({...u,live:false}))]) {
+  assert.equal(paymentAllocation({fee:85000,vat:0,paid:85000,units:items}).fullyPaid,true);
+  assert.equal(paymentAllocation({fee:275000,vat:0,paid:275000,units:items}).fullyPaid,true);
+  assert.equal(paymentAllocation({fee:100,vat:14,paid:114,units:items}).fullyPaid,true);
+  assert.equal(paymentAllocation({fee:100,vat:14,paid:113.99,units:items}).fullyPaid,false);
+  assert.equal(paymentAllocation({fee:100,vat:0,paid:120,units:items}).fullyPaid,true);
+  assert.equal(paymentAllocation({fee:0,vat:0,paid:0,units:items}).fullyPaid,false);
+ }
 });
 test('FIFO partial payments allocate 45000 as 30000,15000,0; live obligations settle first',()=>{
  assert.deepEqual(paymentAllocation({fee:90000,vat:0,paid:45000,units}).units.map(u=>u.allocated),[30000,15000,0]);
