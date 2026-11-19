@@ -4,14 +4,17 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { setPublicationCollab } from '@/lib/campaigns/publication-content-url';
 
-export async function setPublicationCollabAction(input: { campaignId: string; publicationId: string; collab: boolean }) {
-  const parsed = z.object({ campaignId: z.string().uuid(), publicationId: z.string().uuid(), collab: z.boolean() }).safeParse(input);
+export async function setPublicationCollabAction(input: { campaignId: string; publicationId: string; collab: boolean; creatorLineId?: string }) {
+  const parsed = z.object({ campaignId: z.string().uuid(), publicationId: z.string().uuid(), collab: z.boolean(), creatorLineId: z.string().uuid().optional() }).safeParse(input);
   if (!parsed.success) return { ok: false, message: 'Invalid publication.' };
   try {
     const supabase = await requireAuth();
-    const { data: row, error } = await supabase.from('campaign_publications').select('notes').eq('id', input.publicationId).eq('campaign_header_id', input.campaignId).single();
+    const { data: row, error } = await supabase.from('campaign_publications').select('notes,campaign_line_id').eq('id', input.publicationId).eq('campaign_header_id', input.campaignId).single();
     if (error || !row) return { ok: false, message: 'Publication unavailable.' };
-    let update = supabase.from('campaign_publications').update({ notes: setPublicationCollab(row.notes, input.collab) }).eq('id', input.publicationId).eq('campaign_header_id', input.campaignId);
+    const creators = input.collab ? await loadCampaignCollabCreatorsAction(input.campaignId) : [];
+    const partner = creators.find(creator => creator.id === input.creatorLineId);
+    if (input.collab && (!partner || partner.id === row.campaign_line_id)) return { ok: false, message: 'Choose another creator in this campaign.' };
+    let update = supabase.from('campaign_publications').update({ notes: setPublicationCollab(row.notes, input.collab, partner) }).eq('id', input.publicationId).eq('campaign_header_id', input.campaignId);
     update = row.notes === null ? update.is('notes', null) : update.eq('notes', row.notes);
     const result = await update.select('id').single();
     if (result.error || !result.data) return { ok: false, message: 'Could not update collaboration. Refresh and check your access.' };
@@ -354,4 +357,16 @@ export async function restoreAutomaticPublicationMetricsAction(input: {
   } catch {
     return { ok: false, message: "Unauthorized" };
   }
+}
+
+export async function loadCampaignCollabCreatorsAction(campaignId: string) {
+  z.string().uuid().parse(campaignId);
+  const db = await requireAuth();
+  const { data, error } = await db.from('campaign_lines').select('id,name,metadata').eq('campaign_header_id', campaignId);
+  if (error) throw new Error('Could not load campaign creators.');
+  return (data ?? []).flatMap(line => {
+    const meta = line.metadata as { influencer_assignment?: { influencer_name?: string } } | null;
+    const name = meta?.influencer_assignment?.influencer_name;
+    return name ? [{ id: line.id, name }] : [];
+  });
 }

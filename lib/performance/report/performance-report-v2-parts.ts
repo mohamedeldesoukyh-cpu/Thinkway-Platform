@@ -1,4 +1,4 @@
-import { publicationCollabLabel } from "@/lib/campaigns/publication-content-url";
+import { collabCellStyle, publicationCollabLabel } from "@/lib/campaigns/publication-content-url";
 import { reportedValue, videoCounters } from './reported-metrics';
 import type { CampaignPublicationRow } from "@/lib/domains/campaign/types";
 import {
@@ -233,7 +233,7 @@ export function renderPcard(pub: CampaignPublicationRow): string {
   return `<article class="pcard">
   ${mediaBlock}
   <div class="pcard__b">
-    <div class="pcard__hd">${renderCreatorAvatar(pub)}<span class="pcard__nm bidi">${esc(publicationCollabLabel(pub.influencer_name, pub.notes))}</span></div>
+    <div class="pcard__hd" style="background:${collabCellStyle(pub, [pub])?.backgroundColor ?? "transparent"};border-left:${collabCellStyle(pub, [pub])?.borderLeft ?? "none"};padding:6px">${renderCreatorAvatar(pub)}<span class="pcard__nm bidi">${esc(publicationCollabLabel(pub.influencer_name, pub.notes))}</span></div>
     <div class="pcard__mt">${esc(pub.platform_label)} · ${esc(formatShortDate(pub.publication_date))}</div>
     ${excerpt ? `<div class="pcard__copy"><span class="pcard__label">Caption</span><p class="pcard__cap bidi" dir="auto">${esc(excerpt)}</p></div>` : ""}
     ${tags ? `<div class="pcard__copy"><span class="pcard__label">Tags &amp; mentions</span><p class="pcard__tg bidi" dir="auto">${esc(tags)}</p></div>` : ""}
@@ -325,5 +325,6 @@ export function renderClosing(footLeft: string, pageLbl: string): string {
   </div>
 </section>`;
 }
+
 
 

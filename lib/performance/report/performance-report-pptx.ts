@@ -1,4 +1,4 @@
-import { publicationCollabLabel } from "@/lib/campaigns/publication-content-url";
+import { collabCellStyle, publicationCollabLabel } from "@/lib/campaigns/publication-content-url";
 import { videoMetricTotals, reportedTotal, metricCoverage } from './reported-metrics';
 import {
   formatCompactCount,
@@ -247,6 +247,7 @@ export async function buildPerformanceReportPptxBuffer(
 
     const slide = pptx.addSlide();
     slide.addText(publicationCollabLabel(pub.influencer_name, pub.notes), {
+      fill: collabCellStyle(pub, data.bundle.publications) ? {color:collabCellStyle(pub, data.bundle.publications)!.backgroundColor.slice(1)} : undefined,
       x: 0.5,
       y: 0.3,
       w: 9,
@@ -370,3 +371,4 @@ export async function buildPerformanceReportPptxBuffer(
   const arrayBuffer = (await pptx.write({ outputType: "arraybuffer" })) as ArrayBuffer;
   return Buffer.from(arrayBuffer);
 }
+

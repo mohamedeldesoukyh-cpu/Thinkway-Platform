@@ -1,3 +1,4 @@
+import { uniqueCollabPublications } from "@/lib/campaigns/publication-content-url";
 import { videoMetricTotals, reportedTotal, metricCoverage } from './reported-metrics';
 import { creatorHighlightPages, renderCreatorHighlights } from './creator-highlights';
 import {
@@ -43,7 +44,7 @@ function buildPlatformScopeRows(data: PerformanceReportDocumentData) {
     { platform: string; label: string; agreed: number; added: number; engagements: number }
   >();
 
-  for (const pub of data.bundle.publications) {
+  for (const pub of uniqueCollabPublications(data.bundle.publications)) {
     const key = platformKey(pub.platform) || "unknown";
     const existing = map.get(key) ?? {
       platform: key,
@@ -405,3 +406,4 @@ ${sheets.join("")}
 </body>
 </html>`;
 }
+

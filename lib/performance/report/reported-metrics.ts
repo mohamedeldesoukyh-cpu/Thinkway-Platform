@@ -1,3 +1,4 @@
+import { uniqueCollabPublications } from "@/lib/campaigns/publication-content-url";
 import type { CampaignPublicationRow } from '@/lib/domains/campaign/types';
 import { formatCompactCount } from '@/lib/campaigns/performance-calculations';
 export type ReportMetric = 'reach' | 'impressions' | 'views';
@@ -8,6 +9,7 @@ export function reportedValue(row: CampaignPublicationRow, metric: ReportMetric)
  return value;
 }
 export function metricCoverage(rows: CampaignPublicationRow[], metric: ReportMetric) {
+ rows=uniqueCollabPublications(rows);
  const values=rows.map(r=>reportedValue(r,metric)).filter((v):v is number=>v!=null);
  return {total:values.length ? values.reduce((a,b)=>a+b,0) : null, available:values.length, missing:rows.length-values.length};
 }
@@ -15,9 +17,11 @@ export function reportedTotal(rows: CampaignPublicationRow[], metric: ReportMetr
  const m=metricCoverage(rows,metric);return m.total == null ? 'Unavailable' : formatCompactCount(m.total);
 }
 export function coverageLabel(rows: CampaignPublicationRow[], metric: ReportMetric): string {
+ rows=uniqueCollabPublications(rows);
  const m=metricCoverage(rows,metric);return m.available ? `Based on ${m.available} of ${rows.length} publications` : "";
 }
 export function forecastTotal(rows: CampaignPublicationRow[], metric: 'reach'|'impressions'): string {
+ rows=uniqueCollabPublications(rows);
  const values=rows.filter(r=>r[`${metric}_source`]==='forecast' && r[metric]!=null).map(r=>r[metric]!);
  return values.length ? formatCompactCount(values.reduce((a,b)=>a+b,0)) : 'Unavailable';
 }
@@ -39,8 +43,10 @@ export function videoCounters(row: CampaignPublicationRow) {
  return {plays:row.plays ?? null, views:row.views};
 }
 export function videoMetricTotals(rows: CampaignPublicationRow[]) {
+ rows=uniqueCollabPublications(rows);
  return (['plays','views'] as const).flatMap(key=>{
   const values=rows.map(row=>videoCounters(row)[key]).filter((n):n is number=>n!=null && Number.isFinite(n) && n>=0);
   return values.length ? [{label:key==='plays'?'Video Play Count':'Views',value:formatCompactCount(values.reduce((a,b)=>a+b,0)),coverage:`Based on ${values.length} of ${rows.length} publications`}] : [];
  });
 }
+

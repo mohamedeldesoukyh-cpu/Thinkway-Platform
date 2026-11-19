@@ -6,13 +6,60 @@ export function notesHaveCollabMarker(notes: string | null | undefined): boolean
   return (notes ?? '').split('\n').some(line => line.trim() === PUBLICATION_COLLAB_NOTE_MARKER);
 }
 
-export function setPublicationCollab(notes: string | null | undefined, collab: boolean): string {
-  const base = (notes ?? '').split('\n').filter(line => line.trim() !== PUBLICATION_COLLAB_NOTE_MARKER).join('\n').trim();
-  return collab ? [base, PUBLICATION_COLLAB_NOTE_MARKER].filter(Boolean).join('\n') : base;
+const PARTNER_PREFIX = '[Thinkway:CollabCreator]';
+export type PublicationCollabCreator = { id: string; name: string };
+export function publicationCollabCreator(notes: string | null | undefined): PublicationCollabCreator | null {
+  const line = (notes ?? '').split('\n').find(line => line.startsWith(PARTNER_PREFIX));
+  try { const value = JSON.parse(decodeURIComponent(line?.slice(PARTNER_PREFIX.length) ?? '')); return typeof value.id === 'string' && typeof value.name === 'string' ? value : null; } catch { return null; }
+}
+export function setPublicationCollab(notes: string | null | undefined, collab: boolean, creator?: PublicationCollabCreator): string {
+  const base = (notes ?? '').split('\n').filter(line => line.trim() !== PUBLICATION_COLLAB_NOTE_MARKER && !line.startsWith(PARTNER_PREFIX)).join('\n').trim();
+  return collab ? [base, PUBLICATION_COLLAB_NOTE_MARKER, creator ? PARTNER_PREFIX + encodeURIComponent(JSON.stringify(creator)) : ''].filter(Boolean).join('\n') : base;
 }
 
 export function publicationCollabLabel(name: string | null | undefined, notes: string | null | undefined): string {
-  return `${name || 'Creator'}${notesHaveCollabMarker(notes) ? ' · Collab' : ''}`;
+  const partner = publicationCollabCreator(notes);
+  return `${name || 'Creator'}${notesHaveCollabMarker(notes) ? ' · Collab' + (partner ? ` with ${partner.name}` : '') : ''}`;
+}
+
+type CollabRow = { id: string; campaign_line_id: string | null; content_url: string | null; notes: string | null; influencer_name: string | null };
+export function attributeCollabPublications<T extends CollabRow>(rows: T[]): T[] {
+  return rows.map(row => {
+    if (notesHaveCollabMarker(row.notes)) return row;
+    const source = rows.find(item => notesHaveCollabMarker(item.notes) && publicationCollabCreator(item.notes)?.id === row.campaign_line_id && Boolean(normalizePublicationContentUrl(row.content_url)) && normalizePublicationContentUrl(item.content_url) === normalizePublicationContentUrl(row.content_url));
+    return source ? { ...row, notes: setPublicationCollab(row.notes, true, { id: source.campaign_line_id ?? source.id, name: source.influencer_name ?? 'Creator' }) } : row;
+  });
+}
+export function collabCellStyle(row: CollabRow, rows: CollabRow[]) {
+  const shared = rows.find(item => notesHaveCollabMarker(item.notes) &&
+    normalizePublicationContentUrl(item.content_url) === normalizePublicationContentUrl(row.content_url) &&
+    (item.id === row.id || publicationCollabCreator(item.notes)?.id === row.campaign_line_id));
+  if (!shared) return undefined;
+  const key = [shared.campaign_line_id, publicationCollabCreator(shared.notes)?.id].sort().join(':');
+  let hash = 0; for (const char of key) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  const hue = hash % 360;
+  const rgb = (n: number) => { const k=(n+hue/30)%12; return Math.round(255*(0.96-0.026*Math.max(-1,Math.min(k-3,9-k,1)))).toString(16).padStart(2,'0'); };
+  return { backgroundColor: `#${rgb(0)}${rgb(8)}${rgb(4)}`, borderLeft: `3px solid hsl(${hue} 55% 48%)` };
+}
+
+/** Credit both creator rows while counting a shared publication only once. */
+export function uniqueCollabPublications<T extends CollabRow>(rows: T[]): T[] {
+  const sharedUrls = new Set(rows.filter(row => notesHaveCollabMarker(row.notes)).map(row => normalizePublicationContentUrl(row.content_url)).filter(Boolean));
+  if (sharedUrls.size === 0) return rows;
+  const seen = new Set<string>();
+  const score = (row: T) => ['views','reach','impressions','likes','comments','shares','saves'].filter(key => typeof (row as Record<string, unknown>)[key] === 'number').length;
+  const ranked = [...rows].sort((a,b) => score(b)-score(a) || a.id.localeCompare(b.id));
+  const chosen = new Set(ranked.filter(row => {
+    const url = normalizePublicationContentUrl(row.content_url);
+    if (!url || !sharedUrls.has(url)) return true;
+    if (seen.has(url)) return false;
+    seen.add(url); return true;
+  }).map(row => row.id));
+  return rows.filter(row => chosen.has(row.id)).map(row => {
+    const collab = rows.find(item => notesHaveCollabMarker(item.notes) && normalizePublicationContentUrl(item.content_url) === normalizePublicationContentUrl(row.content_url));
+    if (!collab || collab.id === row.id) return row;
+    return { ...row, notes: setPublicationCollab(row.notes, true, { id: collab.campaign_line_id ?? collab.id, name: collab.influencer_name ?? 'Creator' }) };
+  });
 }
 
 /**

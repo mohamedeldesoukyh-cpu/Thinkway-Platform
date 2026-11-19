@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { setPublicationCollabAction } from "@/features/campaigns/actions/performance-actions";
+import { loadCampaignCollabCreatorsAction, setPublicationCollabAction } from "@/features/campaigns/actions/performance-actions";
 import { useRefreshCampaignAfterPublicationMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import { format, isValid, parseISO } from "date-fns";
 import {
@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -39,6 +41,10 @@ import {
   duplicateNormalizedUrlSet,
   notesHaveDuplicateMarker,
   notesHaveCollabMarker,
+  publicationCollabCreator,
+  collabCellStyle,
+  attributeCollabPublications,
+  publicationCollabLabel,
   normalizePublicationContentUrl,
 } from "@/lib/campaigns/publication-content-url";
 import {
@@ -214,11 +220,18 @@ export function CampaignPerformanceGrid({
   const [page, setPage] = useState(1);
   const [collabBusy, setCollabBusy] = useState<string | null>(null);
   const refreshCollab = useRefreshCampaignAfterPublicationMutation();
-  async function toggleCollab(row: CampaignPublicationRow) {
-    if (collabBusy) return; setCollabBusy(row.id);
-    try { const result = await setPublicationCollabAction({ campaignId: row.campaign_header_id, publicationId: row.id, collab: !notesHaveCollabMarker(row.notes) }); if (!result.ok) { toast.error(result.message); return; } toast.success(result.message); await refreshCollab(); } catch { toast.error("Could not update Collab."); } finally { setCollabBusy(null); }
+  const [collabRow, setCollabRow] = useState<CampaignPublicationRow | null>(null);
+  const [collabChoices, setCollabChoices] = useState<{id:string;name:string}[]>([]);
+  const [collabChoice, setCollabChoice] = useState('');
+  async function openCollab(row: CampaignPublicationRow) {
+    setCollabRow(row); setCollabChoice(publicationCollabCreator(row.notes)?.id ?? ''); setCollabChoices([]);
+    try { setCollabChoices((await loadCampaignCollabCreatorsAction(row.campaign_header_id)).filter(creator => creator.id !== row.campaign_line_id)); }
+    catch { toast.error('Could not load campaign creators.'); }
   }
-  const col = useOperationalColumnVisibleChecker();
+  async function saveCollab(row: CampaignPublicationRow, collab: boolean) {
+    if (collabBusy) return; setCollabBusy(row.id);
+    try { const result = await setPublicationCollabAction({ campaignId: row.campaign_header_id, publicationId: row.id, collab, creatorLineId: collab ? collabChoice : undefined }); if (!result.ok) { toast.error(result.message); return; } setCollabRow(null); toast.success(result.message); await refreshCollab(); } catch { toast.error("Could not update Collab."); } finally { setCollabBusy(null); }
+  }  const col = useOperationalColumnVisibleChecker();
   const { visibleOrderedColumnIds } = useOperationalTableColumnsContext();
 
   const duplicateUrlKeys = useMemo(
@@ -309,7 +322,7 @@ export function CampaignPerformanceGrid({
         );
       case "creator":
         return (
-          <div key={columnId} className="min-w-0 px-2 text-left">
+          <div key={columnId} className="min-w-0 rounded-md px-2 py-1 text-left" style={collabCellStyle(row, allRows ?? rows)}>
             <PerformanceExplorerCreatorCell
               name={row.influencer_name}
               handle={row.influencer_handle}
@@ -319,7 +332,7 @@ export function CampaignPerformanceGrid({
               influencerId={row.influencer_id}
               onOpenCreator={() => onOpenCreator(row)}
             />
-            {notesHaveCollabMarker(row.notes) && <span className="mt-1 inline-flex rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Collab</span>}
+            {notesHaveCollabMarker(attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes) && <span className="mt-1 inline-flex rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{publicationCollabLabel("", attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes).replace("Creator · ", "")}</span>}
           </div>
         );
       case "platform":
@@ -330,7 +343,7 @@ export function CampaignPerformanceGrid({
         );
       case "type": {
         const normalized = normalizePublicationContentUrl(row.content_url);
-        const showDuplicate = !notesHaveCollabMarker(row.notes) && (notesHaveDuplicateMarker(row.notes) || (Boolean(normalized) && duplicateUrlKeys.has(normalized!)));
+        const showDuplicate = !notesHaveCollabMarker(attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes) && (notesHaveDuplicateMarker(row.notes) || (Boolean(normalized) && duplicateUrlKeys.has(normalized!)));
         return (
           <div key={columnId} className="flex min-w-0 flex-col items-start gap-1 px-2">
             <span className="whitespace-nowrap text-[12px] text-[var(--camp-text-3)]">
@@ -472,7 +485,7 @@ export function CampaignPerformanceGrid({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="text-xs">
-                <DropdownMenuItem disabled={collabBusy !== null} onSelect={() => void toggleCollab(row)}>{notesHaveCollabMarker(row.notes) ? "Remove Collab" : "Mark as Collab"}</DropdownMenuItem>
+                <DropdownMenuItem disabled={collabBusy !== null} onSelect={() => void openCollab(row)}>{notesHaveCollabMarker(row.notes) ? "Edit Collab" : "Mark as Collab"}</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => onRefreshMetrics(row.id)}>
                   <RefreshCwIcon className="mr-1 inline size-3" />
                   Refresh metrics
@@ -513,6 +526,15 @@ export function CampaignPerformanceGrid({
 
   return (
     <TooltipProvider delayDuration={200}>
+      <Dialog open={Boolean(collabRow)} onOpenChange={open => { if (!open && !collabBusy) setCollabRow(null); }}>
+        <DialogContent><DialogHeader><DialogTitle>Collaborating creator</DialogTitle><DialogDescription>Choose the other creator in this campaign who shares this publication.</DialogDescription></DialogHeader>
+          <SearchableSelect options={collabChoices.map(creator => ({value:creator.id,label:creator.name}))} value={collabChoice} onValueChange={setCollabChoice} placeholder="Choose campaign creator…" disabled={Boolean(collabBusy)} />
+          <div className="flex justify-end gap-2">
+            {collabRow && notesHaveCollabMarker(collabRow.notes) && <Button variant="outline" disabled={Boolean(collabBusy)} onClick={() => void saveCollab(collabRow, false)}>Remove Collab</Button>}
+            <Button disabled={!collabChoice || Boolean(collabBusy)} onClick={() => collabRow && void saveCollab(collabRow, true)}>Save Collab</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <div className="thinkway-campaign-perf-grid-shell font-sans text-[12px] leading-5 flex min-h-0 flex-col">
         <div className="thinkway-campaign-table-scroll min-h-0 flex-1">
           <div className="min-w-[960px]">
@@ -602,3 +624,7 @@ export function CampaignPerformanceGrid({
     </TooltipProvider>
   );
 }
+
+
+
+

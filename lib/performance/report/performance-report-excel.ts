@@ -1,4 +1,4 @@
-import { publicationCollabLabel } from "@/lib/campaigns/publication-content-url";
+import { collabCellStyle, publicationCollabLabel } from "@/lib/campaigns/publication-content-url";
 import { videoMetricTotals, videoCounters, reportedTotal } from './reported-metrics';
 import {
   formatCompactCount,
@@ -110,6 +110,7 @@ export function buildPerformanceReportExcelBuffer(
     };
 
     return {
+      creatorCellFill: collabCellStyle(p, data.bundle.publications)?.backgroundColor,
       values: [...baseValues, ...costMetricColumns.map((key) => costMetricValues[key])],
     };
   });

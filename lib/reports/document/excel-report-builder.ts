@@ -34,6 +34,7 @@ export type ColumnFormat = "text" | "money" | "percent";
 export type DataRowKind = "data" | "emphasis" | "total";
 
 export type StyledDataRow = {
+  creatorCellFill?: string;
   values: (string | number | null)[];
   kind?: DataRowKind;
   richText?: Record<number, { text: string; secondary?: boolean }[]>;
@@ -320,6 +321,7 @@ function populateSheet(worksheet: Worksheet, sheet: StyledSheetConfig): void {
         cell.alignment = { ...cell.alignment, vertical: "top" };
       }
       if (dataRow.richText?.[colIndex]) cell.value = { richText: dataRow.richText[colIndex].map(run => ({ text: run.text, font: { name: "Calibri", size: run.secondary ? 9 : 10, color: { argb: run.secondary ? COLORS.muted : COLORS.ink } } })) };
+      if (colIndex === 0 && dataRow.creatorCellFill) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: 'FF' + dataRow.creatorCellFill.replace('#','').toUpperCase() } };
       if (sheet.totalColumns?.includes(colIndex)) {
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0F9FF" } };
         cell.font = { ...cell.font, bold: true, color: { argb: "FF082F49" } };

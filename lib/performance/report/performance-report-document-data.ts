@@ -1,3 +1,4 @@
+import { attributeCollabPublications, publicationCollabLabel, notesHaveCollabMarker, uniqueCollabPublications } from "@/lib/campaigns/publication-content-url";
 import { loadIdentityLogoForClientId } from "@/features/client-workspace/identity-logo";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -59,7 +60,7 @@ function formatDateRange(start: string | null, end: string | null): string {
 }
 
 function publicationLabel(pub: CampaignPublicationRow): string {
-  return `${pub.influencer_name ?? "Creator"} · ${pub.platform_label}`;
+  return `${publicationCollabLabel(pub.influencer_name, pub.notes)} · ${pub.platform_label}`;
 }
 
 function buildHighlights(bundle: CampaignPerformanceBundle): CampaignHighlights {
@@ -86,7 +87,7 @@ function buildPlatformBenchmarks(bundle: CampaignPerformanceBundle): PlatformBen
     string,
     { ers: number[]; agreedCount: number; totalCount: number }
   >();
-  for (const pub of bundle.publications) {
+  for (const pub of uniqueCollabPublications(bundle.publications)) {
     const key = pub.platform;
     const entry = byPlatform.get(key) ?? { ers: [], agreedCount: 0, totalCount: 0 };
     entry.totalCount += 1;
@@ -111,6 +112,7 @@ function buildRecommendations(
   benchmarks: PlatformBenchmark[]
 ): string[] {
   const recs: string[] = [];
+  if (bundle.publications.some(pub => notesHaveCollabMarker(pub.notes))) recs.push("Collaboration posts credit the named creators jointly. Shared-post metrics count once in campaign totals; creator-level results overlap and must not be added together.");
   const { summary, publications } = bundle;
 
   if (summary.top_creator_name) {
@@ -452,7 +454,7 @@ export async function loadPerformanceReportDocumentData(
     ).clients
   );
 
-  let bundle = await signPublicationMedia(supabase, bundleRaw);
+  let bundle = await signPublicationMedia(supabase, { ...bundleRaw, publications: attributeCollabPublications(bundleRaw.publications) });
 
   if (options?.publicationIds?.length) {
     const allowed = new Set(options.publicationIds);
@@ -584,3 +586,5 @@ export async function loadPerformanceReportDocumentData(
 }
 
 export { formatDateRange };
+
+

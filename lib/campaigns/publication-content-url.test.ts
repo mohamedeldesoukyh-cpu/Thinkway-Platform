@@ -11,6 +11,7 @@ import {
   setPublicationCollab,
   publicationCollabLabel,
   isDuplicatePublicationUrl,
+  publicationCollabCreator, attributeCollabPublications, uniqueCollabPublications, collabCellStyle,
 } from "@/lib/campaigns/publication-content-url";
 
 assert.equal(
@@ -62,3 +63,22 @@ assert.equal(notesHaveCollabMarker('Discuss collab with creator'), false);
 assert.equal(publicationCollabLabel('Creator A', collab), 'Creator A · Collab');
 assert.equal(publicationCollabLabel('Creator A', original), 'Creator A');
 console.log("publication-content-url — all tests passed");
+
+const linked = setPublicationCollab('Keep notes', true, {id:'b',name:'Creator B'});
+assert.deepEqual(publicationCollabCreator(linked), {id:'b',name:'Creator B'});
+assert.equal(publicationCollabLabel('Creator A',linked),'Creator A · Collab with Creator B');
+assert.equal(setPublicationCollab(linked,false),'Keep notes');
+const sharedRows = [
+ {id:'a-post',campaign_line_id:'a',content_url:'https://instagram.com/p/shared',notes:linked,influencer_name:'Creator A',views:null},
+ {id:'b-post',campaign_line_id:'b',content_url:'https://instagram.com/p/shared/',notes:null,influencer_name:'Creator B',views:100},
+ {id:'c-post',campaign_line_id:'c',content_url:'https://instagram.com/p/other',notes:null,influencer_name:'Creator C',views:50},
+];
+const attributed = attributeCollabPublications(sharedRows);
+assert.equal(publicationCollabCreator(attributed[1].notes)?.name,'Creator A');
+assert.deepEqual(collabCellStyle(sharedRows[0],sharedRows),collabCellStyle(sharedRows[1],sharedRows));
+assert.equal(collabCellStyle(sharedRows[2],sharedRows),undefined);
+const unique = uniqueCollabPublications(sharedRows);
+assert.equal(unique.length,2);
+assert.equal(unique.reduce((sum,row)=>sum+(row.views??0),0),150);
+assert.equal(sharedRows[1].notes,null);
+assert.equal(uniqueCollabPublications(sharedRows.map(row=>({...row,notes:null}))).length,3);

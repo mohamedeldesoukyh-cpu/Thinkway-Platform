@@ -1,3 +1,4 @@
+import { publicationCollabLabel, uniqueCollabPublications } from "@/lib/campaigns/publication-content-url";
 import { attachReportVideoCounters } from "@/lib/performance/report/report-video-counters";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -363,7 +364,7 @@ function buildSummary(publications: CampaignPublicationRow[]): CampaignPerforman
 
   const creatorEngagements = new Map<string, number>();
   for (const p of publications) {
-    const name = p.influencer_name ?? "Unknown";
+    const name = publicationCollabLabel(p.influencer_name, p.notes);
     creatorEngagements.set(name, (creatorEngagements.get(name) ?? 0) + p.total_engagements);
   }
   let top_creator_name: string | null = null;
@@ -423,7 +424,7 @@ function buildCharts(publications: CampaignPublicationRow[]): CampaignPerformanc
 
     byType.set(p.publication_type, (byType.get(p.publication_type) ?? 0) + 1);
 
-    const creator = p.influencer_name ?? "Unknown";
+    const creator = publicationCollabLabel(p.influencer_name, p.notes);
     const ce = byCreatorEng.get(creator) ?? { engagements: 0, views: 0 };
     ce.engagements += p.total_engagements;
     ce.views += p.views ?? 0;
@@ -473,7 +474,7 @@ function buildCharts(publications: CampaignPublicationRow[]): CampaignPerformanc
     views_by_publication: publications
       .map((p) => ({
         id: p.id,
-        label: `${p.influencer_name ?? "Creator"} · ${p.publication_type_label}`,
+        label: `${publicationCollabLabel(p.influencer_name, p.notes)} · ${p.publication_type_label}`,
         views: p.views ?? 0,
       }))
       .sort((a, b) => b.views - a.views)
@@ -606,8 +607,8 @@ export async function getCampaignPerformanceBundle(
 
   return {
     publications,
-    summary: buildSummary(publications),
-    charts: buildCharts(publications),
+    summary: buildSummary(uniqueCollabPublications(publications)),
+    charts: buildCharts(uniqueCollabPublications(publications)),
     sync_health: buildSyncHealth(publications),
     load_error: null,
     schema_warnings: schema.warnings,
@@ -619,3 +620,6 @@ export async function getCampaignPublications(campaignHeaderId: string) {
   const bundle = await getCampaignPerformanceBundle(campaignHeaderId);
   return { publications: bundle.publications, load_error: bundle.load_error };
 }
+
+
+

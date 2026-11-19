@@ -91,6 +91,7 @@ type PublicationRow = {
   /** Creator was set by URL auto-match (user can still override). */
   autoMatched: boolean;
   collab: boolean;
+  collabLineId: string;
 };
 
 function newRow(partial?: Partial<PublicationRow>): PublicationRow {
@@ -102,6 +103,7 @@ function newRow(partial?: Partial<PublicationRow>): PublicationRow {
     publicationType: "instagram_post",
     autoMatched: false,
     collab: false,
+    collabLineId: "",
     ...partial,
   };
 }
@@ -191,7 +193,7 @@ function buildBatchItems(
         status: shared.status,
         caption: shared.caption,
         hashtags: shared.hashtags,
-        notes: row.collab ? setPublicationCollab(shared.notes, true) : isDuplicate ? appendDuplicateNoteMarker(shared.notes) : shared.notes,
+        notes: row.collab ? setPublicationCollab(shared.notes, true, { id: row.collabLineId, name: buildPublicationAssignmentOption(assignmentLines.find(line => line.id === row.collabLineId)!).label }) : isDuplicate ? appendDuplicateNoteMarker(shared.notes) : shared.notes,
       };
     });
 }
@@ -338,6 +340,9 @@ export function CampaignPublicationSheet({
       return;
     }
 
+    if (rows.some(row => row.collab && (!row.collabLineId || row.collabLineId === row.lineId))) {
+      toast.error('Choose another campaign creator for each Collab.'); return;
+    }
     // Sync visible row platform/type before submit so the UI matches what we send.
     setRows((prev) =>
       prev.map((row) => {
@@ -520,6 +525,7 @@ export function CampaignPublicationSheet({
                         ) : null}
 
                         <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={row.collab} disabled={isPending} onChange={event => updateRow(row.key, current => ({ ...current, collab: event.target.checked }))}/>Collab · shared creator publication</label>
+                        {row.collab && <SearchableSelect options={assignmentOptions.filter(option => option.value !== row.lineId)} value={row.collabLineId} onValueChange={value => updateRow(row.key, current => ({ ...current, collabLineId: value }))} placeholder="Choose collaborating creator…" disabled={isPending} />}
                         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
                           <div className="min-w-0">
                             <SearchableSelect
@@ -689,3 +695,5 @@ export function CampaignPublicationSheet({
     </OperationalDetailSheet>
   );
 }
+
+
