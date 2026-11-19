@@ -3,7 +3,7 @@ import { CreatorPaymentSummary } from './creator-payment-summary';
 import {InvoiceVatEditor} from './invoice-vat-editor';
 import { ChevronDown, ListChecks } from 'lucide-react';
 import type { PaymentRow } from './model';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { PaymentEntry } from './model';
 import { PaymentRecordEditor } from './payment-record-editor';
 const amount = (n:number,c:string) => `${c} ${n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
@@ -12,21 +12,22 @@ function PaymentProofDisclosure({paymentId,canWrite}:{paymentId:string;canWrite:
     const [open,setOpen]=useState(false);
     return <details onToggle={e=>setOpen(e.currentTarget.open)}><summary>Proof</summary>{open&&<PaymentProofAttachments paymentId={paymentId} canWrite={canWrite}/>}</details>;
 }
-export function PaymentHistory({row,canWrite,onSaved,allowAdd=true,compact=false}:{row:PaymentRow;canWrite:boolean;onSaved:(row?:PaymentRow)=>void | Promise<void>;allowAdd?:boolean;compact?:boolean}) {
+export function PaymentHistory({row,canWrite,onSaved,allowAdd=true,compact=false,redesigned=false,open,onOpenChange,beforeActions}:{row:PaymentRow;canWrite:boolean;onSaved:(row?:PaymentRow)=>void | Promise<void>;allowAdd?:boolean;compact?:boolean;redesigned?:boolean;open?:boolean;onOpenChange?:(open:boolean)=>void;beforeActions?:ReactNode}) {
     const [editor,setEditor]=useState<{payment?:PaymentEntry;clear?:boolean}|null>(null);
-    return <div className="cp-payment-history">
+    return <div className={`cp-payment-history ${redesigned?'cp-designed-history':''}`}>
+        <div className={redesigned?"acts":undefined}>{beforeActions}
         <InvoiceVatEditor row={row} canWrite={canWrite} onSaved={onSaved}/>
         {allowAdd&&canWrite&&row.payable!==false&&<button className="cp-button" onClick={()=>setEditor({})}>+ Add payments</button>}
         {editor&&<PaymentRecordEditor row={row} {...editor} onClose={()=>setEditor(null)} onSaved={onSaved}/>}
-        <details className="cp-payment-details">
+        </div><details id={`history-${row.assignmentId}`} open={open} onToggle={e=>{if(onOpenChange&&e.currentTarget.open!==open)onOpenChange(e.currentTarget.open);}} className="cp-payment-details">
           <summary>
             <ListChecks aria-hidden="true" size={18}/>
-            <span><strong className="cp-details-show">Show payment details</strong><strong className="cp-details-hide">Hide payment details</strong><small>{compact ? 'Payment ledger' : 'Payment balance · Advance amounts · Payment ledger'}</small></span>
-            <span className="cp-details-count">{row.history?.length ?? 0} payments</span>
+            <span><strong className="cp-details-show">Show payment details</strong><strong className="cp-details-hide">Hide payment details</strong><small>{compact ? 'Payment ledger' : 'VAT · Advance amounts · Payment ledger'}</small></span>
+            <span className="cp-details-count">{row.history?.length ?? 0} {(row.history?.length ?? 0)===1?'payment':'payments'}</span>
             <ChevronDown aria-hidden="true" size={18} className="cp-details-chevron"/>
           </summary>
           <div className="cp-payment-details-body">
-        {!compact&&<CreatorPaymentSummary row={row}/>}
+        {!compact&&<CreatorPaymentSummary row={row} supplemental={redesigned}/>}
         <div className="cp-mini-card cp-payment-ledger-card">
           <div className="cp-ledger-heading">Payment ledger <span>{row.history?.length ?? 0} records</span></div>
           <div className="cp-creator-ledger-scroll" role="region" aria-label={`Payment ledger for ${row.creator}`} tabIndex={0}>

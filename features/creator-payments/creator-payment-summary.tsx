@@ -3,16 +3,16 @@ import type { PaymentRow } from './model';
 
 const amount = (n: number, currency: string) => `${currency} ${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export function CreatorPaymentSummary({ row }: { row: PaymentRow }) {
+export function CreatorPaymentSummary({ row, supplemental=false }: { row: PaymentRow; supplemental?:boolean }) {
   const allocation = paymentAllocation(row);
   return <div className="cp-creator-summary-grid">
     <div className="cp-mini-card">
       <table className="cp-mini-table" aria-label={`Payment balance for ${row.creator}`}>
-        <caption>Payment balance <span>{row.currency}</span></caption>
+        <caption>{supplemental?'Fee & VAT breakdown':'Payment balance'} <span>{row.currency}</span></caption>
         <tbody>
-          <tr><th scope="row">Total agreed incl. VAT</th><td>{amount(allocation.total, row.currency)}</td></tr>
+          {supplemental?<><tr><th scope="row">Fee before VAT</th><td>{amount(row.fee,row.currency)}</td></tr><tr><th scope="row">VAT ({row.vat}%)</th><td>{amount(allocation.total-row.fee,row.currency)}</td></tr><tr><th scope="row">Pending exports</th><td>{amount(row.reserved,row.currency)}</td></tr></>:<><tr><th scope="row">Total agreed incl. VAT</th><td>{amount(allocation.total, row.currency)}</td></tr>
           <tr><th scope="row">Total paid</th><td className="cp-paid-value">{amount(row.paid, row.currency)}</td></tr>
-          <tr className="cp-mini-total"><th scope="row">Remaining</th><td>{amount(allocation.remaining, row.currency)}</td></tr>
+          <tr className="cp-mini-total"><th scope="row">Remaining</th><td>{amount(allocation.remaining, row.currency)}</td></tr></>}
         </tbody>
       </table>
     </div>
