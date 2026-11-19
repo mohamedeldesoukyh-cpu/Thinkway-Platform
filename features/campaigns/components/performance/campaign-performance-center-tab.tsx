@@ -152,6 +152,11 @@ export function CampaignPerformanceCenterTab({
   const enrichmentBatch = useMetricsEnrichmentBatch(publications);
 
   const lines = (workspace.lines ?? []).filter((l) => l.influencer_id);
+  // Reuse the campaign snapshot rather than loading again when Collab opens.
+  const collabChoices = useMemo(() => (workspace.lines ?? []).flatMap((line) => {
+    const name = line.influencer_name || line.assignment?.influencer_name;
+    return name ? [{ id: line.id, name }] : [];
+  }), [workspace.lines]);
 
   const classifiedPublications = useMemo(() => {
     const index = buildAssignmentAgreedPlatformIndexFromAssignments({
@@ -721,6 +726,7 @@ export function CampaignPerformanceCenterTab({
 
         <div className="space-y-3.5">
           <PerformancePublicationValueCard
+            collabChoices={collabChoices}
             title="Publications"
             description="Matching the assignment platforms."
             summary={agreedSummary}
@@ -742,6 +748,7 @@ export function CampaignPerformanceCenterTab({
             emptyDescription="Posts on assignment platforms appear here. Extra platforms are listed under Added value."
           />
           <PerformancePublicationValueCard
+            collabChoices={collabChoices}
             title="Added value"
             description="Posted on platforms that are not contracted on the assignment."
             summary={addedValueSummary}

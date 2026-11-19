@@ -17,6 +17,7 @@ type SortKey =
   | "status";
 
 type Props = {
+  collabChoices: { id: string; name: string }[];
   title: string;
   description: string;
   summary: PublicationValueSummary;
@@ -40,6 +41,7 @@ type Props = {
 };
 
 export function PerformancePublicationValueCard({
+  collabChoices,
   title,
   description,
   summary,
@@ -68,6 +70,7 @@ export function PerformancePublicationValueCard({
       className="mb-0"
     >
       <CampaignPerformanceGrid
+        collabChoices={collabChoices}
         rows={rows}
         allRows={allRows}
         selectScopeIds={selectScopeIds}
