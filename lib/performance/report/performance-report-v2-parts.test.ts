@@ -120,11 +120,11 @@ test("publication badge uses platform logo beside content type without positioni
   assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.pcard__platform-icon\{position:static/);
 });
 
-test("report sheets clip body overflow so metrics cannot paint over the footer", () => {
-  assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.sheet__body\{[^}]*overflow:hidden/);
-  assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.pgrid\{[^}]*minmax\(0,1fr\)/);
-  assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.pcard\{[^}]*min-height:0/);
-  assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.pcard__media\{[^}]*flex:0 0 368px/);
+test("report cards preserve full photos and content above the footer", () => {
+  assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.sheet__body\{[^}]*overflow:visible/);
+  assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.pgrid\{[^}]*repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.pcard\{[^}]*height:auto/);
+  assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.pcard__media > img\{[^}]*object-fit:contain/);
   assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.sheet__foot\{[^}]*z-index:2/);
 });
 

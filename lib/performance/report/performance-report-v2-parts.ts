@@ -34,7 +34,7 @@ export const PLATFORM_COLOR: Record<string, string> = {
   x: "#111827",
 };
 
-export const CARDS_PER_PAGE = 2;
+export const CARDS_PER_PAGE = 3;
 
 export function esc(value: string): string {
   return value
