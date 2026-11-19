@@ -5,6 +5,7 @@ import { loadCampaignCollabCreatorsAction, setPublicationCollabAction } from "@/
 import { useRefreshCampaignAfterPublicationMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import { format, isValid, parseISO } from "date-fns";
 import {
+  ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ExternalLinkIcon,
@@ -35,7 +36,6 @@ import { EngagementRateDisplay } from "@/features/campaigns/components/performan
 import {
   PerformanceExplorerCreatorCell,
   PerformanceMetricsStatusBadge,
-  PublicationDuplicateBadge,
 } from "@/features/campaigns/components/performance/performance-explorer-cells";
 import {
   duplicateNormalizedUrlSet,
@@ -344,18 +344,7 @@ export function CampaignPerformanceGrid({
               influencerId={row.influencer_id}
               onOpenCreator={() => onOpenCreator(row)}
             />
-            <div className="mt-1 max-w-64" onClick={event => event.stopPropagation()} onPointerDown={event => event.stopPropagation()}>
-              <SearchableSelect
-                value={publicationCollabCreator(row.notes)?.id ?? ''}
-                options={creatorsLoading ? [] : [{value:'__none',label:'No collaboration'}, ...creatorOptions(row)]}
-                onValueChange={value => void saveCollab(row, value !== '__none', value)}
-                placeholder={creatorsLoading ? 'Loading creators…' : 'Choose Collab creator…'}
-                searchPlaceholder="Search campaign creators…"
-                emptyMessage={creatorsEmptyMessage}
-                disabled={Boolean(collabBusy)}
-                className="h-7 min-h-7 text-xs"
-              />
-            </div>            {notesHaveCollabMarker(attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes) && <span className="mt-1 inline-flex rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{publicationCollabLabel("", attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes).replace("Creator · ", "")}</span>}
+            {notesHaveCollabMarker(attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes) && <span className="mt-1 inline-flex rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{publicationCollabLabel("", attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes).replace("Creator · ", "")}</span>}
           </div>
         );
       case "platform":
@@ -366,13 +355,29 @@ export function CampaignPerformanceGrid({
         );
       case "type": {
         const normalized = normalizePublicationContentUrl(row.content_url);
+        const showCollab = notesHaveCollabMarker(attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes);
+        const collabOwner = notesHaveCollabMarker(row.notes) ? row : (allRows ?? rows).find(item => notesHaveCollabMarker(item.notes) && publicationCollabCreator(item.notes)?.id === row.campaign_line_id && normalizePublicationContentUrl(item.content_url) === normalized) ?? row;
         const showDuplicate = !notesHaveCollabMarker(attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes) && (notesHaveDuplicateMarker(row.notes) || (Boolean(normalized) && duplicateUrlKeys.has(normalized!)));
         return (
           <div key={columnId} className="flex min-w-0 flex-col items-start gap-1 px-2">
             <span className="whitespace-nowrap text-[12px] text-[var(--camp-text-3)]">
               {row.publication_type_label}
             </span>
-            {showDuplicate ? <PublicationDuplicateBadge className="shrink-0" /> : null}
+            {showDuplicate || showCollab ? (
+              <div onClick={event => event.stopPropagation()} onPointerDown={event => event.stopPropagation()}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button type="button" disabled={Boolean(collabBusy)} aria-label="Publication classification" className={cn("thinkway-campaign-badge inline-flex items-center gap-0.5 cursor-pointer", showCollab ? "bg-blue-50 text-blue-700" : "thinkway-campaign-badge-amber")}>
+                      {showCollab ? "Collab" : "Duplicate"}<ChevronDownIcon className="size-2.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem disabled={!showCollab} onSelect={() => void saveCollab(collabOwner, false)}>Duplicate</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => openCollab(collabOwner)}>Collab</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : null}
           </div>
         );
       }
