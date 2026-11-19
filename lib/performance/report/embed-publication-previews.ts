@@ -61,8 +61,10 @@ export async function embedCampaignPublicationPreview(
     return stored;
   }
 
-  if (stored && !shouldProxyPublicationMediaUrl(stored) && stored.includes("://")) {
-    const embedded = await embedStoredUrlAsOriginal(stored);
+  // Try both persisted originals before falling back to expiring social URLs.
+  for (const candidate of [row.screenshot_url, row.thumbnail_url]) {
+    if (!candidate || shouldProxyPublicationMediaUrl(candidate) || !candidate.includes("://")) continue;
+    const embedded = await embedStoredUrlAsOriginal(candidate);
     if (embedded) return embedded;
   }
 

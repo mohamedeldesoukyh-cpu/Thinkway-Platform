@@ -1,3 +1,4 @@
+import { collabAnalysis } from './collab-analysis';
 import { attributeCollabPublications, publicationCollabLabel, notesHaveCollabMarker, uniqueCollabPublications } from "@/lib/campaigns/publication-content-url";
 import { loadIdentityLogoForClientId } from "@/features/client-workspace/identity-logo";
 
@@ -111,7 +112,7 @@ function buildRecommendations(
   bundle: CampaignPerformanceBundle,
   benchmarks: PlatformBenchmark[]
 ): string[] {
-  const recs: string[] = [];
+  const recs: string[] = collabAnalysis(bundle.publications);
   if (bundle.publications.some(pub => notesHaveCollabMarker(pub.notes))) recs.push("Collaboration posts credit the named creators jointly. Shared-post metrics count once in campaign totals; creator-level results overlap and must not be added together.");
   const { summary, publications } = bundle;
 
@@ -165,7 +166,7 @@ function buildInfluencerInsights(
   publications: CampaignPublicationRow[],
   name: string
 ): string[] {
-  const insights: string[] = [];
+  const insights: string[] = collabAnalysis(publications);
   const bestViews = [...publications].sort((a, b) => (b.views ?? 0) - (a.views ?? 0))[0];
   const bestEr = [...publications]
     .filter((p) => p.engagement_rate != null)
@@ -215,7 +216,12 @@ async function signPublicationMedia(
         row.creator_avatar_url?.startsWith("http")
           ? Promise.resolve(row.creator_avatar_url)
           : createPublicationMediaSignedUrl(supabase, row.creator_avatar_url, 60 * 60 * 24),
-        embedCampaignPublicationPreview(row),
+        Promise.all([
+          createPublicationMediaSignedUrl(supabase, row.screenshot_url),
+          createPublicationMediaSignedUrl(supabase, row.thumbnail_url),
+        ]).then(([screenshot_url, thumbnail_url]) => embedCampaignPublicationPreview({
+          ...row, screenshot_url, thumbnail_url,
+        })),
       ]);
 
       const resolvedAvatar =

@@ -1,3 +1,4 @@
+import { collabAnalysis } from './collab-analysis';
 import { videoCounters, videoMetricTotals } from './reported-metrics';
 import type { PerformanceReportDocumentData, InfluencerReportSection } from './performance-report-types';
 import { formatCompactCount, formatPercent } from '@/lib/campaigns/performance-calculations';
@@ -42,6 +43,7 @@ export function renderCreatorHighlights(data: PerformanceReportDocumentData, cre
       <div class="creator-highlight__badges">${badges.map(b => `<span>${b}</span>`).join('')}</div>
       <p class="note">${c.summary.agreedPublications} agreed · ${c.summary.addedValuePublications} added-value publications</p>
       <div class="creator-highlight__metrics">${videoMetricTotals(c.publications).map(metric=>`<div>${esc(metric.label)}<strong>${esc(metric.value)}</strong><small>${esc(metric.coverage)}</small>${platformMetricSources(c, metric.label)}</div>`).join("")}<div>Engagements<strong>${esc(formatCompactCount(c.summary.engagements))}</strong></div><div>Avg. ER<strong>${esc(formatPercent(c.summary.averageEr))}</strong></div></div>
+      ${collabAnalysis(c.publications).map(text => `<p class="note"><b>Collab</b> · ${esc(text)}</p>`).join('')}
       <div class="creator-highlight__best"><b>Best post ER: ${esc(formatPercent(best?.engagement_rate ?? null, 1))}</b><div>${esc(best?.platform_label ?? '')}</div><div>${esc(context)}</div></div>
     </article>`;
   }).join('') || '<p>No creator performance is available yet.</p>'}</div>

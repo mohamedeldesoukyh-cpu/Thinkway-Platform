@@ -32,3 +32,16 @@ test('each counter shows its own platform sources without mixing views and plays
  assert.match(html,/Instagram · 200/);assert.match(html,/alt="TikTok"/);
  assert.equal((html.match(/TikTok · 50/g)||[]).length,1);
 });
+
+
+test('collab analysis appears only for marked shared posts and names the partner', async () => {
+ const { setPublicationCollab } = await import('@/lib/campaigns/publication-content-url');
+ const c=creator('Creator A',100,1000,10);
+ c.publications[0]={...c.publications[0],id:'a',influencer_name:'Creator A',content_url:'https://instagram.com/p/shared',notes:null};
+ assert.doesNotMatch(renderCreatorHighlights(data([c]),[c]), /<b>Collab<\/b>/);
+ c.publications[0].notes=setPublicationCollab(null,true,{id:'b',name:'Creator B'});
+ const html=renderCreatorHighlights(data([c]),[c]);
+ assert.match(html, /Collab with Creator B/);
+ assert.match(html, /Engagements: 100/);
+ assert.match(html, /count once in campaign totals/);
+});
