@@ -434,7 +434,7 @@
   .cp-redesign .nav,.cp-redesign .bar,.cp-redesign .foot,.cp-redesign .disc{display:none}
 }
 /* Integration: scope the supplied design away from the existing Discovery .tw-cp. */
-.thinkway-creator-payments.cp-redesign{min-width:0;container-type:inline-size;--sans:var(--font-geist-sans),'Segoe UI',system-ui,sans-serif;--mono:var(--font-geist-mono),'Cascadia Mono',Consolas,monospace}
+.thinkway-creator-payments.cp-redesign{min-width:0;--sans:var(--font-geist-sans),'Segoe UI',system-ui,sans-serif;--mono:var(--font-geist-mono),'Cascadia Mono',Consolas,monospace}
 .cp-redesign .cp-summary-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
 .cp-redesign .cp-summary-heading h2{font-size:14px;font-weight:700;margin:0}
 .cp-redesign .ccy__g{align-items:center;gap:12px 28px}
@@ -516,7 +516,7 @@
 .cp-redesign-drawer .cp-record-creator,.cp-redesign-drawer .cp-record-facts{background:white;border:1px solid #e7ecf4;border-radius:11px;padding:14px}
 .cp-redesign-drawer .cp-drawer-actions{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));flex-wrap:wrap}
 /* Use available section width as well as viewport width (sidebar/tablet). */
-@container (max-width:1050px){
+@media (max-width:1200px){
  .cp-redesign .thead{display:none}
  .cp-redesign .row{grid-template-columns:24px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:10px;padding:12px}
  .cp-redesign .row>span:first-child{grid-column:1;grid-row:1}
@@ -559,7 +559,7 @@
  .cp-redesign .cp-creator-ledger tr{padding:8px;border-bottom:1px solid var(--line)}
  .cp-redesign .cp-creator-ledger td,.cp-redesign .cp-creator-ledger th{padding:4px 0;border:0}
 }
-@container(max-width:420px){
+@media (max-width:480px){
  .cp-redesign .row{grid-template-columns:24px minmax(0,1fr) 36px}
  .cp-redesign .row>.who{grid-column:2;grid-row:1}
  .cp-redesign .row>.disc{grid-column:3;grid-row:1}
