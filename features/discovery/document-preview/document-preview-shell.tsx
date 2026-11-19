@@ -39,7 +39,7 @@ type Props = {
 
 const ZOOM_STEPS = [0.5, 0.67, 0.75, 0.85, 1, 1.15, 1.25, 1.5] as const;
 /** Cover/closing use `.cpage`; inner sheets also have `.page`. */
-const PAGE_SELECTOR = ".cpage, .page, .invoice-page";
+const PAGE_SELECTOR = ".cpage, .page, .invoice-page, .sheet";
 
 function documentPages(doc: Document): HTMLElement[] {
   const pages = Array.from(doc.querySelectorAll<HTMLElement>(PAGE_SELECTOR));

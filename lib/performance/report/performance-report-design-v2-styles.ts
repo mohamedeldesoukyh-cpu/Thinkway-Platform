@@ -42,10 +42,10 @@ strong{font-weight:600}
    ============================================================ */
 @page{size:A4 portrait;margin:0}
 .sheet{
-  position:relative; width:var(--pw); height:var(--ph);
+  position:relative; width:var(--pw); min-height:var(--ph); height:auto;
   margin:22px auto; background:var(--paper);
   box-shadow:0 2px 6px rgba(8,12,26,.10),0 14px 40px rgba(8,12,26,.16);
-  overflow:hidden; display:flex; flex-direction:column;
+  overflow:visible; display:flex; flex-direction:column;
   page-break-after:always; break-after:page;
 }
 .sheet:last-child{page-break-after:auto;break-after:auto}
@@ -56,7 +56,7 @@ strong{font-weight:600}
   border-bottom:1px solid var(--rule);
 }
 .sheet__head .hm{font-size:8.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);font-weight:600}
-.sheet__body{flex:1;padding:9mm var(--pad) 3mm;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.sheet__body{flex:1;padding:9mm var(--pad) 6mm;display:flex;flex-direction:column;min-height:auto;overflow:visible}
 /* explicit spacer — auto margins are unreliable in print engines */
 .grow{flex:1 1 auto;min-height:6px}
 .sheet__foot{
@@ -301,14 +301,14 @@ strong{font-weight:600}
 .sheet--publications .sheet__body{padding:24px 24px 30px}
 .sheet--publications .sheet__foot{background:transparent;border-color:#ffffff24;color:#c4c1d6;height:60px}
 .sheet--publications .sheet__foot .pg{color:#fff}
-.pgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:1fr;
+.pgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto;
   background:rgba(19,32,74,.45);border:1px solid #ffffff12;border-radius:20px;padding:15px 17px 18px;
-  gap:13px;align-content:stretch;flex:1 1 auto;min-height:0}
+  gap:16px;align-content:start;flex:0 0 auto;min-height:auto}
 .pcard{border:1px solid var(--rule);border-radius:13px;overflow:hidden;background:#fff;color:#080642;padding:10px 10px 12px;box-shadow:0 3px 12px #1729570a;
-  display:flex;flex-direction:column;min-height:0;height:100%;
+  display:flex;flex-direction:column;min-height:auto;height:auto;
   break-inside:avoid;page-break-inside:avoid}
 .pcard .grow{display:none}
-.pcard__media{position:relative;width:100%;flex:0 0 368px;min-height:368px;height:368px;padding-top:0;border-radius:9px;
+.pcard__media{position:relative;width:100%;flex:0 0 240px;min-height:240px;height:240px;padding-top:0;border-radius:9px;
   background:#EDF0F6;overflow:hidden}
 .pcard__media > img{position:absolute;top:0;left:0;right:0;bottom:0;
   width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
@@ -324,23 +324,23 @@ strong{font-weight:600}
 .pcard__platform-icon{position:static;width:14px;height:14px;object-fit:contain;flex:none;display:block}
 .pcard__av{position:absolute;right:9px;bottom:9px;padding:3px 8px;border-radius:999px;
   background:var(--green);color:#fff;font-size:7.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
-.pcard__b{padding:10px 0 0;display:flex;flex-direction:column;gap:4px;flex:1;min-height:0;overflow:hidden}
+.pcard__b{padding:10px 0 0;display:flex;flex-direction:column;gap:7px;flex:1;min-height:auto;overflow:visible}
 .pcard__hd{display:flex;align-items:center;gap:9px;min-width:0}
 .pcard__ava{width:32px;height:32px;border-radius:50%;flex:none;position:relative;overflow:hidden;
   background:var(--navy-3);color:#fff;display:flex;align-items:center;justify-content:center;
   font-size:9px;font-weight:700;letter-spacing:.3px}
 .pcard__ava img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .pcard__nm{font-size:13px;font-weight:700;letter-spacing:-.1px;line-height:1.25;min-width:0;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;unicode-bidi:plaintext}
+  overflow-wrap:anywhere;white-space:normal;unicode-bidi:plaintext}
 .pcard__mt{font-size:10px;color:var(--muted);letter-spacing:.3px}
 .pcard__label{display:block;font-size:10px;font-weight:600;color:var(--muted);margin-bottom:2px}
 .pcard__copy{min-width:0}
 .pcard__cap{font-size:12px;line-height:1.45;color:var(--ink-2);unicode-bidi:plaintext;
-  display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden;max-height:87px}
+  display:block;overflow:visible;overflow-wrap:anywhere}
 .pcard__tg{font-size:10px;line-height:1.4;color:var(--blue);unicode-bidi:plaintext;
-  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;max-height:42px;word-break:break-word}
+  display:block;overflow:visible;overflow-wrap:anywhere}
 .pcard__tg .mn{color:var(--muted)}
-.pcard__url{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard__url{font-size:10px;white-space:normal;overflow-wrap:anywhere}
 .pcard__url a{color:var(--blue);text-decoration:underline;font-weight:600}
 .pcard__media--link{display:block;color:inherit;text-decoration:none;cursor:pointer}
 .pcard__media--link:hover img{opacity:.92}
@@ -392,6 +392,9 @@ strong{font-weight:600}
 @media print{
   body{background:#fff}
   .sheet{margin:0;box-shadow:none;border-radius:0}
+  .sheet:not(.cover):not(.divider):not(.close){display:block}
+  .sheet__body{display:block}
+  .sheet__foot{break-inside:avoid;page-break-inside:avoid}
 }
 
 @media screen {
