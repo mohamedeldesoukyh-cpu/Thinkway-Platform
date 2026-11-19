@@ -1,3 +1,4 @@
+import { revealClientReviewShareLink } from '@/features/client-workspace/persist-client-review';
 import { collabAnalysis } from './collab-analysis';
 import { attributeCollabPublications, publicationCollabLabel, notesHaveCollabMarker, uniqueCollabPublications } from "@/lib/campaigns/publication-content-url";
 import { loadIdentityLogoForClientId } from "@/features/client-workspace/identity-logo";
@@ -21,7 +22,7 @@ import { resolvePublicationRowCreatorAvatar } from "@/lib/performance/creator-av
 import { createPublicationMediaSignedUrl } from "@/lib/performance/screenshot-capture/storage";
 import { embedCampaignPublicationPreview, embedReportCreatorAvatar } from "@/lib/performance/report/embed-publication-previews";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
-import { buildQrCodeDataUri, buildQrCodeImageUrl } from "@/lib/performance/report/qr-code";
+import { buildQrCodeDataUri } from "@/lib/performance/report/qr-code";
 import type {
   CampaignHighlights,
   InfluencerReportSection,
@@ -524,10 +525,11 @@ export async function loadPerformanceReportDocumentData(
   const brandLogoUrl = resolveBrandLogo(brandMetadata);
   const identityLogo = await loadIdentityLogoForClientId(supabase, typed.client_id);
   const clientLogoDataUri = identityLogo?.url ? await embedReportImageDataUri(identityLogo.url) : null;
-  const dashboardUrl = `${appUrl.replace(/\/$/, "")}/campaigns/${typed.id}`;
-  const qrCodeImageUrl =
-    (await buildQrCodeDataUri(dashboardUrl, 160)) ??
-    (await embedReportImageDataUri(buildQrCodeImageUrl(dashboardUrl, 160)));
+  const clientWorkspace = await revealClientReviewShareLink({
+    supabase, origin: appUrl, scope: { source: 'campaign', campaignHeaderId: typed.id }, readOnly: true,
+  });
+  const dashboardUrl = clientWorkspace.ok ? clientWorkspace.url : '';
+  const qrCodeImageUrl = dashboardUrl ? await buildQrCodeDataUri(dashboardUrl, 320) : null;
   const platformBenchmarks = buildPlatformBenchmarks(bundle);
   const highlights = buildHighlights(bundle);
   const recommendations = buildRecommendations(bundle, platformBenchmarks);

@@ -11,7 +11,7 @@ import type { PerformanceReportDocumentData } from "@/lib/performance/report/per
 import {
   getReportPlatformIconTitle,
 } from "@/lib/performance/report/report-platform-icons";
-import { buildQrCodeImageUrl } from "@/lib/performance/report/qr-code";
+
 import { partitionPublicationsByValueScope, resolvePublicationValueScope, addedValueCreatorPercent } from "@/lib/performance/publication-value-scope";
 import {
   CARDS_PER_PAGE,
@@ -98,7 +98,7 @@ function renderCover(data: PerformanceReportDocumentData): string {
   }.`;
 
   const qrUrl =
-    campaign.qrCodeImageUrl?.trim() || buildQrCodeImageUrl(campaign.dashboardUrl, 160);
+    campaign.qrCodeImageUrl?.trim() || null;
 
   return `<section class="sheet cover">
   <div class="cover__in">
@@ -127,7 +127,7 @@ function renderCover(data: PerformanceReportDocumentData): string {
       </div>
       ${
         qrUrl
-          ? `<div class="cover__qr"><div class="qb"><img src="${esc(qrUrl)}" alt="QR code to live dashboard"/></div><div class="ql">Live dashboard</div></div>`
+          ? `<div class="cover__qr"><div class="qb"><img src="${esc(qrUrl)}" alt="QR code to client campaign workspace"/></div><div class="ql">Client dashboard</div></div>`
           : ""
       }
     </div>

@@ -764,6 +764,8 @@ export async function revealClientReviewShareLink(input: {
   supabase: SupabaseClient;
   origin: string;
   scope: ReviewScope;
+  /** Read an existing address, including stopped links, without minting tokens. */
+  readOnly?: boolean;
 }): Promise<
   | { ok: true; url: string; reviewId: string; reviewNumber: number; created: boolean }
   | { ok: false; message: string }
@@ -793,7 +795,7 @@ export async function revealClientReviewShareLink(input: {
   } | null;
   const origin = input.origin.replace(/\/$/, "");
 
-  if (row && row.status !== "revoked") {
+  if (row && (row.status !== "revoked" || input.readOnly)) {
     const share = await shareFromJourneyOrReview(
       db,
       origin,
@@ -810,6 +812,7 @@ export async function revealClientReviewShareLink(input: {
       };
     }
 
+    if (input.readOnly) return { ok: false, message: CLIENT_REVIEW_LINK_MISSING_MESSAGE };
     const token = randomBytes(16).toString("hex");
     const tokenHash = hashClientReviewToken(token);
     const { error } = await db

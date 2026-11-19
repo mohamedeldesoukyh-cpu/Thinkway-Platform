@@ -18,7 +18,7 @@ export async function buildQrCodeDataUri(
   try {
     return await QRCode.toDataURL(trimmed, {
       errorCorrectionLevel: "M",
-      margin: 1,
+      margin: 4,
       width: size,
       color: {
         dark: "#020B26",
