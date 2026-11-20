@@ -1601,7 +1601,7 @@ export function CreatorDetailSheet({
                 platforms={platforms}
                 enrichmentStatus={enrichmentStatus}
                 onEditContact={() => setEditContactOpen(true)}
-                onEnrichmentStatusChange={setEnrichmentStatus}
+                onEnrichmentStatusChange={(status) => { if (sameCreatorIdentity(activeIdentityRef.current, identityCreator)) setEnrichmentStatus(status); }}
                 onCreatorUpdated={handleCreatorUpdated}
               />
             </TabsContent>
@@ -1815,7 +1815,7 @@ export function CreatorDetailSheet({
           variant="outline"
           className="tw-b sm tw-cp__pack-refresh"
           label="Refresh"
-          onStatusChange={setEnrichmentStatus}
+          onStatusChange={(status) => { if (sameCreatorIdentity(activeIdentityRef.current, identityCreator)) setEnrichmentStatus(status); }}
           onCreatorUpdated={handleCreatorUpdated}
         />
       ) : (
@@ -1959,7 +1959,7 @@ export function CreatorDetailSheet({
                 onShowPublications={() => setActiveTab("publications")}
                 onEditContact={() => setEditContactOpen(true)}
                 onEditAveragePrice={() => setEditAveragePriceOpen(true)}
-                onEnrichmentStatusChange={setEnrichmentStatus}
+                onEnrichmentStatusChange={(status) => { if (sameCreatorIdentity(activeIdentityRef.current, identityCreator)) setEnrichmentStatus(status); }}
                   onCreatorUpdated={handleCreatorUpdated}
                 />
               )
@@ -2047,7 +2047,7 @@ export function CreatorDetailSheet({
                     size="sm"
                     variant="outline"
                     className="creator-detail-sheet-action-btn"
-                    onStatusChange={setEnrichmentStatus}
+                    onStatusChange={(status) => { if (sameCreatorIdentity(activeIdentityRef.current, identityCreator)) setEnrichmentStatus(status); }}
                     onCreatorUpdated={handleCreatorUpdated}
                   />
                 ) : (
