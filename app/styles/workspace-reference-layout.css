@@ -2,7 +2,7 @@
 .wr-ops-action-reference { display:none; }
 .workspace-redesign .wr-metrics-private { flex:4 1 460px; }
 .wr-hub-extra > summary { cursor:pointer; font-size:10.5px; color:#8490a3; padding-top:8px; }
-.workspace-redesign .campaign-detail-suite .wr-reference-hub .thinkway-aurora-ops-card-head .thinkway-campaign-btn { color:#3e4659 !important; border:1px solid #dce3ee !important; box-shadow:none !important; }
+.workspace-redesign .campaign-detail-suite .wr-reference-hub .thinkway-aurora-ops-card-head .thinkway-campaign-btn { color:var(--wr-ink, #3e4659) !important; border:1px solid #dce3ee !important; box-shadow:none !important; }
 .workspace-redesign .campaign-detail-suite .wr-reference-hub .thinkway-aurora-ops-card-head .thinkway-aurora-pill { box-shadow:none !important; }
 .workspace-redesign .campaign-detail-suite .wr-reference-hub .thinkway-aurora-ops-card-body > ul { max-height:174px; overflow-y:auto; }
 .workspace-redesign .campaign-detail-suite .thinkway-aurora-command { display:flex; flex-direction:column; gap:11px; }
@@ -15,7 +15,7 @@
 .workspace-redesign .campaign-detail-suite .wr-reference-hub .thinkway-aurora-ops-card-head .thinkway-aurora-pill { border:0 !important; background:#eef3ff; color:#0057ff; font-size:10px; height:auto; min-height:21px; padding:3px 8px; white-space:normal; max-width:110px; line-height:1.25; }
 .workspace-redesign .campaign-detail-suite .wr-reference-hub .thinkway-aurora-pill::before { content:""; width:5px; height:5px; background:currentColor; border-radius:50%; flex-shrink:0; }
 .workspace-redesign .campaign-detail-suite .wr-reference-hub .thinkway-aurora-pill-green { background:#e7f8f2 !important; color:#168f75 !important; }
-.workspace-redesign .campaign-detail-suite .wr-reference-hub .thinkway-aurora-pill-amber { background:#fff3dd !important; color:#8d6216 !important; }
+.workspace-redesign .campaign-detail-suite .wr-reference-hub .thinkway-aurora-pill-amber { background:var(--wr-warning-bg, #fff3dd) !important; color:#8d6216 !important; }
 .workspace-redesign .campaign-detail-suite .wr-reference-hub .thinkway-aurora-ops-stat { border-top:0 !important; border-bottom-style:dashed !important; font-size:12px; min-height:37px; }
 .workspace-redesign .campaign-detail-suite .wr-reference-hub .thinkway-aurora-ops-stat-k { color:#8490a3; }
 .workspace-redesign .campaign-detail-suite .wr-reference-hub .thinkway-aurora-ops-stat-v { font-family:var(--font-geist-mono),Consolas,monospace; font-size:12px; overflow-wrap:anywhere; }
@@ -25,7 +25,7 @@
 .workspace-redesign .campaign-detail-suite .wr-reference-hub .thinkway-aurora-tl-mini .truncate { white-space:normal; overflow-wrap:anywhere; font-weight:400; color:#8490a3; }
 .workspace-redesign .campaign-detail-suite .wr-reference-hub .thinkway-aurora-tl-mini .truncate + div { display:none; }
 .workspace-redesign .campaign-detail-suite .wr-overview-info-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:11px; }
-.wr-overview-info { min-width:0; border:1px solid #e7ecf4; border-radius:13px; background:#fff; overflow:hidden; box-shadow:0 1px 2px rgb(17 24 39 / 5%); }
+.wr-overview-info { min-width:0; border:1px solid #e7ecf4; border-radius:13px; background:var(--wr-surface, #fff); overflow:hidden; box-shadow:0 1px 2px rgb(17 24 39 / 5%); }
 .wr-overview-info h2 { margin:0; padding:11px 14px; font-size:12.5px; font-weight:700; background:#f3f5fc; border-bottom:1px solid #e7ecf4; }
 .wr-overview-info-body { padding:4px 14px 12px; }
 .wr-overview-info dl > div { display:flex; justify-content:space-between; align-items:baseline; gap:12px; border-bottom:1px solid #e7ecf4; padding:8px 0; }
@@ -34,8 +34,8 @@
 .wr-overview-info small { display:block; color:#8490a3; font-size:10px; }
 .wr-overview-info-actions { display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; font-size:12px; }
 .wr-overview-info-actions p { width:100%; color:#8490a3; }
-.wr-overview-info-actions button { border:1px solid #dce3ee; border-radius:6px; background:#fff; color:#3e4659; padding:7px 10px; font-size:11px; }
-.wr-overview-additional > summary { cursor:pointer; padding:11px 14px; border:1px solid #e7ecf4; border-radius:10px; background:#fff; font-size:12px; color:#64748b; }
+.wr-overview-info-actions button { border:1px solid #dce3ee; border-radius:6px; background:var(--wr-surface, #fff); color:var(--wr-ink, #3e4659); padding:7px 10px; font-size:11px; }
+.wr-overview-additional > summary { cursor:pointer; padding:11px 14px; border:1px solid #e7ecf4; border-radius:10px; background:var(--wr-surface, #fff); font-size:12px; color:var(--wr-muted, #64748b); }
 @media(max-width:1200px) { .workspace-redesign .campaign-detail-suite .wr-reference-hub { grid-template-columns:repeat(2,minmax(0,1fr)) !important; } }
 @media(max-width:800px) { .workspace-redesign .campaign-detail-suite .wr-overview-info-grid { grid-template-columns:1fr; } }
 @media(max-width:600px) { .workspace-redesign .campaign-detail-suite .wr-reference-hub { grid-template-columns:1fr !important; } }
@@ -46,14 +46,14 @@
 .workspace-redesign .campaign-detail-suite .tw-mast .tw-mr { padding: 0 16px 11px !important; gap: 7px; }
 .workspace-redesign .campaign-detail-suite .tw-step2.enterprise-tabs { border-radius: 13px !important; }
 .workspace-redesign .campaign-detail-suite .thinkway-aurora-ops-grid { gap: 11px !important; align-items: start; }
-.workspace-redesign .campaign-detail-suite.thinkway-campaign-workspace .thinkway-aurora-ops-card-head { background: #fff !important; padding: 11px 14px !important; }
+.workspace-redesign .campaign-detail-suite.thinkway-campaign-workspace .thinkway-aurora-ops-card-head { background: var(--wr-surface, #fff) !important; padding: 11px 14px !important; }
 .workspace-redesign .campaign-detail-suite .thinkway-aurora-ops-card { box-shadow: 0 1px 2px rgb(17 24 39 / 5%) !important; border-radius: 13px !important; }
 .workspace-redesign .campaign-detail-suite .thinkway-aurora-ops-stat { border-bottom: 1px solid #e7ecf4 !important; padding: 7px 0 !important; }
 .workspace-redesign .campaign-detail-suite .thinkway-aurora-ops-card-body { padding: 4px 14px 12px !important; }
 
 /* A toolbar has one padding owner, even where the existing table has nested wrappers. */
 .workspace-redesign .campaign-detail-suite :is(.thinkway-campaign-section-head,.thinkway-campaign-asgn-head-bar):has(.thinkway-aurora-tbar) { padding: 0 !important; border-bottom: 0 !important; }
-.workspace-redesign .campaign-detail-suite .thinkway-aurora-tbar { padding: 10px 14px !important; background: #fff !important; border-bottom: 1px solid #e7ecf4; }
+.workspace-redesign .campaign-detail-suite .thinkway-aurora-tbar { padding: 10px 14px !important; background: var(--wr-surface, #fff) !important; border-bottom: 1px solid #e7ecf4; }
 .workspace-redesign .campaign-detail-suite .thinkway-aurora-tbar .thinkway-aurora-ws-tools { padding: 0 !important; min-height: 0 !important; gap: 7px; }
 .workspace-redesign .campaign-detail-suite .thinkway-aurora-ws-register-label { padding: 7px 14px !important; font-size: 8.5px !important; }
 .workspace-redesign .campaign-detail-suite .thinkway-aurora-ws-head { min-height: 0; padding: 10px 14px !important; }
@@ -68,7 +68,7 @@
 .workspace-redesign .wr-body-kpi-band { font-size: 8.5px; padding: 7px 14px; }
 
 /* Dense registers keep their original columns and one horizontal scrolling surface. */
-.workspace-redesign .campaign-detail-suite :is(.thinkway-campaign-asgn-table,.thinkway-campaign-asgn-table-root,.thinkway-campaign-perf-grid-shell) { font-size: 12.5px !important; background: #fff; }
+.workspace-redesign .campaign-detail-suite :is(.thinkway-campaign-asgn-table,.thinkway-campaign-asgn-table-root,.thinkway-campaign-perf-grid-shell) { font-size: 12.5px !important; background: var(--wr-surface, #fff); }
 .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent { padding-block: 0 !important; min-height: 44px !important; }
 .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [role="gridcell"] { padding: 9px 12px !important; min-height: 44px; font-size: 12.5px !important; line-height: 1.5; }
 .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [role="gridcell"] :is(p,button) { line-height: 1.5; }
@@ -85,12 +85,12 @@
 /* Inline commercial split: same inputs and callbacks, reference heading/FX geometry. */
 .workspace-redesign .assignment-commercial-pane .acp-side-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; padding-bottom: 9px; margin-bottom: 11px; border-bottom: 1px solid rgb(17 24 39 / 8%); min-height: 38px; }
 .workspace-redesign .assignment-commercial-pane .acp-side-heading h3 { margin: 0 !important; padding: 0 !important; border: 0 !important; font-size: 12px; }
-.workspace-redesign .assignment-commercial-pane .acp-rate { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-inline-start: auto; font-size: 11px; color: #3e4659; }
-.workspace-redesign .assignment-commercial-pane .acp-rate input { width: 96px; min-height: 28px; padding: 4px 7px; border: 1px solid #d8e0ee; background: #fff; color: #3e4659; border-radius: 7px; font: 500 12px var(--font-geist-mono),Consolas,monospace; }
-.workspace-redesign .assignment-commercial-pane .acp-rate input:disabled { background: #f3f6fb; color: #64748b; }
+.workspace-redesign .assignment-commercial-pane .acp-rate { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-inline-start: auto; font-size: 11px; color: var(--wr-ink, #3e4659); }
+.workspace-redesign .assignment-commercial-pane .acp-rate input { width: 96px; min-height: 28px; padding: 4px 7px; border: 1px solid #d8e0ee; background: var(--wr-surface, #fff); color: var(--wr-ink, #3e4659); border-radius: 7px; font: 500 12px var(--font-geist-mono),Consolas,monospace; }
+.workspace-redesign .assignment-commercial-pane .acp-rate input:disabled { background: var(--wr-soft, #f3f6fb); color: var(--wr-muted, #64748b); }
 .workspace-redesign .assignment-commercial-pane .acp-rate input:focus-visible { outline: 2px solid #0057ff; outline-offset: 1px; }
 .workspace-redesign .assignment-commercial-pane .acp-fx-fields { grid-template-columns: repeat(2,minmax(0,1fr)); margin-bottom: 10px; }
-.workspace-redesign .assignment-commercial-pane .acp-lock-notice { margin: 0; padding: 8px 14px; border-bottom: 1px solid #e7ecf4; background: #fff6e8; color: #8a5d12; font-size: 11.5px; }
+.workspace-redesign .assignment-commercial-pane .acp-lock-notice { margin: 0; padding: 8px 14px; border-bottom: 1px solid #e7ecf4; background: var(--wr-warning-bg, #fff6e8); color: #8a5d12; font-size: 11.5px; }
 .workspace-redesign .assignment-commercial-pane .acp-field { font-size: 8.5px; letter-spacing: .5px; }
 .workspace-redesign .assignment-commercial-pane .acp-fields input { min-height: 32px; }
 .workspace-redesign .assignment-commercial-pane .acp-footer > div { max-width: 68ch; margin-inline-end: auto; }
@@ -109,20 +109,20 @@ body:has(.workspace-redesign) .wr-assignment-form .wr-detail-form-body { display
 body:has(.workspace-redesign) .wr-assignment-form .wr-assignment-scope { gap: 11px; }
 body:has(.workspace-redesign) .wr-assignment-form .wr-assignment-scope > .grid { gap: 11px; }
 body:has(.workspace-redesign) .wr-assignment-form :is(.wr-assignment-cost,.wr-assignment-revenue) { gap: 11px; padding: 13px 14px; }
-body:has(.workspace-redesign) .wr-assignment-po [data-slot="card"] { gap: 0; padding: 0; background: #fff; border: 1px solid #e7ecf4; border-radius: 10px; box-shadow: none; }
+body:has(.workspace-redesign) .wr-assignment-po [data-slot="card"] { gap: 0; padding: 0; background: var(--wr-surface, #fff); border: 1px solid #e7ecf4; border-radius: 10px; box-shadow: none; }
 body:has(.workspace-redesign) .wr-assignment-po [data-slot="card-header"] { padding: 11px 14px; border-bottom: 1px solid #e7ecf4; }
 body:has(.workspace-redesign) .wr-assignment-po [data-slot="card-content"] { padding: 11px 14px; }
 body:has(.workspace-redesign) .wr-assignment-po [data-slot="card-content"] > .grid { grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 8px 11px; }
 body:has(.workspace-redesign) .wr-assignment-form :is(input,[data-slot="select-trigger"]) { min-height: 34px; border-radius: 7px; font-size: 12.5px; }
-body:has(.workspace-redesign) .wr-assignment-form :is(label,.wr-detail-form-section > p:first-child) { font-size: 8.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: #64748b; }
+body:has(.workspace-redesign) .wr-assignment-form :is(label,.wr-detail-form-section > p:first-child) { font-size: 8.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--wr-muted, #64748b); }
 body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-footer { padding: 10px 16px; }
-body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-slot="tabs-list"] { background: #fff; border: 0; padding: 0; gap: 2px; border-radius: 0; }
+body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-slot="tabs-list"] { background: var(--wr-surface, #fff); border: 0; padding: 0; gap: 2px; border-radius: 0; }
 body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state="active"] { background: #eff4ff; box-shadow: none; }
 
-.workspace-redesign .wr-audit-register { background: #fff; border: 1px solid #e7ecf4; border-top: 0; border-radius: 0 0 13px 13px; overflow: hidden; }
+.workspace-redesign .wr-audit-register { background: var(--wr-surface, #fff); border: 1px solid #e7ecf4; border-top: 0; border-radius: 0 0 13px 13px; overflow: hidden; }
 .workspace-redesign .wr-audit-register > header { display: flex; align-items: baseline; flex-wrap: wrap; gap: 9px; padding: 10px 14px; border-bottom: 1px solid #e7ecf4; }
 .workspace-redesign .wr-audit-register h3 { margin: 0; font-size: 12.5px; font-weight: 700; }
-.workspace-redesign .wr-audit-register header span { font-size: 11.5px; color: #64748b; }
+.workspace-redesign .wr-audit-register header span { font-size: 11.5px; color: var(--wr-muted, #64748b); }
 .workspace-redesign .wr-audit-scroll { overflow-x: auto; }
 .workspace-redesign .wr-audit-register table { width: 100%; min-width: 1060px; border-collapse: collapse; table-layout: fixed; }
 .workspace-redesign .wr-audit-register th { text-align: start; }
@@ -130,20 +130,20 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
 .workspace-redesign .wr-audit-register td button { color: #0b52e0; text-align: start; background: none; border: 0; padding: 0; font-weight: 600; }
 .workspace-redesign .wr-audit-register tbody tr:hover { background: #fbfcfe; }
 .workspace-redesign .wr-audit-register .wr-audit-time { font: 500 11px var(--font-geist-mono),Consolas,monospace; }
-.workspace-redesign .wr-timeline-milestones { border: 1px solid #e7ecf4; border-radius: 10px; background: #fff; }
+.workspace-redesign .wr-timeline-milestones { border: 1px solid #e7ecf4; border-radius: 10px; background: var(--wr-surface, #fff); }
 .workspace-redesign .wr-timeline-milestones > summary { padding: 10px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
 
 .workspace-redesign .wr-vio-reference-register table tbody tr { height: 48px; }
 .workspace-redesign .wr-vio-reference-register table td.wr-vio-reference-cell { padding: 9px 12px !important; vertical-align: middle; white-space: normal; overflow-wrap: break-word; }
 .workspace-redesign .wr-vio-reference-register .thinkway-campaign-cr-cell { gap: 8px; }
 .workspace-redesign .wr-vio-reference-register .thinkway-campaign-cr-name { font-size: 12.5px !important; }
-.workspace-redesign .wr-vio-reference-register .wr-eligibility { font-size: 11.5px; color: #64748b; line-height: 1.4; }
+.workspace-redesign .wr-vio-reference-register .wr-eligibility { font-size: 11.5px; color: var(--wr-muted, #64748b); line-height: 1.4; }
 .workspace-redesign .wr-vio-reference-register .wr-eligibility--blocked { color: #c03636; }
 .wr-vio-reference-actions { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
 .wr-vio-reference-actions > button { min-height: 30px; height: 30px; font-size: 11.5px; }
 .wr-deliverable-reference-actions { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-.workspace-redesign .wr-deliverable-filters > summary { padding: 8px 14px; font-size: 11.5px; color: #64748b; cursor: pointer; }
-.workspace-redesign .wr-vio-readiness-details > summary { padding: 7px 14px; font-size: 11.5px; color: #64748b; cursor: pointer; }
+.workspace-redesign .wr-deliverable-filters > summary { padding: 8px 14px; font-size: 11.5px; color: var(--wr-muted, #64748b); cursor: pointer; }
+.workspace-redesign .wr-vio-readiness-details > summary { padding: 7px 14px; font-size: 11.5px; color: var(--wr-muted, #64748b); cursor: pointer; }
 
 /* The full header keeps its height and scrolls in the same surface as the work.
    A zero-height sticky anchor owns only the separate 71px visual summary. */
@@ -224,7 +224,7 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st b { text-align: start; font-size: 12px; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__r { flex: 0 0 auto; overflow: visible; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__b { overflow: visible; }
-  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__h { position: sticky; top: 0; z-index: 2; background: #fff; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__h { position: sticky; top: 0; z-index: 2; background: var(--wr-surface, #fff); }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__h .tw-cdt { flex-wrap: nowrap; overflow-x: auto; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-dr__x { flex-shrink: 0; min-width: 40px; min-height: 40px; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-dl { gap: 10px; padding: 10px 12px; }
@@ -263,18 +263,18 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
 /* Mobile details use a visible close bar and a flat, readable metric table. */
 .assignment-detail-mobile-bar { display: none; }
 @media (max-width: 860px) {
-  body:has(.workspace-redesign) .campaign-detail-creator-modal .assignment-detail-mobile-bar { display:flex; flex:0 0 auto; align-items:center; justify-content:space-between; position:fixed; top:8px; left:8px; right:8px; z-index:10; border-radius:18px 18px 0 0; padding:6px 12px; background:#fff; color:#1e293b; border-bottom:1px solid #e2e8f0; font-size:13px; font-weight:600; }
-  .assignment-detail-mobile-bar button { min-height:44px; padding:8px 12px; color:#0057ff; border:1px solid #dbe4f0; border-radius:8px; background:#fff; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .assignment-detail-mobile-bar { display:flex; flex:0 0 auto; align-items:center; justify-content:space-between; position:fixed; top:8px; left:8px; right:8px; z-index:10; border-radius:18px 18px 0 0; padding:6px 12px; background:var(--wr-surface, #fff); color:var(--wr-ink, #1e293b); border-bottom:1px solid #e2e8f0; font-size:13px; font-weight:600; }
+  .assignment-detail-mobile-bar button { min-height:44px; padding:8px 12px; color:#0057ff; border:1px solid #dbe4f0; border-radius:8px; background:var(--wr-surface, #fff); }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__h { top:57px; }
-  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st { background:#f8fafc; border:1px solid #e2e8f0; border-radius:0; gap:0; margin:12px -14px -14px; position:relative; z-index:1; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st { background:var(--wr-soft, #f8fafc); border:1px solid #e2e8f0; border-radius:0; gap:0; margin:12px -14px -14px; position:relative; z-index:1; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st > div { background:transparent; border-bottom:1px solid #e2e8f0; border-right:1px solid #e2e8f0; padding:10px 14px; align-items:flex-start; }
-  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st i { color:#64748b; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st i { color:var(--wr-muted, #64748b); }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st b { color:#334155; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st > div:first-child b { color:#0057ff; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st b.g { color:#008568; }
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent { display:grid !important; grid-template-columns:minmax(0,1fr) !important; position:relative; }
-  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [role="gridcell"][data-assignment-col] { grid-column:1 / -1; flex-basis:auto !important; width:100% !important; display:flex; flex-direction:row !important; align-items:center !important; justify-content:space-between !important; gap:12px; text-align:right !important; border-bottom:1px solid #e2e8f0; background:#fff; }
-  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [role="gridcell"][data-assignment-col]::before { flex:0 0 90px; margin:0; text-align:left; color:#64748b; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [role="gridcell"][data-assignment-col] { grid-column:1 / -1; flex-basis:auto !important; width:100% !important; display:flex; flex-direction:row !important; align-items:center !important; justify-content:space-between !important; gap:12px; text-align:right !important; border-bottom:1px solid #e2e8f0; background:var(--wr-surface, #fff); }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [role="gridcell"][data-assignment-col]::before { flex:0 0 90px; margin:0; text-align:left; color:var(--wr-muted, #64748b); }
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="select"] { position:absolute; top:3px; right:0; width:40px; padding:6px !important; border:0 !important; background:transparent !important; }
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="assignment"] { padding-right:44px !important; }
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="creator"] { justify-content:flex-start; }

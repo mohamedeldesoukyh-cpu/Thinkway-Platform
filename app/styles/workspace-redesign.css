@@ -107,7 +107,7 @@
 }
 .workspace-redesign .tw-mast :is(.tw-b.pri, [data-variant="default"]),
 .workspace-redesign .wr-context-actions [data-variant="default"] {
-  color: var(--wr-blue-ink); background: #fff; border-color: #fff;
+  color: var(--wr-blue-ink); background: var(--wr-surface, #fff); border-color: #fff;
 }
 .workspace-redesign .campaign-detail-suite .tw-mast .tw-mr { padding: 9px 16px 11px; flex-wrap: wrap; background: transparent; border-color: rgb(255 255 255 / 18%); }
 .workspace-redesign .tw-mast .tw-ms2,
@@ -143,7 +143,7 @@
 .workspace-redesign .tw-billing-v3.billing-related .group-summary-header .related-summary-strip {
   background: transparent; border: 0; border-radius: 0; margin: 0;
 }
-.workspace-redesign .tw-billing-v3.billing-related .thinkway-campaign-section-head { background: #fff; border-color: var(--wr-hair); }
+.workspace-redesign .tw-billing-v3.billing-related .thinkway-campaign-section-head { background: var(--wr-surface, #fff); border-color: var(--wr-hair); }
 .workspace-redesign .tw-billing-v3.billing-related [data-sticky="operational-workspace-tabs"] .enterprise-tab {
   min-height: 52px; height: auto; padding: 22px 12px 10px;
   background: transparent; border: 0; border-radius: 0; box-shadow: none;
@@ -161,13 +161,13 @@
   padding: 8px 16px; gap: 10px; flex-wrap: wrap;
 }
 .workspace-redesign .campaign-detail-suite .tw-mb :is(.lb, .msg, .sub) { color: inherit; }
-.workspace-redesign .campaign-detail-suite .tw-mb .go { color: var(--wr-blue-ink); background: #fff; border-color: #fff; white-space: normal; height: auto; min-height: 30px; }
+.workspace-redesign .campaign-detail-suite .tw-mb .go { color: var(--wr-blue-ink); background: var(--wr-surface, #fff); border-color: #fff; white-space: normal; height: auto; min-height: 30px; }
 
 /* Connected rail: use the existing Radix/drag handlers and selected state. */
 .workspace-redesign [data-sticky="operational-workspace-tabs"],
 .workspace-redesign .client-detail-suite .tw-step2,
 .workspace-redesign .campaign-detail-suite .tw-step2 {
-  background: #fff; border: 1px solid var(--wr-hair);
+  background: var(--wr-surface, #fff); border: 1px solid var(--wr-hair);
   border-radius: 13px; box-shadow: var(--wr-shadow);
   padding: 12px 4px 2px; margin-bottom: 11px;
 }
@@ -190,7 +190,7 @@
 .workspace-redesign .client-detail-suite .tw-step2 .tw-sb::after {
   content: ""; position: absolute; top: 0; left: calc(50% - 5px);
   width: 11px; height: 11px; border-radius: 50%;
-  background: #fff; border: 2px solid var(--wr-hair); pointer-events: none;
+  background: var(--wr-surface, #fff); border: 2px solid var(--wr-hair); pointer-events: none;
 }
 .workspace-redesign :is(.tw-step2, [data-sticky="operational-workspace-tabs"]) .enterprise-tab[data-state="active"],
 .workspace-redesign .client-detail-suite .tw-step2 .tw-sb[aria-pressed="true"] { color: var(--wr-blue-ink); }
@@ -205,13 +205,13 @@
 
 /* Tables/cards reuse the current configurable columns, selection and sorting. */
 .workspace-redesign :is(.tw-c, .thinkway-campaign-section-card, .thinkway-campaign-info-card, .thinkway-aurora-ops-card, [data-slot="table-container"]) {
-  background: #fff; border: 1px solid var(--wr-hair);
+  background: var(--wr-surface, #fff); border: 1px solid var(--wr-hair);
   border-radius: var(--wr-radius); box-shadow: var(--wr-shadow);
   min-width: 0;
 }
 .workspace-redesign :is(.tw-ch, .thinkway-campaign-section-head, .thinkway-aurora-ops-card-head) {
   padding: 10px 14px; gap: 9px; border-bottom: 1px solid var(--wr-hair);
-  background: #fff; flex-wrap: wrap;
+  background: var(--wr-surface, #fff); flex-wrap: wrap;
 }
 .workspace-redesign :is(.tw-ct, .thinkway-campaign-section-head h2, .thinkway-aurora-ops-card-title) { font-size: 12.5px; font-weight: 700; }
 .workspace-redesign :is(.thinkway-campaign-section-body, .thinkway-aurora-ops-card-body) { padding: 12px 14px; }
@@ -259,7 +259,7 @@ body:has(.workspace-redesign) :is([data-slot="dialog-content"], [data-slot="shee
   --popover: #fff; --popover-foreground: #111827; --foreground: #111827;
   --muted-foreground: #64748b; --border: #e7ecf4; --input: #d8e0ee;
   --background: #fff; --card: #fff; --primary: #0057ff; --primary-foreground: #fff;
-  color: #111827; background: #fff; font-size: 12.5px;
+  color: var(--wr-ink, #111827); background: var(--wr-surface, #fff); font-size: 12.5px;
   border-color: #e7ecf4; box-shadow: 0 18px 44px -16px rgb(17 24 39 / 34%);
   overflow-wrap: anywhere;
 }
@@ -294,7 +294,7 @@ body:has(.workspace-redesign) :is([data-slot="dialog-footer"], [data-slot="sheet
   .workspace-redesign .wr-responsive-table tbody { display: grid; gap: 11px; padding: 11px; background: var(--wr-bg); }
   .workspace-redesign .wr-responsive-table tbody tr {
     display: block; min-width: 0; padding: 5px 12px;
-    background: #fff; border: 1px solid var(--wr-hair); border-radius: 13px;
+    background: var(--wr-surface, #fff); border: 1px solid var(--wr-hair); border-radius: 13px;
   }
   .workspace-redesign .wr-responsive-table [data-label] {
     display: grid; grid-template-columns: minmax(84px, .7fr) minmax(0, 1.3fr);
