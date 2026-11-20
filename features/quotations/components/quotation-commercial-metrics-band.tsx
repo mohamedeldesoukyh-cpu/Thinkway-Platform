@@ -47,17 +47,9 @@ function MetricItem({ label, value, unit, tone, compact, original, staged, inter
     tone === "green" ? "g" : tone === "red" ? "r" : tone === "amber" ? "y" : compact ? "s" : undefined;
   return (
     <div className={`q-m ${internal ? "q-m--priv" : ""}`}>
-      <u>
-        {staged ? (
-          <span className="inline-flex items-center gap-1.5">
-            <span className="tw-dot warn" aria-hidden style={{ width: 8, height: 8, margin: 0 }} />
-            <QuotationText>{label}</QuotationText>
-            <span className="tw-p p-y" style={{ fontSize: 9, padding: "1px 5px" }}>
-              <QuotationText>Draft</QuotationText></span>
-          </span>
-        ) : (
-          <QuotationText>{label}</QuotationText>
-        )}
+      <u className="q-m-label" data-staged={staged || undefined} title={staged ? "Unsaved pricing changes" : undefined}>
+        <QuotationText>{label}</QuotationText>
+        {staged && <span className="sr-only"> — <QuotationText>Draft</QuotationText></span>}
       </u>
       <b className={value === "0" ? "z" : toneClass}>
         {unit ? <span className="cur">{unit}</span> : null}{value}
@@ -159,27 +151,12 @@ export function QuotationCommercialMetricsBand({
   return (
     <div className={embedded ? undefined : "discovery-suite px-4 pt-1"}>
     {hasDraftEdits ? (
-      <p className="tw-note wrn mx-3.5 mb-2" role="status">
-        <b><QuotationText>Unsaved pricing changes</QuotationText></b>{" — "}
-        <QuotationText>The figures shown include your unsaved edits.</QuotationText>{" "}
-        {stagedVsSavedDisagree && savedClient ? (
-          <>
-            <QuotationText>Total investment including agency fees:</QuotationText>{" "}
-            <QuotationText>saved</QuotationText>{" "}<b>{savedClient.value} {savedClient.unit}</b>
-            {"; "}<QuotationText>after edits</QuotationText>{" "}<b>{client.value} {client.unit}</b>.{" "}
-          </>
-        ) : null}
-        <QuotationText>Save to keep these edits, or Discard changes to restore the saved pricing.</QuotationText>
-        {onOpenCommercialWorkspace ? (
-          <>
-            {" "}
-            <button type="button" className="tw-b sm" onClick={onOpenCommercialWorkspace}>
-              <QuotationText>Open Commercial Workspace</QuotationText>
-            </button>
-          </>
-        ) : null}
-      </p>
-    ) : null}
+      <p className="q-draft-notice" role="status">
+        <span className="q-draft-notice__text"><b><QuotationText>Unsaved pricing changes</QuotationText></b></span>
+        {stagedVsSavedDisagree && savedClient ? <span className="q-draft-notice__totals"><QuotationText>saved</QuotationText> {savedClient.value} {savedClient.unit} → {client.value} {client.unit}</span> : null}
+        <span className="sr-only"><QuotationText>Save to keep these edits, or Discard changes to restore the saved pricing.</QuotationText></span>
+        {onOpenCommercialWorkspace ? <button type="button" onClick={onOpenCommercialWorkspace}><QuotationText>Open Commercial Workspace</QuotationText></button> : null}
+      </p>    ) : null}
     <div className="q-fin" aria-label="Quotation commercial metrics">
       <div className="q-fin-group">
       <div className="q-finlbl priv"><s aria-hidden /><QuotationText>Internal — never shown to the client</QuotationText></div>

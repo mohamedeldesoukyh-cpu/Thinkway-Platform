@@ -3,6 +3,13 @@
    q-head, q-frozen-summary, WorkspaceScrollSummary, or sticky positioning here. */
 .q-route-loading {position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;min-height:100dvh;background:var(--background);}
 .q-route-loading .thinkway-page-loader-logo,.q-route-loading .login-v2-logo-mark {animation:none!important;transform:none!important;}
+.q-draft-notice {position:fixed;inset-inline-start:50%;bottom:12px;transform:translateX(-50%);z-index:35;display:flex;align-items:center;gap:12px;max-width:calc(100vw - 28px);min-height:28px;margin:0;padding:4px 10px;border:1px solid #eadcc0;border-radius:7px;background:#fdf6ea;color:#8a5d12;font:11px/1.4 var(--font-geist-sans,system-ui);box-shadow:0 2px 8px #0e172914;}
+.q-draft-notice__text {white-space:nowrap;}
+.q-draft-notice__totals {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.q-draft-notice button {border:0;background:none;color:inherit;font:inherit;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;padding:0;cursor:pointer;}
+.q-fin .q-m-label {position:relative;}
+.q-fin .q-m-label[data-staged]::after {content:"";position:absolute;width:5px;height:5px;border-radius:50%;background:#fbbf24;inset-inline-start:-8px;top:4px;}
+@media(max-width:760px) {.q-draft-notice {gap:8px;font-size:10.5px;}.q-draft-notice__totals {display:none;}}
 .q-redesign-body {
   --q-ink: #0e1729; --q-ink2: #3a4561; --q-mut: #5c6b82;
   --q-bg: #f2f5fa; --q-soft: #f1f5fa; --q-hair: #e9eef6; --q-line: #dce3ee;
