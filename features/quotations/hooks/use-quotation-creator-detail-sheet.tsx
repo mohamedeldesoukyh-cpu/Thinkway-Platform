@@ -76,12 +76,10 @@ export function useQuotationCreatorDetailSheet(options?: {
 
       if (
         handleOrId &&
-        openCreatorByHandle(handleOrId, fetchedPoolRef.current)
+        openCreatorByHandle(handleOrId, fetchedPoolRef.current, ...extraPools)
       ) {
-        setCoreDetailLoaded(true);
         return;
       }
-      if (handleOrId && openCreatorByHandle(handleOrId, ...extraPools)) return;
 
       if (!quotationItemCreatorRefId(item)) {
         toast.error("Creator details are unavailable for this line.");
