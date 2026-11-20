@@ -9,6 +9,8 @@ export type CreatorQuotationHistoryLine = {
   quotation_id: string;
   cost: number;
   cost_currency: string;
+  revenue: number;
+  af_pct: number;
   created_at: string;
   quotations: {
     serial_number: string | null;
@@ -36,7 +38,7 @@ export async function getCreatorQuotationHistory(influencerId: string): Promise<
     // Fetch every line, including zero-cost and archived quotations, beyond the API row limit.
     for (let offset = 0; ; offset += 500) {
       const { data, error } = await supabase.from("quotation_items").select(`
-        id, quotation_id, cost, cost_currency, created_at,
+        id, quotation_id, cost, cost_currency, revenue, af_pct, created_at,
         quotations!inner(serial_number, name, status, is_archived,
           temporary_client_name, temporary_brand_name,
           client:clients!client_id(name), brand:brands!brand_id(name), campaign:campaign_headers!campaign_header_id(name))

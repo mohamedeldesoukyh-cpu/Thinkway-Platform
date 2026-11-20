@@ -5,6 +5,9 @@ import Link from "next/link";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { getCreatorQuotationHistory, type CreatorQuotationHistoryLine } from "@/features/quotations/creator-history-action";
 import { quotationDetailPath } from "@/features/quotations/constants";
+import { computeAgencyFee } from "@/lib/commercial/commercial-engine";
+
+const money = (value: number) => Number(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export function CreatorQuotationHistory({ influencerId }: { influencerId: string | null | undefined }) {
   const [open, setOpen] = useState(false);
@@ -33,21 +36,23 @@ export function CreatorQuotationHistory({ influencerId }: { influencerId: string
       </span>
     </div>
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-5xl max-h-[85dvh] overflow-hidden flex flex-col" style={{ zIndex: 300 }} overlayClassName="z-[299]">
+      <DialogContent className="sm:max-w-[min(1400px,calc(100vw-40px))] max-h-[85dvh] overflow-hidden flex flex-col" style={{ zIndex: 300 }} overlayClassName="z-[299]">
         <DialogHeader className="pr-10">
           <DialogTitle>Creator quotation history</DialogTitle>
           <DialogDescription>{count == null ? "Loading quotations…" : `${count} quotation${count === 1 ? "" : "s"} · ${lines.length} price line${lines.length === 1 ? "" : "s"}`}
-            {" · Internal creator costs, excluding VAT. Each price option is listed separately."}
+            {" · Saved prices and agency fees, excluding VAT, in each line’s currency. Each price option is listed separately."}
           </DialogDescription>
         </DialogHeader>
         {error ? <div role="alert">{error} <button type="button" onClick={() => setRetry(value => value + 1)}>Try again</button></div> :
           count === 0 ? <p>No quotations include this creator yet.</p> :
           <div className="overflow-auto min-h-0">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs">
               <thead className="sticky top-0 bg-muted"><tr>
-                {["Quotation", "Client", "Brand", "Campaign / quotation name", "Creator cost"].map(label => <th key={label} className="p-3 text-left font-semibold whitespace-nowrap">{label}</th>)}
+                {["Quotation", "Client", "Brand", "Campaign / quotation name", "Creator cost", "Client price before fees", "Agency fee %", "Agency fee amount", "Client total incl. fees"].map(label => <th key={label} className="p-3 text-left font-semibold whitespace-nowrap">{label}</th>)}
               </tr></thead>
-              <tbody>{lines.map(line => <tr key={line.id} className="border-b">
+              <tbody>{lines.map(line => {
+                const fee = computeAgencyFee({ revenue: Number(line.revenue), afPct: Number(line.af_pct) });
+                return <tr key={line.id} className="border-b">
                 <td className="p-3 whitespace-nowrap">
                   <Link className="text-blue-600 underline" href={quotationDetailPath(line.quotation_id)} target="_blank" rel="noopener noreferrer">{line.quotations.serial_number ?? "Open quotation"}</Link>
                   <div className="text-xs text-muted-foreground">{line.quotations.is_archived ? "Archived" : line.quotations.status}</div>
@@ -56,7 +61,11 @@ export function CreatorQuotationHistory({ influencerId }: { influencerId: string
                 <td className="p-3">{line.quotations.brand?.name ?? line.quotations.temporary_brand_name ?? "—"}</td>
                 <td className="p-3 min-w-48">{line.quotations.campaign?.name ?? line.quotations.name}</td>
                 <td className="p-3 whitespace-nowrap font-mono">{line.cost_currency} {Number(line.cost).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-              </tr>)}</tbody>
+                <td className="p-3 whitespace-nowrap font-mono">{line.cost_currency} {money(line.revenue)}</td>
+                <td className="p-3 whitespace-nowrap font-mono">{fee.afPct.toLocaleString("en-US", { maximumFractionDigits: 2 })}%</td>
+                <td className="p-3 whitespace-nowrap font-mono">{line.cost_currency} {money(fee.afValue)}</td>
+                <td className="p-3 whitespace-nowrap font-mono">{line.cost_currency} {money(Number(line.revenue) + fee.afValue)}</td>
+              </tr>})}</tbody>
             </table>
           </div>}
       </DialogContent>
