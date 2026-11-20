@@ -470,7 +470,6 @@ export function QuotationCommercialWorkspaceDialog({
               <button className="qx-hth" onClick={() => setQuickFilter("band_critical")}><span>Critical</span><b>{health.critical}</b></button>
             </div>
           </div>
-          <p className="q-commercial-selected">Selected · {selectionRows.length} lines · {fmtStat(selectionTotals.revenue, displayCurrency, displayFxRateToEgp)} incl. fees</p>
 
           <div className="flex flex-wrap items-center gap-2">
             <Input
@@ -597,67 +596,7 @@ export function QuotationCommercialWorkspaceDialog({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pb-2">
-          <div
-            className="mb-2 flex shrink-0 items-center gap-3 py-1"
-            style={{ borderBottom: `0.5px solid ${CS.line}` }}
-          >
-            <Checkbox
-              checked={allFilteredSelected}
-              onCheckedChange={() => {
-                setSelectedIds((prev) => {
-                  const next = new Set(prev);
-                  if (allFilteredSelected) {
-                    filtered.forEach((row) => next.delete(row.itemId));
-                  } else {
-                    filtered.forEach((row) => next.add(row.itemId));
-                  }
-                  return next;
-                });
-              }}
-              aria-label="Select filtered"
-            />
-            <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: CS.muted }}>
-              Creators · {sortedRows.length}
-            </span>
-            <div className="ml-auto flex flex-wrap gap-1">
-              {(
-                [
-                  ["influencer", "Influencer"],
-                  ["cost", "Cost"],
-                  ["revenue", "Client cost"],
-                  ["gp", "GP margin"],
-                  ["gpPct", "GP %"],
-                ] as const
-              ).map(([field, label]) => (
-                <Button
-                  key={field}
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2 text-[11px] font-semibold"
-                  style={{
-                    color:
-                      tableSort?.field === field ? CS.dark : CS.muted,
-                  }}
-                  onClick={() =>
-                    setTableSort((prev) => {
-                      if (prev?.field !== field) return { field, direction: "asc" };
-                      if (prev.direction === "asc") return { field, direction: "desc" };
-                      return null;
-                    })
-                  }
-                >
-                  {label}
-                  {tableSort?.field === field
-                    ? tableSort.direction === "asc"
-                      ? " ↑"
-                      : " ↓"
-                    : ""}
-                </Button>
-              ))}
-            </div>
-          </div>
-          <div className="cw-card-list min-h-0 flex-1 overflow-auto"><div className="qx-cwhead" style={{gridTemplateColumns:commercialGridColumns(show)}}><span/><span>Creator / line</span>{show("mode") && <span>Cost + …</span>}{show("cost") && <span className="num">Cost</span>}{show("revenue") && <span className="num">Client cost</span>}{(show("gpPctInput") || show("gpPct")) && <span className="num">GP / markup %</span>}{show("gp") && <span className="num">GP margin</span>}{show("afPct") && <span className="num">AF %</span>}<span className="num">Client incl. fees</span></div>
+          <div className="cw-card-list min-h-0 flex-1 overflow-auto"><div className="qx-cwhead" style={{gridTemplateColumns:commercialGridColumns(show)}}><input type="checkbox" checked={allFilteredSelected} aria-label="Select filtered" onChange={() => setSelectedIds(prev => { const next = new Set(prev); filtered.forEach(row => allFilteredSelected ? next.delete(row.itemId) : next.add(row.itemId)); return next; })}/><button type="button" className="q-cw-sort" onClick={() => setTableSort(prev => ({field:"influencer",direction:prev?.field === "influencer" && prev.direction === "asc" ? "desc" : "asc"}))}>Creator / line</button>{show("mode") && <span>Cost + …</span>}{show("cost") && <button type="button" className="q-cw-sort num" onClick={() => setTableSort(prev => ({field:"cost",direction:prev?.field === "cost" && prev.direction === "asc" ? "desc" : "asc"}))}>Cost</button>}{show("revenue") && <button type="button" className="q-cw-sort num" onClick={() => setTableSort(prev => ({field:"revenue",direction:prev?.field === "revenue" && prev.direction === "asc" ? "desc" : "asc"}))}>Client cost</button>}{(show("gpPctInput") || show("gpPct")) && <span className="num">GP / markup %</span>}{show("gp") && <button type="button" className="q-cw-sort num" onClick={() => setTableSort(prev => ({field:"gp",direction:prev?.field === "gp" && prev.direction === "asc" ? "desc" : "asc"}))}>GP margin</button>}{show("afPct") && <span className="num">AF %</span>}<span className="num">Client incl. fees</span></div>
             {sortedRows.length === 0 ? (
               <div className="cgroup quotation-creator-card">
                 <div className="cw-kpi-inner py-10 text-center text-sm" style={{ color: CS.muted }}>

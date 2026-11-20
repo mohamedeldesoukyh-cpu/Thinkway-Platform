@@ -193,6 +193,26 @@ function QuotationPackLineRow({
   );
 
   const primary = lineFields.deliverableDrafts[0];
+  const editorSnapshot = useRef<{ description: string; deliverables: typeof lineFields.deliverableDrafts; draft: QuotationRowDraft } | null>(null);
+  useEffect(() => {
+    if (!expanded) { editorSnapshot.current = null; return; }
+    if (!editorSnapshot.current) editorSnapshot.current = structuredClone({ description: lineFields.serviceDescription, deliverables: lineFields.deliverableDrafts, draft: resolved });
+  }, [expanded, lineFields.serviceDescription, lineFields.deliverableDrafts, resolved]);
+  function cancelEditor() {
+    const saved = editorSnapshot.current;
+    if (saved) {
+      lineFields.saveDeliverables(saved.deliverables);
+      lineFields.setServiceDescription(saved.description);
+      onDraftChange(item.id, saved.draft);
+      manualSave.registerLinePending(item.id, {
+        commercial_source: "master", service_description: saved.description,
+        deliverables: saved.deliverables, cost: saved.draft.cost, revenue: saved.draft.revenue,
+        mode: saved.draft.mode, gp_pct: saved.draft.gpPct, gp_value: saved.draft.gpValue,
+        af_pct: saved.draft.afPct, cost_currency: saved.draft.costCurrency,
+      });
+    }
+    setExpanded(false);
+  }
   const favorites = useDeliverableFavorites();
   useEffect(() => favorites.register(item.id, (favorite) => {
     if (!canManage || isOtherService(item)) return false;
@@ -471,7 +491,7 @@ function QuotationPackLineRow({
           <div className="qx-qty"><span className="qx-qty__l">GP %</span><b>{projected.marginPct.toFixed(1)}%</b></div>
           <div className="qx-qty"><span className="qx-qty__l"><b>Client total incl. fees</b></span><b>{rowCurrency} {F(projected.clientCost)}</b></div>
         </div></section>
-      </div><footer className="qx-sh__f"><button type="button" className="b b--pri" onClick={() => setExpanded(false)}>Apply to this line</button><span className="sp" /><span className="q-help">Changes are staged for quotation Save</span></footer></SheetContent></Sheet>}
+      </div><footer className="qx-sh__f"><button type="button" className="b b--pri" onClick={() => setExpanded(false)}>Apply to this line</button><button type="button" className="b" onClick={cancelEditor}>Cancel</button><span className="sp" /><span className="q-help">Staged for quotation Save</span></footer></SheetContent></Sheet>}
     </div>
   );
 }

@@ -910,6 +910,7 @@ function QuotationWorkspaceContent({
                   />
                 ) : null}
                 <QuotationCommercialEntry
+                  showTrigger={false}
                   quotationId={detail.id}
                   items={detail.items}
                   drafts={drafts}
