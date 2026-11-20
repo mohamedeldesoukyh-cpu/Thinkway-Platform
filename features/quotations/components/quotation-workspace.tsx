@@ -8,7 +8,7 @@ import { QuotationCreatorOrderDialog } from "./quotation-creator-order-dialog";
 import { quotationOrderCreators } from "@/lib/quotations/quotation-creator-order";
 import { needsQuotationSystemFx } from "@/lib/commercial/quotation-system-fx";
 import { QuotationText, QuotationDesignLocaleProvider, useQuotationDesignLocale } from "./quotation-design-locale";
-import { WorkspaceScrollSummary } from "@/features/discovery/components/workspace-scroll-summary";
+import { useQuotationStickyHeaders } from "./use-quotation-sticky-headers";
 import { fetchQuotationItemCreatorDetail } from "@/features/quotations/lib/quotation-item-creator-detail";
 import { stashCompareQueue } from "@/features/discovery/components/creator-compare/compare-storage";
 import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
@@ -161,6 +161,7 @@ function QuotationWorkspaceContent({
 }) {
   const router = useRouter();
   const { language } = useQuotationDesignLocale();
+  const stickyHeadersRef = useQuotationStickyHeaders();
   const manualSave = useQuotationManualSave();
   const [drafts, setDrafts] = useState(() => draftsFromItems(detail.items));
   const undoRevisionSeen = useRef(manualSave.undoRevision);
@@ -785,14 +786,8 @@ function QuotationWorkspaceContent({
   if (!directRates) return rateError ? <div role="status" className="p-6 text-sm">Could not load quotation exchange rates. <button onClick={() => { setRateError(false); setRateAttempt(value => value + 1); }}>Retry</button></div> : <ThinkwayRouteLoading className="q-route-loading" />;
 
   return (
-    <QuotationDirectRatesContext.Provider value={directRates}><div data-discovery-workspace-scroll data-shortcut-save-scope="quotation" dir={language === "ar" ? "rtl" : "ltr"} lang={language} className="tq-redesign quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)] pb-16">
+    <QuotationDirectRatesContext.Provider value={directRates}><div ref={stickyHeadersRef} data-discovery-workspace-scroll data-shortcut-save-scope="quotation" dir={language === "ar" ? "rtl" : "ltr"} lang={language} className="tq-redesign quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)] pb-16">
       <QuotationSetupWizard detail={detail} options={formOptions} />
-      <WorkspaceScrollSummary serial={detail.serial_number} name={detail.name} status={detail.status.replaceAll("_", " ")}
-        metrics={[
-          { label: "Creators", value: uniqueCreatorCount },
-          { label: "Total Revenue", value: foreignDisplay ? originalTotals.map(row => `${row.currency} ${row.totalClientCost.toLocaleString("en-US", { maximumFractionDigits: 2 })}`).join(" · ") : `${displayCurrency} ${computeQuotationDisplayTotals(totalsDraftList, displayCurrency, displayFxRateToEgp, directRates).clientCost.toLocaleString("en-US", { maximumFractionDigits: 0 })}` },
-          { label: "GP %", value: `${totals.headerGpPct.toFixed(1)}%` },
-        ]} />
       <div className="q-frozen-summary">
       <QuotationWorkspaceHeader
         displayCurrency={displayCurrency}

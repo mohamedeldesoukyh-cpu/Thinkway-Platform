@@ -1,6 +1,7 @@
 /* Adapted from the supplied quotation prototype. Intentionally scoped to
    surfaces BELOW the blue header and quotation editor portals. Never change
-   q-head, q-frozen-summary, WorkspaceScrollSummary, or sticky positioning here. */
+   The quotation's original sticky header is restored below at the user's request. */
+.tq-redesign.quotation-editor-rd4 > .q-frozen-summary {position:sticky;top:var(--q-summary-top,0px);z-index:32;flex-shrink:0;background:var(--q-bg);}
 .q-route-loading {position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;min-height:100dvh;background:var(--background);}
 .q-route-loading .thinkway-page-loader-logo,.q-route-loading .login-v2-logo-mark {animation:none!important;transform:none!important;}
 .q-draft-notice {position:fixed;inset-inline-start:50%;bottom:12px;transform:translateX(-50%);z-index:35;display:flex;align-items:center;gap:12px;max-width:calc(100vw - 28px);min-height:28px;margin:0;padding:4px 10px;border:1px solid #eadcc0;border-radius:7px;background:#fdf6ea;color:#8a5d12;font:11px/1.4 var(--font-geist-sans,system-ui);box-shadow:0 2px 8px #0e172914;}
