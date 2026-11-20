@@ -6,6 +6,12 @@
   --wr-warning-bg:#3c301b;
 }
 .dark .workspace-redesign :is(.client-detail-suite,.campaign-detail-suite,.campaigns-list-suite,.collections-suite) {--tw-ink2:#cbd5e1;color:var(--wr-ink);}
+.dark .workspace-redesign [data-slot=table-row]:hover {background:var(--wr-soft);}
+.dark .workspace-redesign [data-slot=table-row][data-state=selected] {background:#1d3152;}
+.dark body:has(.workspace-redesign) :is([data-slot=dialog-content],[data-slot=sheet-content]) {
+  --popover:#182231;--popover-foreground:#eef2f8;--foreground:#eef2f8;--muted-foreground:#a6b4c8;
+  --background:#182231;--card:#182231;--border:#3a4a60;--input:#3a4a60;
+}
 .dark :is(.discovery-suite,.finance-suite,.campaign-detail-suite,.campaigns-list-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.collections-suite,.dv) {
   --tw-ink:#eef2f8;--tw-ink2:#cbd5e1;--tw-mut:#a6b4c8;
   --tw-bg:#101620;--tw-surface:#182231;--tw-soft:#202d40;--tw-lav:#1d3152;
@@ -34,6 +40,7 @@
   --bad:#fca5a5;--bad-b:#43252c;--bad-br:#80414e;
 }
 .dark .q-redesign-body {
+  --q-blue-i:#8bb8ff;--q-surf:#182231;
   --q-ink:#eef2f8;--q-ink2:#cbd5e1;--q-mut:#a6b4c8;
   --q-bg:#101620;--q-soft:#202d40;--q-hair:#2c3a4e;--q-line:#3a4a60;
   --q-ok:#6ee7b7;--q-ok-b:#123b30;--q-wrn:#fcd34d;--q-wrn-b:#3c301b;--q-bad:#fca5a5;--q-bad-b:#43252c;
@@ -81,6 +88,10 @@
 
 @media (max-width:1023px) {
   .wr-responsive-table td {white-space:normal;overflow-wrap:anywhere;}
+  .tq-redesign.discovery-suite .q-redesign-body .q-cell-actions {gap:8px;flex-wrap:wrap;}
+  .tq-redesign.discovery-suite .q-redesign-body .q-cell-actions .q-b {width:auto;min-width:44px;min-height:44px;padding:0 10px;}
+  .tq-redesign.discovery-suite .q-redesign-body .q-cell-actions .q-mobile-action {display:inline-flex;}
+  .tq-redesign.discovery-suite .q-redesign-body .q-cell-actions > :is(.qx-link,[data-slot=dropdown-menu-trigger]) {display:none;}
   /* Desktop summary + toolbars together must not pin most of a phone screen. */
   .tq-redesign.discovery-suite.quotation-editor-rd4 > .q-frozen-summary,
   .tq-redesign .q-redesign-body.q-header-tools,
