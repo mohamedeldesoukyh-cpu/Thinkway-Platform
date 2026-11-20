@@ -371,9 +371,7 @@
 .tq-redesign .q-rev .tw-fchips { display:flex; flex-wrap:wrap; gap:5px; }
 .tq-redesign .q-rev .tw-fchip { font-size:11px; padding:4px 9px; min-height:28px; }
 .tq-redesign .q-cell-creator .tw-cw2 { gap:9px; align-items:flex-start; }
-.tq-redesign .q-cell-creator .tw-avx { width:36px!important; height:36px!important; border:0; border-radius:11px; box-shadow:none; font-size:12px!important; }
-.tq-redesign .q-cell-creator .tw-avx > .absolute { border-radius:11px; }
-.tq-redesign .q-cell-creator .tw-avx .fl { width:13px!important; height:13px!important; }
+/* Creator avatars retain the shared shortlist sizing, circular crop and flag. */
 .tq-redesign .q-cell-creator .nm { font-size:12.5px; font-weight:700; line-height:1.35; text-align:start; }
 .tq-redesign .q-cell-creator .hd { font-size:10px; margin-top:1px; color:var(--q-mut); }
 .tq-redesign .q-conn > span { display:flex; flex-direction:row; flex-wrap:wrap; gap:3px; }
