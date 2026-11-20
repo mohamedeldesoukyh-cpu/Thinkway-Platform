@@ -602,9 +602,11 @@
 .q-service-sheet .q-favorites-editor > input { width:100%; min-width:0; height:32px; min-height:32px; border-radius:6px; padding:5px 8px; font-size:12px; }
 .q-service-sheet .q-favorites-footer { display:flex; flex-wrap:wrap; gap:8px; padding-top:5px; }
 .q-service-sheet .q-favorites-footer button:last-child { background:#2563eb; color:#fff; border-color:#2563eb; }
-.tq-redesign .q-service-tools { display:flex; align-items:center; gap:6px; margin:0 0 6px; }
+.tq-redesign .q-creator-service-tools { display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
+.tq-redesign .q-creator-service-tools--first { margin-top:6px; }
+.tq-redesign .q-creator-service-tools .q-b, .tq-redesign .q-creator-service-tools .q-favorite-button { min-height:26px; height:26px; padding:0 7px; font-size:11px; white-space:nowrap; }
 .q-favorite-button--saved { background:#f5f3ff; color:#6d28d9; border-color:#ddd6fe; }
-.tq-redesign .q-service-tools .q-favorite-button:not(.q-favorite-button--saved) { color:#1d4ed8; border-color:#bfdbfe; background:#eff6ff; }
+.tq-redesign .q-creator-service-tools .q-favorite-button:not(.q-favorite-button--saved) { color:#1d4ed8; border-color:#bfdbfe; background:#eff6ff; }
 .q-type-select-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 12px; border-bottom:1px solid #e2e8f0; font-size:12px; }
 .q-type-select-actions label { display:flex; align-items:center; gap:8px; cursor:pointer; }
 .q-type-select-actions small { color:#64748b; }

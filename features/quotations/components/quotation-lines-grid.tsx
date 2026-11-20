@@ -335,13 +335,15 @@ function QuotationPackLineRow({
               ) : null}
             </div>
           </DiscoverySuiteCreatorCell>}
-          {canManage && showCreator && !otherService ? <button type="button" className="q-b q-b--sm mt-2" onClick={handleAddOption} disabled={pending} aria-label={`Add service line for ${name}`}>{pending ? "Adding service…" : "+ Add service"}</button> : null}
+          {canManage && !otherService ? <div className={`q-creator-service-tools${showCreator ? " q-creator-service-tools--first" : ""}`}>
+            {showCreator && <button type="button" className="q-b q-b--sm" onClick={handleAddOption} disabled={pending} aria-label={`Add service line for ${name}`}>{pending ? "Adding service…" : "+ Add service"}</button>}
+            <QuotationFavoriteButtons itemIds={[item.id]} lines={primary ? deliverableTypeLines(primary) : []} description={lineFields.serviceDescription} disabled={pending} />
+          </div> : null}
 
         </div>
         <div className="q-cell-platform" role="cell"><span className="q-mobile-label"><QuotationText>Quoted on</QuotationText></span><QuotationDeliverablePlatformIcons platforms={selectedPlatforms} allPlatforms={lineFields.deliverableDrafts.some(typeLinesIncludeAllPlatforms)} loading={lineFields.loadingPlatforms} /></div>
         <div className="q-cell-service" role="cell">
           <span className="q-mobile-label"><QuotationText>Service</QuotationText></span>
-          {canManage && !otherService ? <div className="q-service-tools"><QuotationFavoriteButtons itemIds={[item.id]} lines={primary ? deliverableTypeLines(primary) : []} description={lineFields.serviceDescription} disabled={pending} /></div> : null}
           <textarea rows={1} className="q-desc" value={lineFields.serviceDescription} readOnly={!canManage} placeholder="Click to add deliverables and cost" onFocus={() => setExpanded(true)} aria-label="Service description" onChange={(event) => { if (canManage) updateServiceDescription(event.target.value); }} />
           <div className="q-dels">{lineFields.deliverableDrafts.flatMap(deliverableTypeLines).filter(line => line.type.trim()).map((line,index) => <span className={`q-del ${/boost/i.test(line.type) ? "q-del--bo" : /usage/i.test(line.type) ? "q-del--ur" : /event/i.test(line.type) ? "q-del--ev" : ""}`} key={`${line.type}:${index}`}>{formatTypeLinesSummary([line])}</span>)}</div>
         </div>
