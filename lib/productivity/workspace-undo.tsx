@@ -9,17 +9,30 @@ const HistoryContext = createContext<{
   remove: (owner: string) => void;
   clear: () => void;
   beforeReplay: (flush: () => void) => () => void;
+  step: (direction: 'undo' | 'redo') => boolean;
+  subscribe: (listener: () => void) => () => void;
+  snapshot: () => string;
 } | null>(null);
 
 export function WorkspaceUndoProvider({ children }: { children: ReactNode }) {
   const history = useRef(new WorkspaceHistory());
   const flushes = useRef(new Set<() => void>());
+  const listeners = useRef(new Set<() => void>());
+  const notify = useCallback(() => { listeners.current.forEach(listener => listener()); }, []);
   const value = useMemo(() => ({
-    record: (command: UndoCommand) => history.current.record(command),
-    remove: (owner: string) => history.current.remove(owner),
-    clear: () => history.current.clear(),
+    record: (command: UndoCommand) => { history.current.record(command); notify(); },
+    remove: (owner: string) => { history.current.remove(owner); notify(); },
+    clear: () => { history.current.clear(); notify(); },
     beforeReplay: (flush: () => void) => { flushes.current.add(flush); return () => { flushes.current.delete(flush); }; },
-  }), []);
+    step: (direction: 'undo' | 'redo') => {
+      for (const flush of flushes.current) flush();
+      const changed = history.current.step(direction);
+      if (changed) { notify(); toast.success(direction === 'undo' ? 'Edit undone' : 'Edit redone', { id: 'workspace-undo', duration: 1200 }); }
+      return changed;
+    },
+    subscribe: (listener: () => void) => { listeners.current.add(listener); return () => { listeners.current.delete(listener); }; },
+    snapshot: () => `${history.current.past.length}:${history.current.future.length}`,
+  }), [notify]);
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (event.defaultPrevented || event.isComposing || event.repeat || event.altKey || !(event.ctrlKey || event.metaKey)) return;
@@ -28,17 +41,15 @@ export function WorkspaceUndoProvider({ children }: { children: ReactNode }) {
       const target = event.target;
       // Preserve the browser's text editing history. Number/select/checkbox controls use workspace history.
       if (target instanceof HTMLElement && (target.isContentEditable || target.closest('textarea, [role="textbox"]') || (target instanceof HTMLInputElement && !['number', 'checkbox', 'radio', 'range', 'date'].includes(target.type)))) return;
-      for (const flush of flushes.current) flush();
       const direction = event.shiftKey || key === 'y' ? 'redo' : 'undo';
-      if (history.current.step(direction)) {
+      if (value.step(direction)) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        toast.success(direction === 'undo' ? 'Edit undone' : 'Edit redone', { id: 'workspace-undo', duration: 1200 });
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [value]);
   return <HistoryContext.Provider value={value}>{children}</HistoryContext.Provider>;
 }
 

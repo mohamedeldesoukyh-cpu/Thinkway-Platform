@@ -170,39 +170,6 @@ function sumRows(rows: WorkspaceRow[]) {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone?: "green" | "warn" | "critical";
-}) {
-  return (
-    <div className="discovery-search-exact-stat-box">
-      <p className="discovery-search-exact-stat-col-label uppercase tracking-[0.03em]">
-        {label}
-      </p>
-      <p
-        className="discovery-search-exact-stat-value mt-1"
-        style={{
-          color:
-            tone === "green"
-              ? CS.green
-              : tone === "warn"
-                ? CS.warn
-                : tone === "critical"
-                  ? CS.critical
-                  : "#0d1220",
-        }}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
 export type QuotationCommercialWorkspaceDialogProps = {
   quotationId: string;
   items: QuotationItemRow[];
@@ -508,7 +475,7 @@ export function QuotationCommercialWorkspaceDialog({
       <DialogContent
         showCloseButton
         data-shortcut-save-scope="quotation"
-        className="commercial-workspace-dialog q-redesign-commercial flex h-[min(92vh,820px)] max-h-[min(92vh,820px)] min-h-0 w-[min(98vw,1280px)] max-w-[min(98vw,1280px)] flex-col gap-0 overflow-hidden rounded-xl border-[0.5px] p-0 sm:max-w-[min(98vw,1280px)]"
+        className="commercial-workspace-dialog qx q-redesign-commercial flex h-[min(92vh,820px)] max-h-[min(92vh,820px)] min-h-0 w-[min(98vw,1280px)] max-w-[min(98vw,1280px)] flex-col gap-0 overflow-hidden rounded-xl border-[0.5px] p-0 sm:max-w-[min(98vw,1280px)]"
         style={{ borderColor: CS.line, backgroundColor: "#fff", color: CS.dark }}
       >
         <div
@@ -529,116 +496,25 @@ export function QuotationCommercialWorkspaceDialog({
           className="shrink-0 space-y-3 px-5 py-3"
           style={{ borderBottom: `0.5px solid ${CS.line}`, background: "#fff" }}
         >
-          <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
-            <div className="cgroup quotation-creator-card">
-              <div className="cw-kpi-inner">
-                <p className="cw-kpi-title">Selection · {selectionRows.length}</p>
-                <div className="cw-stat-grid">
-                  <StatCard
-                    label="Client cost (incl. fees)"
-                    value={fmtStat(
-                      selectionTotals.revenue,
-                      displayCurrency,
-                      displayFxRateToEgp
-                    )}
-                  />
-                  <StatCard
-                    label="Cost"
-                    value={fmtStat(
-                      selectionTotals.cost,
-                      displayCurrency,
-                      displayFxRateToEgp
-                    )}
-                  />
-                  <StatCard
-                    label="GP margin"
-                    value={fmtStat(
-                      selectionTotals.gp,
-                      displayCurrency,
-                      displayFxRateToEgp
-                    )}
-                    tone="green"
-                  />
-                  <StatCard
-                    label="GP %"
-                    value={fmtGpPct(selectionTotals.gp, selectionTotals.revenue, 0)}
-                    tone="green"
-                  />
-                  <StatCard label="Agency fees" value={fmtStat(selectionTotals.agencyFee, displayCurrency, displayFxRateToEgp)} />
-                </div>
-              </div>
-            </div>
-            <div className="cgroup quotation-creator-card">
-              <div className="cw-kpi-inner">
-                <p className="cw-kpi-title">Quotation · {rows.length}</p>
-                <div className="cw-stat-grid">
-                  <StatCard
-                    label="Client cost (incl. fees)"
-                    value={fmtStat(
-                      quotationTotals.revenue,
-                      displayCurrency,
-                      displayFxRateToEgp
-                    )}
-                  />
-                  <StatCard
-                    label="Cost"
-                    value={fmtStat(
-                      quotationTotals.cost,
-                      displayCurrency,
-                      displayFxRateToEgp
-                    )}
-                  />
-                  <StatCard
-                    label="GP margin"
-                    value={fmtStat(
-                      quotationTotals.gp,
-                      displayCurrency,
-                      displayFxRateToEgp
-                    )}
-                    tone="green"
-                  />
-                  <StatCard
-                    label="GP %"
-                    value={fmtGpPct(quotationTotals.gp, quotationTotals.revenue, 0)}
-                    tone="green"
-                  />
-                  <StatCard label="Agency fees" value={fmtStat(quotationTotals.agencyFee, displayCurrency, displayFxRateToEgp)} />
-                </div>
-              </div>
-            </div>
-            <div className="cgroup quotation-creator-card min-w-[148px]">
-              <div className="cw-kpi-inner">
-                <p className="cw-kpi-title">Commercial Health</p>
-                <div className="cw-health-stack">
-                  {(
-                    [
-                      ["band_healthy", "Healthy", health.healthy, "quotation-creator-card--green"],
-                      ["band_warning", "Warning", health.warning, "quotation-creator-card--orange"],
-                      [
-                        "band_critical",
-                        "Critical",
-                        health.critical,
-                        "quotation-creator-card--missing-cost",
-                      ],
-                    ] as const
-                  ).map(([filter, label, count, cardClass]) => (
-                    <button
-                      key={filter}
-                      type="button"
-                      onClick={() => setQuickFilter(filter)}
-                      className={cn(
-                        "cgroup quotation-creator-card flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold",
-                        cardClass
-                      )}
-                    >
-                      <span>{label}</span>
-                      <span className="tabular-nums">{count}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <div className="qx-cw__sum">
+            <div className="qx-zone qx-zone--int"><div className="qx-zone__h">Internal — never shown to the client</div><div className="qx-zone__g">
+              <div><u>Cost</u><b>{fmtStat(quotationTotals.cost, displayCurrency, displayFxRateToEgp)}</b></div>
+              <div><u>GP margin</u><b>{fmtStat(quotationTotals.gp, displayCurrency, displayFxRateToEgp)}</b></div>
+              <div><u>GP %</u><b>{fmtGpPct(quotationTotals.gp, quotationTotals.revenue, 0)}</b></div>
+              <div><u>Markup</u><b>{quotationTotals.cost > 0 ? ((quotationTotals.gp / quotationTotals.cost) * 100).toFixed(1) + "%" : "—"}</b></div>
+            </div></div>
+            <div className="qx-zone qx-zone--cli"><div className="qx-zone__h">Client-facing</div><div className="qx-zone__g">
+              <div><u>Client cost</u><b>{fmtStat(quotationTotals.revenue - quotationTotals.agencyFee, displayCurrency, displayFxRateToEgp)}</b></div>
+              <div><u>Agency fees</u><b>{fmtStat(quotationTotals.agencyFee, displayCurrency, displayFxRateToEgp)}</b></div>
+              <div><u>Total incl. fees</u><b>{fmtStat(quotationTotals.revenue, displayCurrency, displayFxRateToEgp)}</b></div>
+            </div></div>
+            <div className="qx-zone qx-zone--hth"><div className="qx-zone__h">Commercial health</div>
+              <button className="qx-hth" onClick={() => setQuickFilter("band_healthy")}><span>Healthy</span><b>{health.healthy}</b></button>
+              <button className="qx-hth" onClick={() => setQuickFilter("band_warning")}><span>Warning</span><b>{health.warning}</b></button>
+              <button className="qx-hth" onClick={() => setQuickFilter("band_critical")}><span>Critical</span><b>{health.critical}</b></button>
             </div>
           </div>
+          <p className="q-commercial-selected">Selected · {selectionRows.length} lines · {fmtStat(selectionTotals.revenue, displayCurrency, displayFxRateToEgp)} incl. fees</p>
 
           <div className="flex flex-wrap items-center gap-2">
             <Input

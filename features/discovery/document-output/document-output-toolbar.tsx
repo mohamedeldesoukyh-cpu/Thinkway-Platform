@@ -48,6 +48,7 @@ export type DocumentOutputToolbarProps = {
   busy?: boolean;
   linkDisabled?: boolean;
   sendDisabled?: boolean;
+  hideSend?: boolean;
   /**
    * Render prop so page adapters keep their trigger styles.
    * Export formats are supplied by the adapter (`formats`) — this chrome never
@@ -79,6 +80,7 @@ export function DocumentOutputToolbar({
   busy,
   linkDisabled,
   sendDisabled,
+  hideSend = false,
   renderTrigger,
   className,
 }: DocumentOutputToolbarProps) {
@@ -178,7 +180,7 @@ export function DocumentOutputToolbar({
         children: clientLinkLabel,
       })}
 
-      {renderTrigger({
+      {!hideSend && renderTrigger({
         disabled: busy || sendDisabled,
         primary: true,
         onClick: onSend,

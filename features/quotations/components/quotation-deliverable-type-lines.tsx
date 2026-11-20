@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { QuotationDeliverableTypeLine } from "@/lib/domains/commercial/quotation-types";
 import { QuotationPostTypeMultiSelect } from "@/features/quotations/components/quotation-post-type-multi-select";
+import { QuotationInlineServicePicker } from "./quotation-inline-service-picker";
 import {
   formatTypeLinesSummary,
   normalizeTypeLineQuantity,
@@ -34,6 +35,7 @@ type Props = {
   compact?: boolean;
   /** Quantity rows in the quotation's expanded design cards. */
   workspaceDetails?: boolean;
+  inlinePicker?: boolean;
 };
 
 export function QuotationDeliverableTypeLinesEditor({
@@ -44,6 +46,7 @@ export function QuotationDeliverableTypeLinesEditor({
   defaultOpen,
   compact = false,
   workspaceDetails = false,
+  inlinePicker = false,
 }: Props) {
   const displayLines = lines.length > 0 ? lines : [{ type: "", quantity: 1 }];
   const selectedTypes = selectedTypesFromTypeLines(displayLines);
@@ -88,8 +91,8 @@ export function QuotationDeliverableTypeLinesEditor({
         </div>;
       })}
       <div className="q-type-picker">
-        <QuotationPostTypeMultiSelect value={selectedTypes} onChange={handleTypesChange}
-          allowedPlatforms={allowedPlatforms} disabled={disabled} summaryLabel={summaryLabel} defaultOpen={defaultOpen} />
+        {inlinePicker ? <><h3>Services</h3><QuotationInlineServicePicker value={selectedTypes} onChange={handleTypesChange} allowedPlatforms={allowedPlatforms} disabled={disabled} /></> : <QuotationPostTypeMultiSelect value={selectedTypes} onChange={handleTypesChange}
+          allowedPlatforms={allowedPlatforms} disabled={disabled} summaryLabel={summaryLabel} defaultOpen={defaultOpen} />}
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
 import { RenameQuotationDialog } from "./rename-quotation-dialog";
-import { ChangeQuotationClientDialog } from "./change-quotation-client-dialog";
+import { QuotationUndoControls } from "./quotation-undo-controls";
 
 import { QuotationText, QuotationLanguageSwitcher } from "./quotation-design-locale";
 
@@ -93,6 +93,7 @@ type Props = {
   lineCount?: number;
   creatorCount?: number;
   showGpConflict?: boolean;
+  onOpenCommercial?: () => void;
 };
 
 export function QuotationWorkspaceHeader({
@@ -114,6 +115,7 @@ export function QuotationWorkspaceHeader({
   lineCount,
   creatorCount,
   showGpConflict = false,
+  onOpenCommercial,
 }: Props) {
   const router = useRouter();
   const { confirm } = useConfirmAction();
@@ -285,7 +287,7 @@ export function QuotationWorkspaceHeader({
         </div>
         {metricsSlot}
       </div></header>
-      <div className="q-wrap q-header-tools q-redesign-body">
+      <div className="q-wrap q-header-tools qx q-redesign-body">
         {detail.is_expired && <div className="q-banner q-banner--bad" role="status"><b>This quotation has expired.</b><span>Review its validity date in Document details.</span></div>}
         {saveStatus === "error" && <div className="q-banner q-banner--bad" role="alert"><span>Save failed. Your pending edits are still available on this page.</span><button type="button" className="q-b q-b--sm" disabled={savePending} onClick={onSave}><QuotationText>Retry save</QuotationText></button></div>}
         {showGpConflict && <div className="q-banner q-banner--wrn" role="status"><span><QuotationText>Commercial totals do not reconcile: total margin must equal GP before agency fees plus agency fees. Review Cost detail before submitting.</QuotationText></span></div>}
@@ -310,10 +312,68 @@ export function QuotationWorkspaceHeader({
               <span role="status" className={`q-save ${savePending ? "is-saving" : saveStatus === "error" ? "is-failed" : hasUnsavedChanges ? "is-dirty" : "is-saved"}`}>
                 <s aria-hidden /><span><QuotationText>{savePending ? "Saving…" : saveStatus === "error" ? "Save failed — retry" : hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}</QuotationText></span>
               </span>
-              {detail.canManage && detail.status !== "approved" && detail.status !== "archived" && detail.status !== "cancelled" && !detail.is_archived ? (
-                <ChangeQuotationClientDialog detail={detail} options={promoteOptions} disabled={hasUnsavedChanges || savePending || pending} />
-              ) : null}
+              <QuotationUndoControls disabled={savePending || !detail.canManage} />
               <span className="q-actions__div" aria-hidden />
+              <Popover>
+                <PopoverTrigger asChild><button type="button" className="tw-b sm"><QuotationText>Display</QuotationText></button></PopoverTrigger>
+                <PopoverContent align="end" className="tq-redesign qx q-redesign-body q-display-popover">
+                  <h3><QuotationText>Client presentation</QuotationText></h3>
+        <div className="q-toggles">
+          <ClientWorkspaceDisplayToggles
+                          showOriginalCurrency={showOriginalCurrency}
+                          hideCostAndFees={hideCostAndFees}
+                          showPackageVat={showPackageVat}
+                          onShowPackageVatChange={(value) => {
+                            startDisplayTransition(async () => {
+                              setOptimisticShowPackageVat(value);
+                              try {
+                                const result = await setQuotationShowPackageVat({ quotationId: detail.id, value });
+                                if (!result.ok) toast.error(result.message);
+                                // The action revalidates this page. A second router refresh
+                                // needlessly remounts quotation controls during the transition.
+                              } catch {
+                                toast.error("Unable to save VAT setting. Please try again.");
+                              }
+                            });
+                          }}
+                          disabled={pending || displayPending || !detail.canManage}
+                          onShowOriginalCurrencyChange={(value) => {
+                            startTransition(async () => {
+                              setOptimisticShowOriginalCurrency(value);
+                              const result = await setQuotationShowOriginalCurrency({
+                                quotationId: detail.id,
+                                value,
+                              });
+                              if (!result.ok) {
+                                toast.error(result.message);
+                                return;
+                              }
+                              router.refresh();
+                            });
+                          }}
+                          onHideCostAndFeesChange={(value) => {
+                            startTransition(async () => {
+                              setOptimisticHideCostAndFees(value);
+                              const result = await setQuotationHideCostAndFees({
+                                quotationId: detail.id,
+                                value,
+                              });
+                              if (!result.ok) {
+                                toast.error(result.message);
+                                return;
+                              }
+                              router.refresh();
+                            });
+                          }}
+                        />
+          <span className="q-help">AF = agency fees. Client presentation settings apply to linked reviews and outputs.</span>
+        </div>
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild><button type="button" className="tw-b sm"><QuotationText>Discovery</QuotationText></button></PopoverTrigger>
+                <PopoverContent align="end" className="tq-redesign qx q-redesign-body q-discovery-popover"><DiscoverySuiteJumpNav /></PopoverContent>
+              </Popover>
               <QuotationDocumentOutputToolbar
                 quotationId={detail.id}
                 serialNumber={detail.serial_number}
@@ -331,6 +391,7 @@ export function QuotationWorkspaceHeader({
                 onClientLink={detail.canManage ? runLinkButton : () => undefined}
                 onSend={detail.canManage ? runSendToClient : () => undefined}
                 clientLinkLabel="Client link"
+                hideSend
                 linkDisabled={!detail.canManage || linkPending}
                 linkPending={linkPending}
                 sendDisabled={
@@ -340,12 +401,13 @@ export function QuotationWorkspaceHeader({
                   Boolean(detail.is_archived)
                 }
               />
+              <button type="button" className="b" onClick={onOpenCommercial}>Commercial workspace</button>
               <OpenCampaignStudioLauncher
                 seed={campaignSeed}
                 tab="studio"
                 workspace={{ type: "quotation", id: detail.id }}
                 showIcon={false}
-                buttonClassName="tw-b sm"
+                buttonClassName="tw-b sm pri"
               />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -429,66 +491,6 @@ export function QuotationWorkspaceHeader({
                   ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Popover>
-                <PopoverTrigger asChild><button type="button" className="tw-b sm"><QuotationText>Display</QuotationText></button></PopoverTrigger>
-                <PopoverContent align="end" className="tq-redesign q-redesign-body q-display-popover">
-                  <h3><QuotationText>Client presentation</QuotationText></h3>
-        <div className="q-toggles">
-          <ClientWorkspaceDisplayToggles
-                          showOriginalCurrency={showOriginalCurrency}
-                          hideCostAndFees={hideCostAndFees}
-                          showPackageVat={showPackageVat}
-                          onShowPackageVatChange={(value) => {
-                            startDisplayTransition(async () => {
-                              setOptimisticShowPackageVat(value);
-                              try {
-                                const result = await setQuotationShowPackageVat({ quotationId: detail.id, value });
-                                if (!result.ok) toast.error(result.message);
-                                // The action revalidates this page. A second router refresh
-                                // needlessly remounts quotation controls during the transition.
-                              } catch {
-                                toast.error("Unable to save VAT setting. Please try again.");
-                              }
-                            });
-                          }}
-                          disabled={pending || displayPending || !detail.canManage}
-                          onShowOriginalCurrencyChange={(value) => {
-                            startTransition(async () => {
-                              setOptimisticShowOriginalCurrency(value);
-                              const result = await setQuotationShowOriginalCurrency({
-                                quotationId: detail.id,
-                                value,
-                              });
-                              if (!result.ok) {
-                                toast.error(result.message);
-                                return;
-                              }
-                              router.refresh();
-                            });
-                          }}
-                          onHideCostAndFeesChange={(value) => {
-                            startTransition(async () => {
-                              setOptimisticHideCostAndFees(value);
-                              const result = await setQuotationHideCostAndFees({
-                                quotationId: detail.id,
-                                value,
-                              });
-                              if (!result.ok) {
-                                toast.error(result.message);
-                                return;
-                              }
-                              router.refresh();
-                            });
-                          }}
-                        />
-          <span className="q-help">AF = agency fees. Client presentation settings apply to linked reviews and outputs.</span>
-        </div>
-                </PopoverContent>
-              </Popover>
-              <Popover>
-                <PopoverTrigger asChild><button type="button" className="tw-b sm"><QuotationText>Discovery</QuotationText></button></PopoverTrigger>
-                <PopoverContent align="end" className="tq-redesign q-redesign-body q-discovery-popover"><DiscoverySuiteJumpNav /></PopoverContent>
-              </Popover>
             </div>
       </div>
 

@@ -284,9 +284,10 @@ function QuotationPackLineRow({
     });
   }
 
-  const renderCostDetails = (showPrice: boolean) => canManage && primary ? (
+  const renderCostDetails = (showPrice: boolean, embedded = false) => canManage && primary ? (
 <QuotationDeliverableCostDetails
-              triggerLabel="+ Add cost"
+              embedded={embedded}
+              triggerLabel={projected.cost > 0 ? "Edit cost" : "+ Add cost"}
                     displayCurrency={rowCurrency}
                     displayFxRateToEgp={displayCurrency === "FOREIGN" ? resolved.fxRateToEgp : displayFxRateToEgp}
                     onFxChange={patch => {
@@ -337,15 +338,15 @@ function QuotationPackLineRow({
           </DiscoverySuiteCreatorCell>}
           {canManage && !otherService ? <div className={`q-creator-service-tools${showCreator ? " q-creator-service-tools--first" : ""}`}>
             {showCreator && <button type="button" className="q-b q-b--sm" onClick={handleAddOption} disabled={pending} aria-label={`Add service line for ${name}`}>{pending ? "Adding service…" : "+ Add service"}</button>}
-            <QuotationFavoriteButtons itemIds={[item.id]} lines={primary ? deliverableTypeLines(primary) : []} description={lineFields.serviceDescription} disabled={pending} />
+            <QuotationFavoriteButtons itemIds={[item.id]} lines={primary ? deliverableTypeLines(primary) : []} description={lineFields.serviceDescription} disabled={pending} onDeliverables={() => setExpanded(true)} />
           </div> : null}
 
         </div>
         <div className="q-cell-platform" role="cell"><span className="q-mobile-label"><QuotationText>Quoted on</QuotationText></span><QuotationDeliverablePlatformIcons platforms={selectedPlatforms} allPlatforms={lineFields.deliverableDrafts.some(typeLinesIncludeAllPlatforms)} loading={lineFields.loadingPlatforms} /></div>
         <div className="q-cell-service" role="cell">
           <span className="q-mobile-label"><QuotationText>Service</QuotationText></span>
-          <textarea rows={1} className="q-desc" value={lineFields.serviceDescription} readOnly={!canManage} placeholder="Click to add deliverables and cost" onFocus={() => setExpanded(true)} aria-label="Service description" onChange={(event) => { if (canManage) updateServiceDescription(event.target.value); }} />
           <div className="q-dels">{lineFields.deliverableDrafts.flatMap(deliverableTypeLines).filter(line => line.type.trim()).map((line,index) => <span className={`q-del ${/boost/i.test(line.type) ? "q-del--bo" : /usage/i.test(line.type) ? "q-del--ur" : /event/i.test(line.type) ? "q-del--ev" : ""}`} key={`${line.type}:${index}`}>{formatTypeLinesSummary([line])}</span>)}</div>
+          <textarea rows={1} className="q-desc" value={lineFields.serviceDescription} readOnly={!canManage} placeholder="Click to add deliverables and cost" aria-label="Service description" onChange={(event) => { if (canManage) updateServiceDescription(event.target.value); }} />
         </div>
         <div className="q-cell-repeat" role="cell">
           <span className="q-mobile-label">Repeat</span>
@@ -360,9 +361,9 @@ function QuotationPackLineRow({
         <div className="q-cell-option" role="cell">{canManage ? <select className="q-opt max-w-full cursor-pointer bg-transparent" aria-label={`Option label for ${name}`} value={selectedLabel ?? "option"} onChange={(event) => manualSave.registerLinePending(item.id, {option_label: event.target.value === "option" ? null : event.target.value})}>
 <option value="option">Option {item.option_number ?? 1}/{optionCount}</option><option value="Additional Service">Additional Service</option><option value="Deliverables">Deliverables</option></select> : <span className="q-opt">{optionLabel}{!selectedLabel && optionCount > 1 ? `/${optionCount}` : ""}</span>}</div>
         <div className="q-cell-price q-price" role="cell"><span className="q-mobile-label"><QuotationText>Client price</QuotationText></span><b className={clientPrice === 0 ? "z" : undefined}>{F(clientPrice)} {rowCurrency}</b>{priceUnits > 1 && <span className="q-repeat-price">×{priceUnits} · Total {F(projected.clientCost)} {rowCurrency}</span>}{hideCostAndFees ? <u><QuotationText>AF included</QuotationText></u> : <u>{F(projected.revenue / priceUnits)} + {F(projected.af / priceUnits)} AF</u>}{originalPrice && <span className="orig">{originalPrice}</span>}{renderCostDetails(false)}{linePending && <span className="q-p q-p--wrn"><QuotationText>Unsaved</QuotationText></span>}</div>
-        <div className="q-cell-status" role="cell"><span className={`q-p ${linePending ? "q-p--wrn" : "q-p--ok"}`} title={linePending ? "This service has changes waiting for Save" : "This service matches the saved quotation"}>{linePending ? "Unsaved changes" : "Saved"}</span></div>
+        <div className="q-cell-status" role="cell"><span className={`qx-stat ${linePending ? "qx-stat--dirty" : ""}`} title={linePending ? "This service has changes waiting for Save" : "This service matches the saved quotation"}><i aria-hidden />{linePending ? "Unsaved changes" : "Saved"}</span></div>
         <div className="q-cell-actions q-acts" role="cell">
-          <button type="button" className="q-b q-b--sm" aria-label={`${expanded ? "Collapse" : "Expand"} line for ${name}`} aria-expanded={expanded} aria-controls={`quotation-line-${item.id}`} onClick={() => setExpanded(true)}>⋯</button>
+          <button type="button" className="qx-link qx-link--danger" disabled={!canManage || pending} aria-label={`Remove this service line for ${name}`} onClick={handleRemove}>Remove</button>
                   <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -396,11 +397,11 @@ function QuotationPackLineRow({
           <button type="button" className="q-b q-b--sm q-b--danger q-mobile-action" aria-label="Remove line" onClick={handleRemove} disabled={!canManage || pending}><QuotationText>Delete</QuotationText></button>
         </div>
       </div>
-      {expanded && <Sheet open={expanded} onOpenChange={setExpanded}><SheetContent side="right" showCloseButton={false} className="tq-redesign q-service-sheet q-redesign-body" data-shortcut-pane id={`quotation-line-${item.id}`}><SheetTitle className="sr-only">Service details for {name}</SheetTitle><SheetDescription className="sr-only">Choose deliverables, quantities, duration and internal costs. Changes are staged until Save.</SheetDescription>
+      {expanded && <Sheet open={expanded} onOpenChange={setExpanded}><SheetContent side="right" showCloseButton={false} className="tq-redesign q-service-sheet qx q-redesign-body" data-shortcut-pane id={`quotation-line-${item.id}`}><SheetTitle className="sr-only">Service details for {name}</SheetTitle><SheetDescription className="sr-only">Choose deliverables, quantities, duration and internal costs. Changes are staged until Save.</SheetDescription>
         <header className="q-bottom-editor__header"><div className="q-bottom-editor__title"><b title={name}>{name}</b><span title={lineFields.serviceDescription || "New service"}> · {lineFields.serviceDescription || "New service"}</span></div><button type="button" className="q-b q-b--sm" data-shortcut-close onClick={() => setExpanded(false)}>Close</button></header><div className="q-exp">
         {otherService ? <section className="q-sec"><div className="q-sec__h"><b>Service description</b></div><textarea aria-label="Other service description" className="w-full rounded border p-2" rows={3} value={lineFields.serviceDescription} readOnly={!canManage} onChange={e => updateServiceDescription(e.target.value)} /><p className="q-help">Use Repeat on the row for multiple units.</p></section> : <section className="q-sec"><div className="q-sec__h"><b><QuotationText>Quantity &amp; Duration</QuotationText></b></div>          {lineFields.deliverableDrafts.map((deliverable) => (
             <QuotationDeliverableTypeLinesEditor
-              workspaceDetails
+              workspaceDetails inlinePicker
               key={deliverable.key}
               lines={deliverableTypeLines(deliverable)}
               allowedPlatforms={allowedCreatorPlatforms}
@@ -453,7 +454,7 @@ function QuotationPackLineRow({
                   <QuotationText>Unsaved changes</QuotationText></span>
               </>
             ) : null}
-            {renderCostDetails(true)}
+            {renderCostDetails(true, true)}
           </div>
         ) : (
           <span className="tw-v inline-flex items-center gap-1.5">
@@ -472,7 +473,7 @@ function QuotationPackLineRow({
         )}
           <div className="q-kv"><span><QuotationText>Margin %</QuotationText></span><b>{projected.marginPct.toFixed(1)}%</b></div>
         </section>
-      </div></SheetContent></Sheet>}
+      </div><footer className="qx-sh__f"><button type="button" className="b b--pri" onClick={() => setExpanded(false)}>Done</button><span className="sp" /><span className="q-help">Changes are staged for quotation Save</span></footer></SheetContent></Sheet>}
     </div>
   );
 }
@@ -493,6 +494,7 @@ type Props = {
   uniqueCreatorCount: number;
   totalClientCostEgp: number;
   foreignTotalsLabel?: string;
+  financialFooter?: React.ReactNode;
   canManage: boolean;
   showOriginalCurrency?: boolean;
   hideCostAndFees?: boolean;
@@ -516,6 +518,7 @@ export function QuotationLinesGrid({
   uniqueCreatorCount,
   totalClientCostEgp,
   foreignTotalsLabel,
+  financialFooter,
   canManage,
   showOriginalCurrency = false,
   hideCostAndFees = false,
@@ -535,8 +538,8 @@ export function QuotationLinesGrid({
       </div>
       <label className="q-mobile-select"><input type="checkbox" className="q-ck" checked={allSelected} ref={el=>{if(el)el.indeterminate=indeterminate&&!allSelected;}} onChange={event => onToggleSelectAll(event.target.checked)} disabled={!canManage || items.length === 0} /><QuotationText>Select all lines</QuotationText></label>
       {items.length === 0 && <div className="q-empty" role="status"><b>No lines match this filter</b><p>Try another creator name or username, or clear the search and filters.</p></div>}
-      {Array.from(groups.entries()).sort((a,b) => Number(isOtherService(a[1][0])) - Number(isOtherService(b[1][0]))).map(([key, group], index) => <div key={key} className="q-creator-service-group" role="rowgroup">{isOtherService(group[0]) && <div className="border-b bg-muted px-4 py-2 text-sm font-semibold">Others</div>}{group.map((item, serviceIndex) => <QuotationPackLineRow showCreator={serviceIndex === 0} expanded={activeId === item.id} onActivate={setActiveId} key={item.id} quotationId={quotationId} item={item} draft={drafts[item.id]} index={index} optionCount={optionCounts.get(quotationCreatorDuplicateKey(item)) ?? 1} selected={selectedIds.has(item.id)} onToggleSelect={() => onToggleSelect(item.id)} onDraftChange={onDraftChange} onRemoved={onRemoved} onLineChanged={onLineChanged} onOpenCreator={onOpenCreator} showOriginalCurrency={showOriginalCurrency} hideCostAndFees={hideCostAndFees} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} canManage={canManage} />)}</div>)}
-      <div className="q-grid-total">Quotation totals · {uniqueCreatorCount} creators · {items.length} <QuotationText>option lines</QuotationText> <b>{foreignTotalsLabel ?? `${F(totalClientCostEgp)} EGP`}</b></div>
+      {Array.from(groups.entries()).sort((a,b) => Number(isOtherService(a[1][0])) - Number(isOtherService(b[1][0]))).map(([key, group], index) => <div key={key} className="q-creator-service-group" role="rowgroup">{isOtherService(group[0]) && <div className="border-b bg-muted px-4 py-2 text-sm font-semibold">Others</div>}{group.map((item, serviceIndex) => <QuotationPackLineRow showCreator={serviceIndex === 0} expanded={activeId === item.id} onActivate={setActiveId} key={item.id} quotationId={quotationId} item={item} draft={drafts[item.id]} index={index} optionCount={optionCounts.get(quotationCreatorDuplicateKey(item)) ?? 1} selected={selectedIds.has(item.id)} onToggleSelect={() => onToggleSelect(item.id)} onDraftChange={onDraftChange} onRemoved={onRemoved} onLineChanged={onLineChanged} onOpenCreator={onOpenCreator} showOriginalCurrency={showOriginalCurrency} hideCostAndFees={hideCostAndFees} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} canManage={canManage} />)}<div className="qx-groupfoot"><span>{group[0].creator_profile_source?.displayName || group[0].creator_name || "Creator"}</span><em>{group.length} service line{group.length === 1 ? "" : "s"}</em></div></div>)}
+      {financialFooter ?? <div className="q-grid-total">Quotation totals · {uniqueCreatorCount} creators · {items.length} <QuotationText>option lines</QuotationText> <b>{foreignTotalsLabel ?? `${F(totalClientCostEgp)} EGP`}</b></div>}
     </div>
   );
 }

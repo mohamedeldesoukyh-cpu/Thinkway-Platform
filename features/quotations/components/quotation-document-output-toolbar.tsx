@@ -67,6 +67,7 @@ type Props = {
   clientLinkLabel: string;
   linkDisabled?: boolean;
   sendDisabled?: boolean;
+  hideSend?: boolean;
   linkPending?: boolean;
 };
 
@@ -115,6 +116,7 @@ export function QuotationDocumentOutputToolbar({
   clientLinkLabel,
   linkDisabled,
   sendDisabled,
+  hideSend = false,
   linkPending,
 }: Props) {
   const directRates = useQuotationDirectRates();
@@ -204,6 +206,7 @@ export function QuotationDocumentOutputToolbar({
         busy={busy || linkPending}
         linkDisabled={linkDisabled || linkPending}
         sendDisabled={sendDisabled}
+        hideSend={hideSend}
         renderTrigger={({ children, disabled, primary, onClick }) => (
           <button
             type="button"

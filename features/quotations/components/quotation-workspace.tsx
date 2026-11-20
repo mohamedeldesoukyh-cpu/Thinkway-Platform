@@ -63,7 +63,7 @@ import {
 } from "@/features/quotations/quotation-client-review";
 import { quotationItemClientCreatorId } from "@/features/client-workspace/quotation-item-creator-id";
 import { setQuotationReviewCreatorsOnBehalfAction } from "@/features/client-workspace/actions/internal-quotation-review-selection-action";
-import { QuotationDocumentMetaPanel } from "@/features/quotations/components/quotation-document-meta-panel";
+import { QuotationDocumentSummary, QuotationClientSummary } from "./quotation-document-summary";
 import { QuotationSetupWizard } from "@/features/quotations/components/quotation-setup-wizard";
 import { QuotationLinesGrid } from "@/features/quotations/components/quotation-lines-grid";
 import { QuotationSelectionBar } from "@/features/quotations/components/quotation-selection-bar";
@@ -184,6 +184,7 @@ function QuotationWorkspaceContent({
     })));
   }, [manualSave, detail.items]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [activeSection, setActiveSection] = useState("quotation-creators");
   const [creatorSearch, setCreatorSearch] = useState("");
   const creatorSearchRef = useRef<HTMLInputElement>(null);
   useEscapeClearSelection(selectedIds.size > 0, () => setSelectedIds(new Set()));
@@ -814,6 +815,7 @@ function QuotationWorkspaceContent({
         lineCount={visibleItems.length}
         creatorCount={uniqueCreatorCount}
         showGpConflict={hasQuotationGpConflict(totals)}
+        onOpenCommercial={() => setCommercialWorkspaceOpen(true)}
         metricsSlot={
           <QuotationCommercialMetricsBand
             projected={computeQuotationDisplayTotals(totalsDraftList, displayCurrency, displayFxRateToEgp, directRates)}
@@ -848,41 +850,15 @@ function QuotationWorkspaceContent({
         }
       />
 
-      {clientReview ? (
-        <QuotationClientReviewPanel
-          detail={detail}
-          review={clientReview}
-          items={visibleItems}
-          filter={clientSelectionFilter}
-          onFilter={setClientSelectionFilter}
-          canManage={detail.canManage}
-          quotationApproved={detail.status === "approved"}
-          onSelectApproved={() => selectByClientState("accepted")}
-          onSelectUnderReview={() => selectByClientState("in_review")}
-          onAcceptOnBehalf={acceptUnderReviewOnBehalf}
-          onMoveApprovedToCampaign={() => {
-            if (approvedItemIds.length === 0) {
-              toast.error("No client-selected creators to move.");
-              return;
-            }
-            if (detail.status !== "approved") {
-              toast.error("Approve this quotation first, then move the client-selected creators to the campaign.");
-              return;
-            }
-            setConvertSelectedIds(approvedItemIds);
-            setConvertApprovedOpen(true);
-          }}
-          pending={bulkPending}
-        />
-      ) : null}
+
 
       </div>
       <section
-        className={cn("q-wrap q-main q-redesign-body", discoverySelectionFlyoutContentClass(selectedIds.size > 0))}
+        className={cn("q-wrap q-main qx q-redesign-body", discoverySelectionFlyoutContentClass(selectedIds.size > 0))}
       >
-      <nav className="q-section-links" aria-label="Quotation sections">
-        {[["quotation-creators", "Creators & services"], ["quotation-document", "Document details"], ["quotation-notes", "Notes"], ["quotation-terms", "Terms & conditions"]].map(([id, label]) => (
-          <button key={id} type="button" onClick={() => document.getElementById(id)?.scrollIntoView({ block: "start", behavior: "instant" })}><QuotationText>{label}</QuotationText></button>
+      <nav className="q-section-links qx-sec-nav" aria-label="Quotation sections">
+        {[["quotation-creators", "Creators & services"], ["commercial", "Commercial"], ["quotation-document", "Document"], ["quotation-client", "Client & brand"], ["quotation-notes", "Notes"], ["quotation-review", "Client review"], ["quotation-terms", "Terms"]].map(([id, label]) => (
+          <button key={id} type="button" aria-current={activeSection === id} onClick={() => { setActiveSection(id); if (id === "commercial") { setCommercialWorkspaceOpen(true); return; } document.getElementById(id)?.scrollIntoView({ block: "start", behavior: "instant" }); }}><QuotationText>{label}</QuotationText></button>
         ))}
       </nav>
       <div id="quotation-creators" className="q-section-target">
@@ -976,6 +952,7 @@ function QuotationWorkspaceContent({
                   uniqueCreatorCount={uniqueCreatorCount}
                   foreignTotalsLabel={foreignDisplay ? originalTotals.map(row => `${row.currency} ${row.totalClientCost.toLocaleString("en-US", { maximumFractionDigits: 2 })}`).join(" · ") : undefined}
                   totalClientCostEgp={totals.totalClientCostEgp}
+                  financialFooter={<div className="qx-foot"><div><u>Lines</u><b>{visibleItems.length}</b></div>{(foreignDisplay ? originalTotals.map(row => { const value = computeQuotationDisplayTotals(totalsDraftList.filter(draft => (draft.costCurrency || "EGP") === row.currency), row.currency, 1, directRates); return { currency: row.currency, before: value.revenue, af: value.af, total: row.totalClientCost }; }) : [(() => { const value = computeQuotationDisplayTotals(totalsDraftList, displayCurrency, displayFxRateToEgp, directRates); return { currency: displayCurrency, before: value.revenue, af: value.af, total: value.clientCost }; })()]).map(value => <div className="q-footer-currency" key={value.currency}><div><u>Client cost before fees</u><b>{value.currency} {value.before.toLocaleString("en-US", { maximumFractionDigits: 2 })}</b></div><div><u>Agency fees</u><b>{value.currency} {value.af.toLocaleString("en-US", { maximumFractionDigits: 2 })}</b></div><div><u>Total investment</u><b>{value.currency} {value.total.toLocaleString("en-US", { maximumFractionDigits: 2 })}</b></div></div>)}<span className="sp" /><span className="q-help">Totals match the header band.</span></div>}
                   canManage={detail.canManage}
                 />
               </PlatformErrorBoundary>
@@ -985,31 +962,54 @@ function QuotationWorkspaceContent({
       )}
 
       </div>
-      <section id="quotation-document" className="sec q-document-details q-section-target">
-        <div className="cols2">
-          <div>
-            <div className="subh"><QuotationText>Document details</QuotationText></div>
-            <div className="subp"><QuotationText>Version, ownership, and validity.</QuotationText></div>
-            <fieldset disabled={!detail.canManage}><QuotationDocumentMetaPanel detail={detail} layout="flush" /></fieldset>
-          </div>
-        </div>
-      </section>
-      <section id="quotation-notes" className="sec q-notes-section q-section-target">
-          <div>
+      <QuotationDocumentSummary detail={detail} />
+      <QuotationClientSummary detail={detail} options={promoteOptions} />
+      <section id="quotation-notes" className="card q-notes-section q-section-target">
+          <div className="card__h">
             <div className="subh"><QuotationText>Quotation notes</QuotationText></div>
             <div className="subp"><QuotationText>Internal &amp; client-facing.</QuotationText></div>
-            <HeaderNotes detail={detail} />
           </div>
+          <div className="card__b"><HeaderNotes detail={detail} /></div>
       </section>
 
-      <section id="quotation-terms" className="sec q-section-target">
-        <div className="sec-head">
+      <section id="quotation-review" className="card q-section-target"><div className="card__h"><h2>Client review &amp; selection</h2><p>Client selection, document lifecycle and per-line save status are separate.</p></div><div className="card__b">
+      {clientReview ? (
+        <QuotationClientReviewPanel
+          detail={detail}
+          review={clientReview}
+          items={visibleItems}
+          filter={clientSelectionFilter}
+          onFilter={setClientSelectionFilter}
+          canManage={detail.canManage}
+          quotationApproved={detail.status === "approved"}
+          onSelectApproved={() => selectByClientState("accepted")}
+          onSelectUnderReview={() => selectByClientState("in_review")}
+          onAcceptOnBehalf={acceptUnderReviewOnBehalf}
+          onMoveApprovedToCampaign={() => {
+            if (approvedItemIds.length === 0) {
+              toast.error("No client-selected creators to move.");
+              return;
+            }
+            if (detail.status !== "approved") {
+              toast.error("Approve this quotation first, then move the client-selected creators to the campaign.");
+              return;
+            }
+            setConvertSelectedIds(approvedItemIds);
+            setConvertApprovedOpen(true);
+          }}
+          pending={bulkPending}
+        />
+      ) : null}
+{!clientReview && <p className="q-help">No client review has been created for this quotation. Use Client link to set one up.</p>}
+</div></section>
+      <section id="quotation-terms" className="card q-section-target">
+        <div className="sec-head card__h">
           <div>
             <h2><QuotationText>Terms &amp; conditions</QuotationText></h2>
             <p><QuotationText>Applies to this quotation unless amended in writing.</QuotationText></p>
           </div>
         </div>
-        <QuotationTermsAccordion termsText={detail.terms} />
+        <div className="card__b"><QuotationTermsAccordion termsText={detail.terms} /></div>
       </section>
       </section>
 
