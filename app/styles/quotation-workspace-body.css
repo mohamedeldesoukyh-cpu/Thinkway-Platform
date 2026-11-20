@@ -394,6 +394,9 @@ body:has(.q-main.q-redesign-body) :is([data-slot=dialog-content],[data-slot=popo
 .q-redesign-commercial.qx .qx-cwhead {gap:0 9px;}
 .q-redesign-commercial.qx .q-cw-identity b {font-size:12.5px;}
 .q-redesign-commercial.qx .q-cw-identity small {font-size:11px;}
+.q-redesign-commercial.qx .cw-card-list {gap:0;padding-bottom:0;}
+.q-redesign-commercial.qx .q-cw-identity small {display:inline-block;vertical-align:middle;}
+.q-redesign-commercial.qx .q-cw-identity .q-cw-currency {display:inline-block;margin-inline-start:6px;vertical-align:middle;}
 .q-redesign-commercial.qx .qx-sh__f {gap:12px;}
 @layer components {
  .q-redesign-commercial.qx .q-cw-bulk-kind {border-color:transparent!important;background:transparent!important;padding-inline:0!important;color:var(--mut)!important;}
