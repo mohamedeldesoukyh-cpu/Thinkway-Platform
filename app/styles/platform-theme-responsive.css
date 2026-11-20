@@ -1,0 +1,99 @@
+/* Shared suite compatibility layer. Keep brand headers, charts, avatars and
+   document previews intact; map workspace surfaces to the active app theme. */
+.dark :is(.discovery-suite,.finance-suite,.campaign-detail-suite,.campaigns-list-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.collections-suite,.dv) {
+  --tw-ink:#eef2f8;--tw-ink2:#cbd5e1;--tw-mut:#a6b4c8;
+  --tw-bg:#101620;--tw-surface:#182231;--tw-soft:#202d40;--tw-lav:#1d3152;
+  --tw-line:#3a4a60;--tw-hair:#2c3a4e;--tw-bi:#8bb8ff;
+  --tw-ok:#6ee7b7;--tw-okb:#123b30;--tw-wrn:#fcd34d;--tw-wrnb:#3c301b;
+  --tw-bad:#fca5a5;--tw-badb:#43252c;--tw-vio:#c4b5fd;--tw-viob:#302847;
+  --tw-ring:0 0 0 1px var(--tw-hair),0 6px 20px #0002;
+  color:var(--tw-ink);
+}
+.dark :is(.discovery-suite,.finance-suite,.campaign-detail-suite,.campaigns-list-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.collections-suite,.dv)
+ :is(.tw-c,.tw-k,.tw-idbar,.tw-toolbar,.tw-tools,.tw-dr,.tw-cp__w,.tw-cp__m,.tw-cp__r,.tw-pub,.tw-calcp,.tw-mast,.tw-mr,.tw-ms2,.tw-step2,.tw-mode) {
+  background:var(--tw-surface);color:var(--tw-ink);border-color:var(--tw-line);
+}
+.dark :is(.discovery-suite,.finance-suite,.campaign-detail-suite,.campaigns-list-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.collections-suite,.dv)
+ :is(.tw-b:not(.pri),.tw-in,.tw-select,.tw-search,.tw-dr__x) {
+  background:var(--tw-surface);color:var(--tw-ink2);border-color:var(--tw-line);
+}
+.dark .discovery-suite .tw-cp__t button[aria-pressed=true] {background:var(--tw-lav);color:var(--tw-bi);}
+.dark .discovery-suite.tw-cp-root .tw-cp__h .tw-dr__x {background:var(--tw-surface);color:var(--tw-ink);}
+.dark :is(.qx,.cp-redesign) {
+  --ink:#eef2f8;--ink2:#cbd5e1;--mut:#a6b4c8;--blue-i:#8bb8ff;
+  --bg:#101620;--surf:#182231;--soft:#202d40;--soft2:#25344a;
+  --hair:#2c3a4e;--line:#3a4a60;--hairline:#64748b;--lav:#1d3152;--lav2:#263e63;
+  --ok:#6ee7b7;--ok-b:#123b30;--ok-br:#28614e;
+  --wrn:#fcd34d;--wrn-b:#3c301b;--wrn-br:#705627;
+  --bad:#fca5a5;--bad-b:#43252c;--bad-br:#80414e;
+}
+.dark .q-redesign-body {
+  --q-ink:#eef2f8;--q-ink2:#cbd5e1;--q-mut:#a6b4c8;
+  --q-bg:#101620;--q-soft:#202d40;--q-hair:#2c3a4e;--q-line:#3a4a60;
+  --q-ok:#6ee7b7;--q-ok-b:#123b30;--q-wrn:#fcd34d;--q-wrn-b:#3c301b;--q-bad:#fca5a5;--q-bad-b:#43252c;
+}
+.dark .tq-redesign .q-redesign-body.q-header-tools,
+.dark .tq-redesign .q-redesign-body :is(.q-creator-service-group,.q-grid-total),
+.dark .tq-redesign.qx.q-document-edit,
+.dark .tq-redesign.qx.q-service-sheet .qx-sh__f,
+.dark .q-redesign-commercial.qx .b--fin {
+  background:var(--surf);color:var(--ink);border-color:var(--line);
+}
+.dark .tq-redesign .q-redesign-body :is(.tw-b,.q-b):not(.pri):not(.q-b--pri):not([data-action-tone=success]):not([data-action-tone=danger]) {background:var(--surf);color:var(--ink2);border-color:var(--line);}
+.dark .tq-redesign .q-redesign-body .q-grid .q-row.is-head {background:var(--soft2);border-color:var(--line);}
+.dark .tq-redesign .q-redesign-body .q-row.is-head>span {color:var(--ink2);}
+.dark .tq-redesign .qx .q-section-links button[aria-current=true] {background:#dbeafe;color:#14243d;}
+.dark .q-saving-mark {background:#1d3152;color:#8bb8ff;}
+.dark .q-saving-dialog p {color:#a6b4c8;}
+.dark .q-saving-track {background:#2c3a4e;}
+.dark .q-draft-notice {background:#3c301b;color:#fcd34d;border-color:#705627;}
+.dark .tw-billing-v3 {
+  --bq-ink:#eef2f8;--bq-ink2:#cbd5e1;--bq-mut:#a6b4c8;--bq-bi:#6ee7b7;
+  --bq-bg:#101620;--bq-soft:#202d40;--bq-lav:#123b30;--bq-line:#3a4a60;--bq-hair:#2c3a4e;
+  --bq-ok:#6ee7b7;--bq-okb:#123b30;--bq-wrn:#fcd34d;--bq-wrnb:#3c301b;--bq-bad:#fca5a5;--bq-badb:#43252c;
+}
+.dark .tw-billing-v3 :is(.bq-c,.bq-k,.bq-b,.bq-in,.bq-toolbar) {background:#182231;color:var(--bq-ink);border-color:var(--bq-line);}
+
+.dark .discovery-suite :is(.tw-jump a,.tw-mx > div,.tw-cm__w,.tw-cdt button[aria-pressed=true],.tw-seg button[aria-pressed=true]) {background:var(--tw-surface);color:var(--tw-ink2);border-color:var(--tw-line);}
+.dark .home-dashboard-suite .tw-jn.cur {background:var(--tw-surface);color:var(--tw-ink);}
+.dark .finance-suite :is(.thinkway-campaign-section-card,[data-slot=card]:not(.tw-tile):not(.fs-tile),input[data-slot=input],[data-slot=select-trigger],textarea,select,button.group\/table-tool) {background:var(--tw-surface);color:var(--tw-ink);border-color:var(--tw-line);}
+.dark .finance-suite:not(:has([data-overview-redesign])) main [data-slot=button] {background:var(--tw-surface);color:var(--tw-ink2);border-color:var(--tw-line);}
+.dark .finance-suite:not(:has([data-overview-redesign])) tfoot td,
+.dark .finance-suite :is(.thinkway-campaign-op-table-row,tbody [data-slot=table-row]):hover {background:var(--tw-soft);}
+.dark .finance-ledger :is(.fl-input,.tw-mast > nav) {background:var(--tw-surface);color:var(--tw-ink);}
+.dark .tw-billing-v3 :is(.bq-m,.bq-card,.thinkway-campaign-section-card,.bq-chips button,.bq-inw input,.bq-x,button.group\/table-tool) {background:#182231;color:var(--bq-ink2);border-color:var(--bq-line);}
+.dark .tw-billing-v3 .bq-krow:hover {background:#202d40;}
+.dark .tw-billing-v3 .bq-chips button[aria-pressed=true] {background:var(--bq-lav);color:var(--bq-bi);}
+.dark .tw-billing-v3.billing-related :is(.billing-section-tabs > button,.tw-mast .billing-related-nav,.billing-related-nav > a,[data-sticky=operational-workspace-tabs],[role=tablist],[role=tab],.related-inner-panel,.related-summary-strip,.po-control,.po-details-pane) {background:#182231;color:var(--bq-ink2);border-color:var(--bq-line);}
+
+@media (max-width:1023px) {
+  /* Desktop summary + toolbars together must not pin most of a phone screen. */
+  .tq-redesign.quotation-editor-rd4 > .q-frozen-summary,
+  .tq-redesign .q-redesign-body.q-header-tools,
+  :is(.home-dashboard-suite,.finance-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.campaigns-list-suite,.collections-suite) > .tw-frozen {position:static;}
+  .tq-redesign.quotation-editor-rd4 {--q-summary-visible:0px!important;}
+  .tq-redesign .q-redesign-body .q-creator-service-tools {flex-wrap:wrap;white-space:normal;gap:4px 10px;max-width:100%;}
+  .tq-redesign.discovery-suite .q-redesign-body .q-lines__h .tw-b,
+  .tq-redesign .q-redesign-body .q-creator-service-tools button,
+  .tq-redesign .q-redesign-body :is(.q-opt,.qx-svc__desc,.q-cell-repeat input) {min-height:44px;height:auto;}
+  .tq-redesign .q-redesign-body .q-cell-status {max-width:none;}
+  .tq-redesign .q-redesign-body :is(.q-cell-service,.q-cell-creator,.q-cell-option,.q-cell-price) {min-width:0;}
+  .tq-redesign .q-redesign-body .q-lines__h input[type=search] {width:100%;max-width:100%;min-height:44px;font-size:16px;}
+  :is(.home-dashboard-suite,.finance-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.campaigns-list-suite,.collections-suite) .tw-main {padding-inline:12px;min-width:0;}
+  :is(.discovery-suite,.finance-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.campaigns-list-suite,.campaign-detail-suite,.collections-suite) :is(.tw-ch,.tw-toolbar,.tw-tools) {flex-wrap:wrap;min-width:0;}
+  :is(.discovery-suite,.finance-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.campaigns-list-suite,.campaign-detail-suite,.collections-suite) .tw-sc {max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;}
+  .discovery-suite.tw-cp-root .tw-cp__l {overflow-x:hidden;}
+  .discovery-suite.tw-cp-root .tw-cp__l :is(input,select) {max-width:100%;min-width:0;min-height:44px;font-size:16px;}
+  .discovery-suite.tw-cp-root :is(.tw-cp__h .tw-b,.tw-cp__t button,.tw-platform-chip__remove) {min-height:44px;}
+  .discovery-suite.tw-cp-root .tw-cp__h {gap:8px;}
+  .discovery-suite.tw-cp-root .tw-cp__b {padding:12px;}
+}
+@media (max-width:600px) {
+  .home-dashboard-suite {padding-inline:10px;}
+  .discovery-suite.tw-cp-root .tw-cp__l {padding-inline:16px;}
+  .discovery-suite.tw-cp-root .tw-pubs {grid-template-columns:repeat(2,minmax(0,1fr));}
+  .q-redesign-commercial.qx .qx-cw__sum {grid-template-columns:1fr;}
+  .q-redesign-commercial.qx .qx-zone {min-height:0;}
+  .q-redesign-commercial.qx .q-cw-toolbar {flex-wrap:wrap;}
+  .q-redesign-commercial.qx .cw-card-list {min-height:160px;}
+}
