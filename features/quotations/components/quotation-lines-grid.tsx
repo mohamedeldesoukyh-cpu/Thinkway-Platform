@@ -127,10 +127,11 @@ function QuotationPackLineRow({
   const [pending, startTransition] = useTransition();
   const [dragOver, setDragOver] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [editorFocus, setEditorFocus] = useState<"deliverables" | "cost" | null>(null);
+  const [editorFocus, setEditorFocus] = useState<"deliverables" | "cost" | null>("deliverables");
+  const [editorFocusRevision, setEditorFocusRevision] = useState(0);
   const editorBody = useRef<HTMLDivElement>(null);
   const setExpanded = (open: boolean) => onActivate(open ? item.id : null);
-  const openEditor = (focus: "deliverables" | "cost" | null = null) => { setEditorFocus(focus); setExpanded(true); };
+  const openEditor = (focus: "deliverables" | "cost" | null = null) => { setEditorFocus(focus); setEditorFocusRevision(value => value + 1); setExpanded(true); };
   useEffect(() => {
     if (!expanded || !editorFocus) return;
     const frame = requestAnimationFrame(() => {
@@ -139,7 +140,7 @@ function QuotationPackLineRow({
       section?.querySelector<HTMLElement>('input,textarea,select,button')?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(frame);
-  }, [expanded, editorFocus]);
+  }, [expanded, editorFocus, editorFocusRevision]);
   const confirmDelete = useConfirmDelete();
   const manualSave = useQuotationManualSave();
   const resolved = resolveQuotationRowDraft(item, draft);
@@ -209,6 +210,7 @@ function QuotationPackLineRow({
         deliverables: saved.deliverables, cost: saved.draft.cost, revenue: saved.draft.revenue,
         mode: saved.draft.mode, gp_pct: saved.draft.gpPct, gp_value: saved.draft.gpValue,
         af_pct: saved.draft.afPct, cost_currency: saved.draft.costCurrency,
+        cost_fx_override: saved.draft.costFxOverride ?? null, revenue_fx_override: saved.draft.revenueFxOverride ?? null,
       });
     }
     setExpanded(false);
@@ -440,9 +442,9 @@ function QuotationPackLineRow({
           <button type="button" className="q-b q-b--sm q-b--danger q-mobile-action" aria-label="Remove line" onClick={handleRemove} disabled={!canManage || pending}><QuotationText>Delete</QuotationText></button>
         </div>
       </div>
-      {expanded && <Sheet open={expanded} onOpenChange={setExpanded}><SheetContent side="right" showCloseButton={false} className="tq-redesign q-service-sheet qx q-redesign-body" data-shortcut-pane id={`quotation-line-${item.id}`}><SheetTitle className="sr-only">Service details for {name}</SheetTitle><SheetDescription className="sr-only">Choose deliverables, quantities, duration and internal costs. Changes are staged until Save.</SheetDescription>
+      {expanded && <Sheet modal={false} open={expanded} onOpenChange={setExpanded}><SheetContent showOverlay={false} side="right" showCloseButton={false} className="tq-redesign q-service-sheet qx q-redesign-body" data-shortcut-pane id={`quotation-line-${item.id}`}><SheetTitle className="sr-only">Service details for {name}</SheetTitle><SheetDescription className="sr-only">Choose deliverables, quantities, duration and internal costs. Changes are staged until Save.</SheetDescription>
         <header className="qx-sh__h"><div className="q-service-heading"><b title={name}>{name}</b><span title={lineFields.serviceDescription || "New service"}> · {lineFields.serviceDescription || "New service"}</span></div><button type="button" className="q-b q-b--sm" data-shortcut-close onClick={() => setExpanded(false)}>Close</button></header><div className="q-exp qx-sh__b" ref={editorBody}>
-        {otherService ? <section className="q-sec"><div className="q-sec__h"><b>Service description</b></div><textarea aria-label="Other service description" className="w-full rounded border p-2" rows={3} value={lineFields.serviceDescription} readOnly={!canManage} onChange={e => updateServiceDescription(e.target.value)} /><p className="q-help">Use Repeat on the row for multiple units.</p></section> : <section className="q-service-selection" data-editor-section="deliverables">          {lineFields.deliverableDrafts.map((deliverable) => (
+        {otherService ? <section className="q-sec"><div className="q-sec__h"><b>Service description</b></div><textarea aria-label="Other service description" className="w-full rounded border p-2" rows={3} value={lineFields.serviceDescription} readOnly={!canManage} onChange={e => updateServiceDescription(e.target.value)} /><p className="q-help">Use Repeat on the row for multiple units.</p></section> : <section className="q-service-selection">          {lineFields.deliverableDrafts.map((deliverable) => (
             <QuotationDeliverableTypeLinesEditor
               workspaceDetails inlinePicker sectioned
               key={deliverable.key}

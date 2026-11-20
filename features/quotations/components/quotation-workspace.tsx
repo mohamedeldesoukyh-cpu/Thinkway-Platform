@@ -1,4 +1,5 @@
 "use client";
+import { ThinkwayRouteLoading } from "@/components/layout/thinkway-page-loader";
 import { WorkspaceUndoProvider } from "@/lib/productivity/workspace-undo";
 import { useLiveQuotationEnrichment } from "./use-live-quotation-enrichment";
 import { appendProposalOptions, type ProposalOption } from "@/features/quotations/export/proposal-options";
@@ -781,7 +782,7 @@ function QuotationWorkspaceContent({
     onPreview: openPreview,
   });
 
-  if (!directRates) return <div role="status" className="p-6 text-sm">{rateError ? <>Could not load quotation exchange rates. <button onClick={() => { setRateError(false); setRateAttempt(value => value + 1); }}>Retry</button></> : "Loading quotation exchange rates…"}</div>;
+  if (!directRates) return <div role="status" className="p-6 text-sm">{rateError ? <>Could not load quotation exchange rates. <button onClick={() => { setRateError(false); setRateAttempt(value => value + 1); }}>Retry</button></> : <ThinkwayRouteLoading />}</div>;
 
   return (
     <QuotationDirectRatesContext.Provider value={directRates}><div data-discovery-workspace-scroll data-shortcut-save-scope="quotation" dir={language === "ar" ? "rtl" : "ltr"} lang={language} className="tq-redesign quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)] pb-16">
@@ -858,7 +859,7 @@ function QuotationWorkspaceContent({
       >
       <nav className="q-section-links qx-sec-nav" aria-label="Quotation sections">
         {[["quotation-creators", "Creators & services"], ["commercial", "Commercial"], ["quotation-document", "Document"], ["quotation-client", "Client & brand"], ["quotation-notes", "Notes"], ["quotation-review", "Client review"], ["quotation-terms", "Terms"]].map(([id, label]) => (
-          <button key={id} type="button" aria-current={activeSection === id} onClick={() => { setActiveSection(id); if (id === "commercial") { setCommercialWorkspaceOpen(true); return; } document.getElementById(id)?.scrollIntoView({ block: "start", behavior: "instant" }); }}><QuotationText>{label}</QuotationText></button>
+          <button key={id} type="button" aria-current={activeSection === id} onClick={() => { if (id === "commercial") { setCommercialWorkspaceOpen(true); return; } setActiveSection(id); document.getElementById(id)?.scrollIntoView({ block: "start", behavior: "instant" }); }}><QuotationText>{label}</QuotationText></button>
         ))}
       </nav>
       <div id="quotation-creators" className="q-section-target">

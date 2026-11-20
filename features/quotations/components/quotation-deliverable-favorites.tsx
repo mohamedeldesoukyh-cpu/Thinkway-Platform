@@ -88,8 +88,8 @@ export function QuotationFavoriteButtons({ itemIds, lines = [], description = ""
     <button type="button" data-action-tone="favorite" className="q-favorite-button q-favorite-button--saved" disabled={disabled || store.loading} title={onDeliverables ? "Favorite packages" : favorite ? `Apply ${favorite.name}` : "Set your first favorite"}
       onClick={() => onDeliverables ? showEditor() : favorite ? applySelectedFavorite(favorite) : showEditor()}><StarIcon size={12} />Favorite</button>
     <button type="button" className="q-favorite-button" disabled={disabled} onClick={onDeliverables ?? showEditor}><ListPlusIcon size={12} />Deliverables</button>
-    <Sheet open={open} onOpenChange={next => { if (!busy) setOpen(next); }}>
-      <SheetContent side="right" showCloseButton={false} className="tq-redesign q-service-sheet qx q-redesign-body q-favorites-sheet">
+    <Sheet modal={false} open={open} onOpenChange={next => { if (!busy) setOpen(next); }}>
+      <SheetContent showOverlay={false} side="right" showCloseButton={false} className="tq-redesign q-service-sheet qx q-redesign-body q-favorites-sheet">
         <header className="qx-sh__h"><div><SheetTitle>Favorite deliverables</SheetTitle><SheetDescription>{creatorName ? `${creatorName} · ` : ""}Reusable packages · apply to this line, then Save the quotation.</SheetDescription></div><SheetClose className="q-b q-b--sm">Close</SheetClose></header><div className="q-favorites-body qx-sh__b">
         {store.error && <p role="alert" className="text-sm text-destructive">{store.error}</p>}
         <section className="qx-panel"><div className="qx-panel__h"><h4>Saved packages</h4><span className="sp" /><span>{store.favorites.length}</span></div><div className="qx-panel__b">{!store.favorites.length && <p className="q-help">No saved packages yet. Build one below to reuse across quotations.</p>}

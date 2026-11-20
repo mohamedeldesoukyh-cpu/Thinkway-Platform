@@ -431,11 +431,11 @@ export function QuotationCommercialWorkspaceDialog({
       <DialogContent
         showCloseButton
         data-shortcut-save-scope="quotation"
-        className="commercial-workspace-dialog qx q-redesign-commercial flex h-[min(92vh,820px)] max-h-[min(92vh,820px)] min-h-0 w-[min(98vw,1280px)] max-w-[min(98vw,1280px)] flex-col gap-0 overflow-hidden rounded-xl border-[0.5px] p-0 sm:max-w-[min(98vw,1280px)]"
+        className="commercial-workspace-dialog qx q-redesign-commercial flex h-auto max-h-[calc(100dvh-44px)] min-h-0 w-[min(calc(100vw-44px),1180px)] max-w-[min(calc(100vw-44px),1180px)] flex-col gap-0 overflow-hidden rounded-xl border-[0.5px] p-0 sm:max-w-[min(calc(100vw-44px),1180px)]"
         style={{ borderColor: CS.line, backgroundColor: "#fff", color: CS.dark }}
       >
         <div
-          className="shrink-0 px-5 py-3"
+          className="qx-sh__h shrink-0"
           style={{ borderBottom: `0.5px solid ${CS.line}` }}
         >
           <DialogTitle className="m-0 text-base font-semibold" style={{ color: CS.dark }}>
@@ -531,7 +531,7 @@ export function QuotationCommercialWorkspaceDialog({
                 <Button
                   type="button"
                   size="sm"
-                  className="h-8 text-xs"
+                  className="b b--fin h-8 text-xs"
                   disabled={selectedIds.size === 0 || manualSave.savePending}
                   onClick={applyBulk}
                 >

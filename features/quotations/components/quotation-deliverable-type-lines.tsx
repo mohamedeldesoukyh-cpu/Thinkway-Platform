@@ -101,7 +101,7 @@ export function QuotationDeliverableTypeLinesEditor({
       })}
       {sectioned && <p className="q-help">Duration controls appear only for services that use one.</p>}
       </div></div>
-      {!hidePicker && <div className={sectioned ? "qx-panel" : "q-type-picker"}>
+      {!hidePicker && <div className={sectioned ? "qx-panel" : "q-type-picker"} data-editor-section={sectioned ? "deliverables" : undefined}>
         {sectioned && <div className="qx-panel__h"><h4>Services</h4></div>}
         <div className={sectioned ? "qx-panel__b" : undefined}>
         {inlinePicker ? <><QuotationInlineServicePicker value={selectedTypes} onChange={handleTypesChange} allowedPlatforms={allowedPlatforms} disabled={disabled} /></> : <QuotationPostTypeMultiSelect value={selectedTypes} onChange={handleTypesChange}
