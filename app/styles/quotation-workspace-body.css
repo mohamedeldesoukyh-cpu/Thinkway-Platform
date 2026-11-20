@@ -331,7 +331,7 @@ body:has(.q-main.q-redesign-body) :is([data-slot=dialog-content],[data-slot=popo
 .tq-redesign .q-redesign-body .q-cell-creator .hd {font-size:11px;color:var(--mut);}
 .tq-redesign .q-redesign-body .q-conn>span {flex-direction:row;flex-wrap:wrap;gap:8px;}
 .tq-redesign .q-redesign-body .q-conn [data-slot=badge] {background:none;border:0;padding:0;color:var(--mut);font-size:10.5px;font-weight:500;box-shadow:none;}
-.tq-redesign .q-redesign-body .q-creator-service-tools--first {margin-top:8px;margin-inline-start:39px;}
+.tq-redesign .q-redesign-body .q-cell-creator .q-creator-service-tools--first {margin-top:8px;margin-inline-start:39px;}
 .tq-redesign .q-redesign-body .q-creator-service-tools button {font-size:11px!important;font-weight:500!important;}
 .tq-redesign .q-redesign-body .q-creator-service-tools>.q-b {color:var(--blue-i)!important;}
 .tq-redesign .q-redesign-body .q-cell-service {padding:5px 0;}
@@ -342,6 +342,8 @@ body:has(.q-main.q-redesign-body) :is([data-slot=dialog-content],[data-slot=popo
 .tq-redesign .q-redesign-body .q-cell-repeat input {font-size:11px;color:var(--ink);}
 .tq-redesign .q-redesign-body .q-price b {font-size:12.5px;color:var(--ink);}
 .tq-redesign .q-redesign-body :is(.tw-b,.q-b),.tq-redesign .q-redesign-body .q-section-links button {font-size:11px;font-weight:500;}
+.tq-redesign.discovery-suite .q-redesign-body .q-lines__h .tw-b {font-size:11px;font-weight:500;min-height:28px;height:28px;border-radius:7px;}
+.tq-redesign .q-redesign-body .q-conn [data-slot=badge] {height:16px;line-height:16px;}
 .tq-redesign .q-redesign-body .qx-foot b {font-size:14px;}
 .tq-redesign .q-redesign-body .card__h h2 {font-size:14px;}
 .tq-redesign.qx.q-service-sheet .q-service-heading b,.tq-redesign.qx.q-service-sheet [data-slot=sheet-title],.q-redesign-commercial.qx .qx-sh__h [data-slot=dialog-title] {font-size:16px;}
