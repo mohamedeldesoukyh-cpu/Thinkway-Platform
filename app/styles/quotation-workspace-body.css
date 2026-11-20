@@ -339,6 +339,13 @@ body:has(.q-main.q-redesign-body) :is([data-slot=dialog-content],[data-slot=popo
 .tq-redesign .q-redesign-body .q-dels {gap:5px;}
 .tq-redesign .q-redesign-body .q-del {padding:1px 7px;font-size:10.5px;line-height:1.55;background:var(--soft2);color:var(--ink2);}
 .tq-redesign .q-redesign-body .q-desc {font-size:11px;font-weight:400;line-height:1.5;color:var(--mut);padding:0;min-height:0;}
+.tq-redesign .q-redesign-body .qx-svc__desc {
+  display:block;width:100%;min-height:28px;margin-top:5px;padding:4px 7px;
+  border:1px solid var(--line);border-radius:7px;background:var(--soft);
+  color:var(--ink2);font-size:11px;line-height:1.5;text-align:start;
+}
+.tq-redesign .q-redesign-body .qx-svc__desc:hover:not(:disabled) {border-color:#a9bedf;background:var(--surf);}
+.tq-redesign .q-redesign-body .qx-svc__descin {min-height:28px;margin-top:5px;padding:4px 7px;font-size:11px;}
 .tq-redesign .q-redesign-body .q-opt {background:var(--surf);border:1px solid var(--line);font-size:11px;font-weight:500;color:var(--ink);padding:3px 8px;}
 .tq-redesign .q-redesign-body .q-cell-repeat input {font-size:11px;color:var(--ink);}
 .tq-redesign .q-redesign-body .q-price b {font-size:12.5px;color:var(--ink);}
