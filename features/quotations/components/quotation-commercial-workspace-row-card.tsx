@@ -1,50 +1,14 @@
-
-import { useQuotationDirectRates } from "./quotation-direct-rates-context";
-import { QuotationCreatorFxFields } from "./quotation-creator-fx-fields";
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
-import { InterestChips } from "@/features/discovery/components/discovery-interest-chips";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { QuotationDecimalInput } from "@/features/quotations/components/quotation-decimal-input";
-import { COMMERCIAL_INPUT_MODE_LABELS } from "@/lib/domains/commercial/quotation-constants";
-import type { CommercialInputMode } from "@/lib/commercial/commercial-engine";
+import { QuotationDecimalInput } from "./quotation-decimal-input";
+import { QuotationCreatorFxFields } from "./quotation-creator-fx-fields";
 import { COMMERCIAL_CURRENCIES } from "@/lib/commercial/fx-aggregation";
+import { computeCommercials, type CommercialInputMode } from "@/lib/commercial/commercial-engine";
 import { applyCommercialWorkspaceBulkOp } from "@/lib/quotations/commercial-workspace/bulk-transforms";
-import { commercialWorkspaceCreatorCardClass } from "@/lib/quotations/commercial-workspace/creator-card-class";
-import {
-  profitabilityBandLabel,
-  resolveProfitabilityBand,
-} from "@/lib/quotations/commercial-workspace/profitability-thresholds";
 import type { CommercialWorkspaceColumnId } from "@/lib/quotations/commercial-workspace/column-preferences";
 import { resolveQuotationCreatorProfileSource } from "@/lib/quotations/quotation-creator-source";
-import { resolveCreatorLineCostDualLabel } from "@/lib/quotations/quotation-line-creator-commercial-sync";
-import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
-import { cn } from "@/lib/utils";
 import type { QuotationRowDraft } from "@/features/quotations/quotation-row-math";
 import { computeQuotationRowComputed, computeQuotationRowClientCommercials } from "@/features/quotations/quotation-row-math";
 import type { QuotationItemRow } from "@/features/quotations/types";
-
-const MODE_OPTIONS = Object.entries(COMMERCIAL_INPUT_MODE_LABELS) as [
-  CommercialInputMode,
-  string,
-][];
-
-function fmtCell(n: number): string {
-  if (!Number.isFinite(n) || n === 0) return "—";
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
-}
-
-function fmtGpPct(gp: number, revenue: number, rowGpPct: number): string {
-  if (!Number.isFinite(revenue) || revenue <= 0) return "0.0%";
-  const pct = revenue > 0 ? (gp / revenue) * 100 : rowGpPct;
-  return `${pct.toFixed(1)}%`;
-}
-
-function formatHandle(handle: string | null | undefined): string | null {
-  const trimmed = handle?.trim().replace(/^@+/, "");
-  return trimmed ? `@${trimmed}` : null;
-}
-
 export type CommercialWorkspaceRowCardModel = {
   itemId: string;
   item: QuotationItemRow;
@@ -68,354 +32,32 @@ type Props = {
   displayFxRateToEgp?: number;
 };
 
-export function QuotationCommercialWorkspaceRowCard({
-  row,
-  selected,
-  canManage,
-  show,
-  onToggleSelected,
-  onStageDraft,
-  displayCurrency = "EGP",
-  displayFxRateToEgp = 1,
-}: Props) {
-  const directRates = useQuotationDirectRates();
-  const band = resolveProfitabilityBand(row.gpPct);
-  const computed = computeQuotationRowComputed(row.draft);
-  const client = computeQuotationRowClientCommercials(row.draft);
-  const formatMoney = (value: number) => `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value)} ${row.draft.costCurrency || "EGP"}`;
-  const profile = resolveQuotationCreatorProfileSource(
-    row.item,
-    row.item.platform ? [row.item.platform] : []
-  );
-  const profileUrl = resolveCreatorProfileUrl(profile);
-  const handleLabel = formatHandle(profile.handle ?? row.item.handle);
-  const displayName =
-    profile.displayName?.trim() ||
-    row.item.creator_name?.trim() ||
-    handleLabel?.replace(/^@/, "") ||
-    row.influencerName;
-  const categories = row.item.creator_categories ?? [];
-  const costDual = resolveCreatorLineCostDualLabel(row.draft, {
-    displayCurrency,
-    displayFxRateToEgp, directRates,
-  });
 
-  return (
-    <div
-      className={cn(
-        "cgroup quotation-creator-card",
-        commercialWorkspaceCreatorCardClass(band),
-        !selected && "cw-card-row--dimmed"
-      )}
-    >
-      <div className="cw-card-row">
-        <Checkbox checked={selected} onCheckedChange={onToggleSelected} aria-label={`Select ${displayName}`} />
-
-        <div
-          className="cw-avatar-wrap relative shrink-0 overflow-hidden rounded-full"
-          style={{ width: 64, height: 64 }}
-        >
-          {profileUrl ? (
-            <a
-              href={profileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`Open ${displayName} profile`}
-              className="block size-full overflow-hidden rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0057FF]/40"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <CreatorAvatarImage
-                avatarUrl={profile.avatarUrl}
-                profileUrl={profileUrl}
-                alt={displayName}
-                sizeClassName="!size-full"
-                className="!size-full border-0 bg-[var(--surface,#f3f6fc)] [&_img]:!size-full [&_img]:object-cover [&_img]:object-center"
-              />
-            </a>
-          ) : (
-            <CreatorAvatarImage
-              avatarUrl={profile.avatarUrl}
-              profileUrl={null}
-              alt={displayName}
-              sizeClassName="!size-full"
-              className="!size-full border-0 bg-[var(--surface,#f3f6fc)] [&_img]:!size-full [&_img]:object-cover [&_img]:object-center"
-            />
-          )}
-        </div>
-
-        <div className="cg-id min-w-[140px] max-w-[220px] shrink-0 self-center">
-          <div className="cg-name">
-            <span className="truncate font-bold text-[var(--text,#0d1220)]">{displayName}</span>
-          </div>
-          {handleLabel ? <div className="cg-handle truncate">{handleLabel}</div> : null}
-          {categories.length > 0 ? (
-            <div className="cg-cats mt-1">
-              <InterestChips interests={categories} variant="icat" maxVisible={2} />
-            </div>
-          ) : null}
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <span className="shortlist-creator-status-pill inline-flex h-[21px] items-center rounded-full bg-[#f1f4fa] px-2.5 text-[10.5px] font-bold text-[#727d92]">
-              {profitabilityBandLabel(band)}
-            </span>
-            {row.optionLabel ? (
-              <span className="shortlist-creator-status-pill inline-flex h-[21px] items-center rounded-full bg-[#f1f4fa] px-2.5 text-[10.5px] font-bold text-[#727d92]">
-                {row.optionLabel}
-              </span>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="cw-card-fields">
-          <div className="w-full min-w-0"><QuotationCreatorFxFields compact draft={row.draft} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} disabled={!canManage} onChange={patch => onStageDraft({ ...row.draft, ...patch })} /></div>
-          {show("mode") ? (
-            <div className="cw-field min-w-[128px]">
-              <span className="cw-field-label">Mode</span>
-              {canManage ? (
-                <select
-                  className="h-8 w-full max-w-[150px] rounded-[9px] border border-[#e3e8f2] bg-white px-2 text-[11px] font-medium"
-                  value={row.draft.mode}
-                  onChange={(e) => {
-                    const mode = e.target.value as CommercialInputMode;
-                    const next = applyCommercialWorkspaceBulkOp(
-                      { ...row.draft, mode },
-                      mode === "cost_markup_pct"
-                        ? { kind: "apply_markup_pct", pct: row.draft.gpPct }
-                        : { kind: "set_gp_pct", pct: row.draft.gpPct }
-                    );
-                    if (mode === "cost_revenue") {
-                      onStageDraft({
-                        ...row.draft,
-                        mode,
-                        gpValue: row.draft.revenue - row.draft.cost,
-                        gpPct:
-                          row.draft.revenue > 0
-                            ? ((row.draft.revenue - row.draft.cost) / row.draft.revenue) * 100
-                            : 0,
-                      });
-                    } else {
-                      onStageDraft({ ...next, mode: next.mode });
-                    }
-                  }}
-                >
-                  {MODE_OPTIONS.map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="text-[12px] font-semibold text-[#0d1220]">
-                  {COMMERCIAL_INPUT_MODE_LABELS[row.draft.mode]}
-                </span>
-              )}
-            </div>
-          ) : null}
-
-          {show("cost") ? (
-            <div className="cw-field">
-              <span className="cw-field-label">Cost</span>
-              {canManage ? (
-                <div className="flex flex-col items-end gap-0.5">
-                  <div className="flex items-center gap-1">
-                    <QuotationDecimalInput
-                      className="h-8 w-[120px] text-right text-xs tabular-nums"
-                      value={row.draft.cost}
-                      onCommit={(cost) => {
-                        const revenue = row.draft.revenue;
-                        onStageDraft({
-                          ...row.draft,
-                          mode: "cost_revenue",
-                          cost,
-                          gpValue: revenue - cost,
-                          gpPct: revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0,
-                        });
-                      }}
-                    />
-                    <span className="text-[10px] font-semibold uppercase text-[#727d92]">
-                      {row.draft.costCurrency || "EGP"}
-                    </span>
-                  </div>
-                  {costDual.secondary ? (
-                    <span className="text-[10.5px] tabular-nums text-[#8b93a7]">
-                      {costDual.secondary}
-                    </span>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="flex flex-col items-end gap-0.5">
-                  <span className="text-[12px] font-semibold tabular-nums text-[#0d1220]">
-                    {costDual.primary}
-                  </span>
-                  {costDual.secondary ? (
-                    <span className="text-[10.5px] tabular-nums text-[#8b93a7]">
-                      {costDual.secondary}
-                    </span>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          {show("revenue") ? (
-            <div className="cw-field">
-              <span className="cw-field-label">Base revenue</span>
-              {canManage ? (
-                <QuotationDecimalInput
-                  className="h-8 w-[120px] text-right text-xs tabular-nums"
-                  value={row.draft.revenue}
-                  onCommit={(revenue) => {
-                    onStageDraft({
-                      ...row.draft,
-                      mode: "cost_revenue",
-                      revenue,
-                      gpValue: revenue - row.draft.cost,
-                      gpPct:
-                        revenue > 0
-                          ? ((revenue - row.draft.cost) / revenue) * 100
-                          : 0,
-                    });
-                  }}
-                />
-              ) : (
-                <span className="text-[12px] font-semibold tabular-nums text-[#0d1220]">
-                  {formatMoney(computed.revenue)}
-                </span>
-              )}
-            </div>
-          ) : null}
-
-          {show("gpPctInput") ? (
-            <div className="cw-field">
-              <span className="cw-field-label">GP % in</span>
-              {canManage ? (
-                <Input
-                  type="number"
-                  className="h-8 w-[80px] text-right text-xs"
-                  value={row.draft.gpPct}
-                  onChange={(e) => {
-                    const pct = Number(e.target.value);
-                    onStageDraft(
-                      applyCommercialWorkspaceBulkOp(row.draft, {
-                        kind: "set_gp_pct",
-                        pct: Number.isFinite(pct) ? pct : 0,
-                      })
-                    );
-                  }}
-                />
-              ) : (
-                <span className="text-[12px] font-semibold tabular-nums text-[#0d1220]">
-                  {row.draft.gpPct.toFixed(1)}
-                </span>
-              )}
-            </div>
-          ) : null}
-
-          {show("gp") ? (
-            <div className="cw-field">
-              <span className="cw-field-label">GP margin (EGP)</span>
-              <span className="cw-field-value">{fmtCell(row.gpValueEgp)}</span>
-            </div>
-          ) : null}
-
-          {show("gpPct") ? (
-            <div className="cw-field">
-              <span className="cw-field-label">GP %</span>
-              <span className="cw-field-value">
-                {fmtGpPct(row.gpValueEgp, row.revenueEgp, row.gpPct)}
-              </span>
-            </div>
-          ) : null}
-
-          {show("afPct") ? (
-            <div className="cw-field">
-              <span className="cw-field-label">Agency fee %</span>
-              {canManage ? (
-                <Input
-                  type="number"
-                  min={0}
-                  aria-label="Agency fee percent"
-                  className="h-8 w-[72px] text-right text-xs"
-                  value={row.draft.afPct}
-                  onChange={(e) => {
-                    const pct = Number(e.target.value);
-                    onStageDraft({
-                      ...row.draft,
-                      afPct: Number.isFinite(pct) ? Math.max(0, pct) : 0,
-                    });
-                  }}
-                />
-              ) : (
-                <span className="text-[12px] font-semibold tabular-nums text-[#0d1220]">
-                  {row.draft.afPct.toFixed(1)}
-                </span>
-              )}
-              <span className="text-[10.5px] tabular-nums text-muted-foreground">{formatMoney(computed.afValue)}</span>
-            </div>
-          ) : null}
-
-          <div className="cw-field">
-            <span className="cw-field-label">Client cost (incl. fees)</span>
-            <span className="text-xs font-semibold tabular-nums">{formatMoney(client.clientCost)}</span>
-          </div>
-
-          {show("currency") ? (
-            <div className="cw-field">
-              <span className="cw-field-label">Currency</span>
-              {canManage ? (
-                <select
-                  className="h-8 w-[84px] rounded-[9px] border border-[#e3e8f2] bg-white px-1.5 text-[11px] font-semibold uppercase"
-                  value={(row.draft.costCurrency || "EGP").toUpperCase()}
-                  aria-label="Currency"
-                  onChange={(e) => {
-                    onStageDraft(
-                      applyCommercialWorkspaceBulkOp(row.draft, {
-                        kind: "set_currency",
-                        currency: e.target.value || "EGP",
-                      })
-                    );
-                  }}
-                >
-                  {COMMERCIAL_CURRENCIES.map((code) => (
-                    <option key={code} value={code}>
-                      {code}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="text-[12px] font-semibold text-[#0d1220]">
-                  {row.draft.costCurrency}
-                </span>
-              )}
-            </div>
-          ) : null}
-
-          {show("fx") ? (
-            <div className="cw-field">
-              <span className="cw-field-label">FX</span>
-              {canManage ? (
-                <Input
-                  type="number"
-                  className="h-8 w-[72px] text-right text-xs"
-                  value={row.draft.fxRateToEgp}
-                  onChange={(e) => {
-                    const fx = Number(e.target.value);
-                    onStageDraft(
-                      applyCommercialWorkspaceBulkOp(row.draft, {
-                        kind: "set_fx",
-                        fxRateToEgp: Number.isFinite(fx) ? fx : 1,
-                      })
-                    );
-                  }}
-                />
-              ) : (
-                <span className="text-[12px] font-semibold tabular-nums text-[#0d1220]">
-                  {row.draft.fxRateToEgp}
-                </span>
-              )}
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
+const modes: [CommercialInputMode,string][] = [["cost_markup_pct","Markup %"],["cost_gp_pct","GP margin %"],["cost_revenue","Client cost"],["cost_gp_value","GP value"]];
+export function commercialGridColumns(show: Props["show"]) {
+  return ["24px", "minmax(160px,1.5fr)", show("mode") && "128px", show("cost") && "100px", show("revenue") && "108px", (show("gpPctInput") || show("gpPct")) && "86px", show("gp") && "100px", show("afPct") && "76px", "112px"].filter(Boolean).join(" ");
+}
+export function QuotationCommercialWorkspaceRowCard({row,selected,canManage,show,onToggleSelected,onStageDraft,displayCurrency="EGP",displayFxRateToEgp=1}: Props) {
+  const d=row.draft, computed=computeQuotationRowComputed(d), client=computeQuotationRowClientCommercials(d);
+  const profile=resolveQuotationCreatorProfileSource(row.item,row.item.platform?[row.item.platform]:[]);
+  const name=profile.displayName || row.item.creator_name || row.influencerName;
+  const money=(value:number)=>new Intl.NumberFormat("en-US",{maximumFractionDigits:2}).format(value);
+  const patch=(changes:Partial<QuotationRowDraft>)=>{
+    const next={...d,...changes};
+    if(next.mode==="cost_markup_pct") { onStageDraft(applyCommercialWorkspaceBulkOp(next,{kind:"apply_markup_pct",pct:next.gpPct})); return; }
+    const c=computeCommercials({mode:next.mode,cost:next.cost,revenue:next.revenue,gpPct:next.gpPct,gpValue:next.gpValue});
+    onStageDraft({...next,revenue:c.revenue,gpPct:c.gpPct,gpValue:c.gpValue});
+  };
+  return <div className="qx-cwrow" style={{gridTemplateColumns:commercialGridColumns(show)}}>
+    <span><input type="checkbox" checked={selected} onChange={onToggleSelected} aria-label={`Select ${name}`} /></span>
+    <div className="q-cw-identity"><CreatorAvatarImage avatarUrl={profile.avatarUrl} profileUrl={profile.profile_url} alt={name} sizeClassName="!size-[26px]" /><div><b>{name}</b><small>{row.optionLabel || "Deliverables"}</small>{show("currency") && <select className="q-cw-currency" aria-label={`Currency for ${name}`} value={d.costCurrency} disabled={!canManage} onChange={e=>onStageDraft(applyCommercialWorkspaceBulkOp(d,{kind:"set_currency",currency:e.target.value}))}>{COMMERCIAL_CURRENCIES.map(code=><option key={code}>{code}</option>)}</select>}</div></div>
+    {show("mode") && <select className="sel" aria-label={`Pricing mode for ${name}`} value={d.mode} disabled={!canManage} onChange={e=>patch({mode:e.target.value as CommercialInputMode})}>{modes.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>}
+    {show("cost") && <QuotationDecimalInput className="in in--num" aria-label={`Cost for ${name}`} disabled={!canManage} value={d.cost} onCommit={cost=>patch({cost})} />}
+    {show("revenue") && <QuotationDecimalInput className="in in--num" aria-label={`Client cost for ${name}`} disabled={!canManage || d.mode!=="cost_revenue"} value={computed.revenue} onCommit={revenue=>patch({revenue})} />}
+    {(show("gpPctInput") || show("gpPct")) && <QuotationDecimalInput className="in in--num" aria-label={`GP percent for ${name}`} disabled={!canManage || !["cost_gp_pct","cost_markup_pct"].includes(d.mode)} value={d.mode==="cost_markup_pct" ? d.gpPct : computed.gpPct} onCommit={gpPct=>patch({gpPct})} />}
+    {show("gp") && (d.mode==="cost_gp_value" ? <QuotationDecimalInput className="in in--num" aria-label={`GP value for ${name}`} disabled={!canManage} value={d.gpValue} onCommit={gpValue=>patch({gpValue})} /> : <b className="num mono" style={{color:computed.gpValue<0?"var(--bad)":"var(--ok)"}}>{money(computed.gpValue)}</b>)}
+    {show("afPct") && <QuotationDecimalInput className="in in--num" aria-label={`Agency fee percent for ${name}`} disabled={!canManage} value={d.afPct} onCommit={afPct=>patch({afPct:Math.max(0,afPct)})} />}
+    <div className="num"><b className="mono">{money(client.clientCost)}</b><small className="q-cw-unit">{d.costCurrency}</small>{computed.warning && <span className="chip chip--wrn">{computed.warning}</span>}</div>
+    {show("fx") && d.costCurrency!==displayCurrency && <div className="q-cw-fx"><QuotationCreatorFxFields compact draft={d} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} disabled={!canManage} onChange={patch} /></div>}
+  </div>;
 }

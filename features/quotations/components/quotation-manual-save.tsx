@@ -60,6 +60,7 @@ export type QuotationLinePendingPayload = {
   handle?: string | null;
   followers?: number | null;
   engagement_rate?: number | null;
+  sort_order?: number;
   option_number?: number | null;
   option_label?: string | null;
 };

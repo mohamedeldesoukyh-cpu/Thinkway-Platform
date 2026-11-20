@@ -56,6 +56,7 @@ export function linePendingDiffersFromItem(
   ) {
     return true;
   }
+  if (payload.sort_order !== undefined && payload.sort_order !== item.sort_order) return true;
   if (
     payload.option_number !== undefined &&
     (payload.option_number ?? null) !== (item.option_number ?? null)

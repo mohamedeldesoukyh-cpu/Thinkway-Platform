@@ -211,7 +211,8 @@ export async function updateQuotationItemCommercials(
     gp_value?: number | null;
     af_pct?: number | null;
     deliverables?: QuotationDeliverable[];
-    option_number?: number | null;
+    sort_order?: number;
+  option_number?: number | null;
   option_label?: string | null;
     service_description?: string | null;
     platform?: string | null;

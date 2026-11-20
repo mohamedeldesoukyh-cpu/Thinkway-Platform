@@ -764,7 +764,21 @@ export function QuotationDeliverableCostDetails({
     </div>
   );
 
-  if (embedded) return <div onKeyDown={stopShortcutBubble}>{panel}</div>;
+  if (embedded) return <div className="q-prototype-cost" onKeyDown={stopShortcutBubble}>
+    <div className="qx-costgrid" ref={fieldsGridRef}>
+      <Field label="Base cost (internal creator / vendor cost)" navField><DraftDecimalInput aria-label="Base cost" className="in in--num" value={cost} onCommit={next => patchLocal({ cost: next })} /></Field>
+      <Field label="Currency" navField><select aria-label="Cost currency" className="sel" value={costCurrency} disabled={currencyPending} onChange={event => void changeEntryCurrency(event.target.value)}>{COMMERCIAL_CURRENCIES.map(code => <option key={code}>{code}</option>)}</select></Field>
+      <div className="col-span-full"><Field label="How the client price is derived" navField><select aria-label="Pricing calculation" className="sel" value={mode} disabled={freeForClient} onChange={event => patchLocal({ commercial_input_mode: event.target.value as CommercialInputMode })}>{Object.entries(COMMERCIAL_INPUT_MODE_LABELS).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></Field></div>
+      {!freeForClient && (mode === "cost_markup_pct" || mode === "cost_gp_pct") && <Field label={mode === "cost_markup_pct" ? "Markup %" : "GP margin %"} navField><DraftDecimalInput aria-label={mode === "cost_markup_pct" ? "Markup percent" : "GP margin percent"} className="in in--num" value={gpPct} onCommit={next => patchLocal({ gp_pct: next })} /></Field>}
+      {!freeForClient && mode === "cost_revenue" && <Field label="Unit client cost before agency fees" navField><DraftDecimalInput aria-label="Unit client cost before agency fees" className="in in--num" value={(localDeliverable.revenue ?? defaults.revenue ?? 0) / units} onCommit={next => patchLocal({ revenue: next * units })} /></Field>}
+      {!freeForClient && mode === "cost_gp_value" && <Field label="GP value" navField><DraftDecimalInput aria-label="GP value" className="in in--num" value={gpValue} onCommit={next => patchLocal({ gp_value: next })} /></Field>}
+      <Field label="Agency fee %" navField><DraftDecimalInput aria-label="Agency fee percent" className="in in--num" value={afPct} onCommit={next => patchLocal({ af_pct: next })} /></Field>
+      <label className="q-inline-select-all col-span-full"><input type="checkbox" checked={freeForClient} onChange={event => patchLocal({ free_for_client: event.target.checked })} />Free for the client</label>
+    </div>
+    {units > 1 && <p className="q-help">Per-package cost · repeated ×{units}. Totals below include all repeats.</p>}
+    {costCurrency !== paymentCurrency && onFxChange && <QuotationCreatorFxFields compact draft={resolveQuotationRowDraft(item, draft)} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} onChange={onFxChange} />}
+    {computedGp.warning && <p className="qx-note qx-note--wrn">{computedGp.warning}</p>}
+  </div>;
 
   return (
     <>

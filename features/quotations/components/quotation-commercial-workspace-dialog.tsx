@@ -5,14 +5,12 @@ import { needsQuotationSystemFx } from "@/lib/commercial/quotation-system-fx";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Columns3Icon,
-  Loader2Icon,
   Redo2Icon,
   Table2Icon,
   Undo2Icon,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { UnsavedChangesBar } from "@/components/forms/unsaved-changes-bar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -47,7 +45,6 @@ import {
   createCommercialDraftHistory,
   pushCommercialDraftHistory,
   redoCommercialDraftHistory,
-  resetCommercialDraftHistory,
   undoCommercialDraftHistory,
   type CommercialDraftHistoryState,
 } from "@/lib/quotations/commercial-workspace/draft-history";
@@ -63,11 +60,10 @@ import { cn } from "@/lib/utils";
 import { readCreatorFx } from "@/lib/commercial/creator-fx";
 
 import {
-  recordCommercialWorkspaceSaveAudit,
   resolveCommercialRateToEgp,
 } from "@/features/quotations/actions";
 import { useQuotationManualSave } from "@/features/quotations/components/quotation-manual-save";
-import { QuotationCommercialWorkspaceRowCard } from "@/features/quotations/components/quotation-commercial-workspace-row-card";
+import { QuotationCommercialWorkspaceRowCard, commercialGridColumns } from "@/features/quotations/components/quotation-commercial-workspace-row-card";
 import {
   computeQuotationDisplayTotals,
   computeQuotationRowComputed,
@@ -191,7 +187,6 @@ export type QuotationCommercialWorkspaceDialogProps = {
 };
 
 export function QuotationCommercialWorkspaceDialog({
-  quotationId,
   items,
   drafts,
   onDraftChange,
@@ -223,7 +218,6 @@ export function QuotationCommercialWorkspaceDialog({
   const [history, setHistory] = useState<CommercialDraftHistoryState>(() =>
     createCommercialDraftHistory(drafts)
   );
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -347,44 +341,6 @@ export function QuotationCommercialWorkspaceDialog({
         draftToLinePending(draft, itemsById.get(id)?.deliverables)
       );
     }
-  };
-
-  const handleDiscard = () => {
-    const baseline = Object.fromEntries(
-      items.map((item) => [item.id, resolveQuotationRowDraft(item)])
-    );
-    onDraftsMerge(baseline);
-    setHistory(resetCommercialDraftHistory(baseline));
-    for (const item of items) {
-      manualSave.registerLinePending(
-        item.id,
-        draftToLinePending(baseline[item.id]!, item.deliverables)
-      );
-    }
-    toast.message("Workspace drafts reset to last saved quotation values.");
-  };
-
-  const handleSave = async () => {
-    if (saving || manualSave.savePending) return;
-    setSaving(true);
-    try {
-      const pendingIds = items
-        .filter((item) => manualSave.isLinePending(item.id))
-        .map((item) => item.id);
-      const ok = await manualSave.saveAll();
-      if (!ok) return;
-      if (pendingIds.length > 0) {
-        await recordCommercialWorkspaceSaveAudit({
-          quotationId,
-          lineCount: pendingIds.length,
-          changedFields: ["Revenue", "Cost", "GP Target", "AF %", "Currency"],
-        });
-      }
-      setHistory(resetCommercialDraftHistory(drafts));
-      toast.success("Commercial Workspace saved.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not finish saving. Your draft is still available.");
-    } finally { setSaving(false); }
   };
 
   const applyBulk = () => {
@@ -577,7 +533,7 @@ export function QuotationCommercialWorkspaceDialog({
                   type="button"
                   size="sm"
                   className="h-8 text-xs"
-                  disabled={selectedIds.size === 0 || saving || manualSave.savePending}
+                  disabled={selectedIds.size === 0 || manualSave.savePending}
                   onClick={applyBulk}
                 >
                   Apply to selected
@@ -701,7 +657,7 @@ export function QuotationCommercialWorkspaceDialog({
               ))}
             </div>
           </div>
-          <div className="cw-card-list min-h-0 flex-1 overflow-auto">
+          <div className="cw-card-list min-h-0 flex-1 overflow-auto"><div className="qx-cwhead" style={{gridTemplateColumns:commercialGridColumns(show)}}><span/><span>Creator / line</span>{show("mode") && <span>Cost + …</span>}{show("cost") && <span className="num">Cost</span>}{show("revenue") && <span className="num">Client cost</span>}{(show("gpPctInput") || show("gpPct")) && <span className="num">GP / markup %</span>}{show("gp") && <span className="num">GP margin</span>}{show("afPct") && <span className="num">AF %</span>}<span className="num">Client incl. fees</span></div>
             {sortedRows.length === 0 ? (
               <div className="cgroup quotation-creator-card">
                 <div className="cw-kpi-inner py-10 text-center text-sm" style={{ color: CS.muted }}>
@@ -714,7 +670,7 @@ export function QuotationCommercialWorkspaceDialog({
                   key={row.itemId}
                   row={row}
                   selected={selectedIds.has(row.itemId)}
-                  canManage={canManage && !saving && !manualSave.savePending}
+                  canManage={canManage && !manualSave.savePending}
                   show={show}
                   displayCurrency={displayCurrency}
                   displayFxRateToEgp={displayFxRateToEgp}
@@ -733,32 +689,7 @@ export function QuotationCommercialWorkspaceDialog({
           </div>
         </div>
 
-        {canManage ? (
-          <div className="shrink-0 px-5 pb-3 pt-1" style={{ borderTop: `0.5px solid ${CS.line}` }}>
-            <UnsavedChangesBar
-              isDirty={manualSave.hasUnsavedChanges}
-              isSaving={saving || manualSave.savePending}
-              onSave={handleSave}
-              onCancel={() => setOpen(false)}
-              onReset={handleDiscard}
-              cancelLabel="Close"
-              resetLabel="Discard"
-              enableLeaveGuard={false}
-              status={
-                saving || manualSave.savePending ? (
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Loader2Icon className="size-3 animate-spin" /> Saving quotation…
-                  </span>
-                ) : (
-                  <span className="max-w-[42rem] text-xs leading-snug text-muted-foreground">
-                    Unsaved edits are held as drafts and shown in the Creators grid. Save to commit,
-                    or Discard to reset.
-                  </span>
-                )
-              }
-            />
-          </div>
-        ) : null}
+        <footer className="qx-sh__f"><div><small>Selection · {selectedIds.size}</small><b className="mono">{fmtStat(selectionTotals.revenue, displayCurrency, displayFxRateToEgp)}</b></div><div><small>Quotation · {items.length}</small><b className="mono">{fmtStat(quotationTotals.revenue, displayCurrency, displayFxRateToEgp)}</b></div><span className="sp" /><span>{manualSave.hasUnsavedChanges ? "Unsaved changes — Save on the quotation" : "All changes saved"}</span><button type="button" className="b b--pri" onClick={() => setOpen(false)}>Back to quotation</button></footer>
       </DialogContent>
     </Dialog>
   );

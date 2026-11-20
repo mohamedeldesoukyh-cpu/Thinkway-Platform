@@ -36,6 +36,8 @@ type Props = {
   /** Quantity rows in the quotation's expanded design cards. */
   workspaceDetails?: boolean;
   inlinePicker?: boolean;
+  sectioned?: boolean;
+  hidePicker?: boolean;
 };
 
 export function QuotationDeliverableTypeLinesEditor({
@@ -47,6 +49,8 @@ export function QuotationDeliverableTypeLinesEditor({
   compact = false,
   workspaceDetails = false,
   inlinePicker = false,
+  sectioned = false,
+  hidePicker = false,
 }: Props) {
   const displayLines = lines.length > 0 ? lines : [{ type: "", quantity: 1 }];
   const selectedTypes = selectedTypesFromTypeLines(displayLines);
@@ -72,6 +76,10 @@ export function QuotationDeliverableTypeLinesEditor({
 
   if (workspaceDetails) return (
     <div className="q-quantity-editor">
+      <div className={sectioned ? "qx-panel" : undefined}>
+      {sectioned && <div className="qx-panel__h"><h4>Quantity &amp; duration</h4><span className="sp" /><span>{selectedTypes.length} selected</span></div>}
+      <div className={sectioned ? "qx-panel__b" : undefined}>
+      {!selectedTypes.length && <p className="q-help">Nothing selected. Choose services below.</p>}
       {selectedTypes.map((type) => {
         const line = displayLines.find((entry) => entry.type === type);
         return <div className="q-kv" key={type}>
@@ -87,13 +95,18 @@ export function QuotationDeliverableTypeLinesEditor({
                 onChange={e => onChange(displayLines.map(entry => entry.type === type ? {...entry, period_months:e.target.value ? Number(e.target.value) : null} : entry))} />
               <span>months</span>
             </label>}
+            <button type="button" className="b b--xs b--icon b--ghost" disabled={disabled} aria-label={`Remove ${quotationPostTypeLabel(type)}`} onClick={() => onChange(displayLines.filter(entry => entry.type !== type))}>×</button>
           </span>
         </div>;
       })}
-      <div className="q-type-picker">
-        {inlinePicker ? <><h3>Services</h3><QuotationInlineServicePicker value={selectedTypes} onChange={handleTypesChange} allowedPlatforms={allowedPlatforms} disabled={disabled} /></> : <QuotationPostTypeMultiSelect value={selectedTypes} onChange={handleTypesChange}
+      {sectioned && <p className="q-help">Duration controls appear only for services that use one.</p>}
+      </div></div>
+      {!hidePicker && <div className={sectioned ? "qx-panel" : "q-type-picker"}>
+        {sectioned && <div className="qx-panel__h"><h4>Services</h4></div>}
+        <div className={sectioned ? "qx-panel__b" : undefined}>
+        {inlinePicker ? <><QuotationInlineServicePicker value={selectedTypes} onChange={handleTypesChange} allowedPlatforms={allowedPlatforms} disabled={disabled} /></> : <QuotationPostTypeMultiSelect value={selectedTypes} onChange={handleTypesChange}
           allowedPlatforms={allowedPlatforms} disabled={disabled} summaryLabel={summaryLabel} defaultOpen={defaultOpen} />}
-      </div>
+      </div></div>}
     </div>
   );
 

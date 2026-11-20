@@ -1,10 +1,11 @@
+import { moveQuotationService } from "@/lib/quotations/quotation-service-order";
 import { QuotationEnrichmentProgress } from "./quotation-enrichment-progress";
 import { quotationOptionLabel } from "@/lib/quotations/quotation-option-label";
 import { useQuotationDirectRates } from "./quotation-direct-rates-context";
 import { QuotationText } from "./quotation-design-locale";
 import { isOtherService } from "@/lib/commercial/other-service";
 
-import { useCallback, useEffect, useTransition, useState } from "react";
+import { useCallback, useEffect, useTransition, useState, useRef } from "react";
 import { QuotationFavoriteButtons, useDeliverableFavorites } from "./quotation-deliverable-favorites";
 import { CreatorLinkedPlatformIcons } from "@/components/creator/creator-linked-platform-icons";
 import {
@@ -81,6 +82,10 @@ type LineRowProps = {
   index: number;
   optionCount: number;
   showCreator: boolean;
+  onMove: (direction: -1 | 1) => void;
+  onDropLine: (id: string) => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
   expanded: boolean;
   onActivate: (id: string | null) => void;
   selected: boolean;
@@ -103,6 +108,7 @@ function QuotationPackLineRow({
   index,
   optionCount,
   showCreator,
+  onMove, onDropLine, canMoveUp, canMoveDown,
   expanded,
   onActivate,
   selected,
@@ -119,7 +125,21 @@ function QuotationPackLineRow({
 }: LineRowProps) {
   const directRates = useQuotationDirectRates();
   const [pending, startTransition] = useTransition();
+  const [dragOver, setDragOver] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [editorFocus, setEditorFocus] = useState<"deliverables" | "cost" | null>(null);
+  const editorBody = useRef<HTMLDivElement>(null);
   const setExpanded = (open: boolean) => onActivate(open ? item.id : null);
+  const openEditor = (focus: "deliverables" | "cost" | null = null) => { setEditorFocus(focus); setExpanded(true); };
+  useEffect(() => {
+    if (!expanded || !editorFocus) return;
+    const frame = requestAnimationFrame(() => {
+      const section = editorBody.current?.querySelector<HTMLElement>(`[data-editor-section="${editorFocus}"]`);
+      section?.scrollIntoView({ block: "start" });
+      section?.querySelector<HTMLElement>('input,textarea,select,button')?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [expanded, editorFocus]);
   const confirmDelete = useConfirmDelete();
   const manualSave = useQuotationManualSave();
   const resolved = resolveQuotationRowDraft(item, draft);
@@ -314,12 +334,13 @@ function QuotationPackLineRow({
 
   return (
     <div className={`q-line-group ${selected ? "is-sel" : ""}`}>
-      <div className={`q-row q-live-row ${selected ? "is-sel" : ""}`} role="row" onClick={(event) => {
+      <div className={`q-row q-live-row ${selected ? "is-sel" : ""} ${dragOver ? "dropover" : ""} ${dragging ? "dragging" : ""}`} role="row" onDragOver={event => { if (canManage) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDragOver(true); } }} onDragLeave={() => setDragOver(false)} onDrop={event => { event.preventDefault(); setDragOver(false); const id = event.dataTransfer.getData("application/thinkway-quotation-line"); if (id) onDropLine(id); }} onClick={(event) => {
         if (event.defaultPrevented || !(event.target instanceof Element) || !event.currentTarget.contains(event.target)) return;
         if (event.target.closest('button, a, input, textarea, select, label, [role="button"], [role="checkbox"], [role="switch"], [role="combobox"], [contenteditable="true"]')) return;
         if (window.getSelection()?.toString()) return;
-        setExpanded(true);
+        openEditor();
       }}>
+        <div className="q-cell-drag" role="cell"><button type="button" className="qx-grip" draggable={canManage && !pending} disabled={!canManage || pending || (!canMoveUp && !canMoveDown)} aria-label={`Reorder service for ${name}. Use Alt plus Up or Down`} title="Drag to reorder · Alt + ↑ / ↓" onDragEnd={() => { setDragging(false); setDragOver(false); }} onDragStart={event => { setDragging(true); event.dataTransfer.setData("application/thinkway-quotation-line", item.id); event.dataTransfer.effectAllowed = "move"; }} onKeyDown={event => { if (event.altKey && ["ArrowUp","ArrowDown"].includes(event.key)) { event.preventDefault(); onMove(event.key === "ArrowUp" ? -1 : 1); } }}>⠿</button></div>
         <div className="q-cell-select" role="cell"><input type="checkbox" className="q-ck" checked={selected} onChange={onToggleSelect} aria-label={`Select ${name}${optionCount > 1 ? ` ${optionLabel}` : ""}`} disabled={!canManage} /></div>
         <div className="q-cell-creator" role="cell">
           {showCreator && otherService && <div className="space-y-1"><Badge variant="outline">Others</Badge><div className="font-medium">{name}</div><a className="text-xs text-primary" href={`/vendors/${item.influencer_id}`}>View vendor</a></div>}
@@ -338,7 +359,7 @@ function QuotationPackLineRow({
           </DiscoverySuiteCreatorCell>}
           {canManage && !otherService ? <div className={`q-creator-service-tools${showCreator ? " q-creator-service-tools--first" : ""}`}>
             {showCreator && <button type="button" className="q-b q-b--sm" onClick={handleAddOption} disabled={pending} aria-label={`Add service line for ${name}`}>{pending ? "Adding service…" : "+ Add service"}</button>}
-            <QuotationFavoriteButtons itemIds={[item.id]} lines={primary ? deliverableTypeLines(primary) : []} description={lineFields.serviceDescription} disabled={pending} onDeliverables={() => setExpanded(true)} />
+            <QuotationFavoriteButtons creatorName={name} allowedPlatforms={allowedCreatorPlatforms} itemIds={[item.id]} lines={primary ? deliverableTypeLines(primary) : []} description={lineFields.serviceDescription} disabled={pending} onDeliverables={() => openEditor("deliverables")} />
           </div> : null}
 
         </div>
@@ -360,7 +381,7 @@ function QuotationPackLineRow({
         </div>
         <div className="q-cell-option" role="cell">{canManage ? <select className="q-opt max-w-full cursor-pointer bg-transparent" aria-label={`Option label for ${name}`} value={selectedLabel ?? "option"} onChange={(event) => manualSave.registerLinePending(item.id, {option_label: event.target.value === "option" ? null : event.target.value})}>
 <option value="option">Option {item.option_number ?? 1}/{optionCount}</option><option value="Additional Service">Additional Service</option><option value="Deliverables">Deliverables</option></select> : <span className="q-opt">{optionLabel}{!selectedLabel && optionCount > 1 ? `/${optionCount}` : ""}</span>}</div>
-        <div className="q-cell-price q-price" role="cell"><span className="q-mobile-label"><QuotationText>Client price</QuotationText></span><b className={clientPrice === 0 ? "z" : undefined}>{F(clientPrice)} {rowCurrency}</b>{priceUnits > 1 && <span className="q-repeat-price">×{priceUnits} · Total {F(projected.clientCost)} {rowCurrency}</span>}{hideCostAndFees ? <u><QuotationText>AF included</QuotationText></u> : <u>{F(projected.revenue / priceUnits)} + {F(projected.af / priceUnits)} AF</u>}{originalPrice && <span className="orig">{originalPrice}</span>}{renderCostDetails(false)}{linePending && <span className="q-p q-p--wrn"><QuotationText>Unsaved</QuotationText></span>}</div>
+        <div className="q-cell-price q-price" role="cell"><span className="q-mobile-label"><QuotationText>Client price</QuotationText></span><b className={clientPrice === 0 ? "z" : undefined}>{clientPrice === 0 && !primary?.free_for_client ? "Not priced" : `${F(clientPrice)} ${rowCurrency}`}</b>{priceUnits > 1 && <span className="q-repeat-price">×{priceUnits} · Total {F(projected.clientCost)} {rowCurrency}</span>}{hideCostAndFees ? <u><QuotationText>AF included</QuotationText></u> : <u>{F(projected.revenue / priceUnits)} + {F(projected.af / priceUnits)} AF</u>}{originalPrice && <span className="orig">{originalPrice}</span>}{canManage && primary && <button type="button" className="qx-link" onClick={() => openEditor("cost")}>{projected.cost > 0 ? "Edit cost" : "+ Add cost"}</button>}{linePending && <span className="q-p q-p--wrn"><QuotationText>Unsaved</QuotationText></span>}</div>
         <div className="q-cell-status" role="cell"><span className={`qx-stat ${linePending ? "qx-stat--dirty" : ""}`} title={linePending ? "This service has changes waiting for Save" : "This service matches the saved quotation"}><i aria-hidden />{linePending ? "Unsaved changes" : "Saved"}</span></div>
         <div className="q-cell-actions q-acts" role="cell">
           <button type="button" className="qx-link qx-link--danger" disabled={!canManage || pending} aria-label={`Remove this service line for ${name}`} onClick={handleRemove}>Remove</button>
@@ -383,6 +404,8 @@ function QuotationPackLineRow({
             {!otherService && <DropdownMenuItem onClick={handleAddOption}>
               <PlusIcon className="mr-2 size-3.5" />
               <QuotationText>Add service line</QuotationText></DropdownMenuItem>}
+            <DropdownMenuItem disabled={!canMoveUp} onClick={() => onMove(-1)}>Move service up</DropdownMenuItem>
+            <DropdownMenuItem disabled={!canMoveDown} onClick={() => onMove(1)}>Move service down</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
@@ -398,10 +421,10 @@ function QuotationPackLineRow({
         </div>
       </div>
       {expanded && <Sheet open={expanded} onOpenChange={setExpanded}><SheetContent side="right" showCloseButton={false} className="tq-redesign q-service-sheet qx q-redesign-body" data-shortcut-pane id={`quotation-line-${item.id}`}><SheetTitle className="sr-only">Service details for {name}</SheetTitle><SheetDescription className="sr-only">Choose deliverables, quantities, duration and internal costs. Changes are staged until Save.</SheetDescription>
-        <header className="q-bottom-editor__header"><div className="q-bottom-editor__title"><b title={name}>{name}</b><span title={lineFields.serviceDescription || "New service"}> · {lineFields.serviceDescription || "New service"}</span></div><button type="button" className="q-b q-b--sm" data-shortcut-close onClick={() => setExpanded(false)}>Close</button></header><div className="q-exp">
-        {otherService ? <section className="q-sec"><div className="q-sec__h"><b>Service description</b></div><textarea aria-label="Other service description" className="w-full rounded border p-2" rows={3} value={lineFields.serviceDescription} readOnly={!canManage} onChange={e => updateServiceDescription(e.target.value)} /><p className="q-help">Use Repeat on the row for multiple units.</p></section> : <section className="q-sec"><div className="q-sec__h"><b><QuotationText>Quantity &amp; Duration</QuotationText></b></div>          {lineFields.deliverableDrafts.map((deliverable) => (
+        <header className="qx-sh__h"><div className="q-service-heading"><b title={name}>{name}</b><span title={lineFields.serviceDescription || "New service"}> · {lineFields.serviceDescription || "New service"}</span></div><button type="button" className="q-b q-b--sm" data-shortcut-close onClick={() => setExpanded(false)}>Close</button></header><div className="q-exp qx-sh__b" ref={editorBody}>
+        {otherService ? <section className="q-sec"><div className="q-sec__h"><b>Service description</b></div><textarea aria-label="Other service description" className="w-full rounded border p-2" rows={3} value={lineFields.serviceDescription} readOnly={!canManage} onChange={e => updateServiceDescription(e.target.value)} /><p className="q-help">Use Repeat on the row for multiple units.</p></section> : <section className="q-service-selection" data-editor-section="deliverables">          {lineFields.deliverableDrafts.map((deliverable) => (
             <QuotationDeliverableTypeLinesEditor
-              workspaceDetails inlinePicker
+              workspaceDetails inlinePicker sectioned
               key={deliverable.key}
               lines={deliverableTypeLines(deliverable)}
               allowedPlatforms={allowedCreatorPlatforms}
@@ -433,47 +456,22 @@ function QuotationPackLineRow({
                 });
               }}
             />
-          ))}<p className="q-help">Duration controls appear only for services that use one.</p></section>}
+          ))}</section>}
         {otherService ? <section className="q-sec"><div className="q-sec__h"><b>Vendor</b></div><div>{name}</div><p className="q-help">Other service · Included in quotation totals and campaign assignments.</p></section> : <section className="q-sec"><div className="q-sec__h"><b><QuotationText>Platforms in this line</QuotationText></b></div>
           <div className="q-kv"><span><QuotationText>Connected accounts</QuotationText></span><CreatorLinkedPlatformIcons platforms={item.creator_profile_source?.linkedPlatforms?.length ? item.creator_profile_source.linkedPlatforms : allowedCreatorPlatforms} /></div>
           <div className="q-kv"><span><QuotationText>Platforms in this line</QuotationText></span><QuotationDeliverablePlatformIcons platforms={selectedPlatforms} allPlatforms={lineFields.deliverableDrafts.some(typeLinesIncludeAllPlatforms)} /></div>
           <p className="q-help"><QuotationText>A creator may have accounts that are not part of this quoted package.</QuotationText></p>
         </section>}
-        <section className="q-sec q-sec--priv"><div className="q-sec__h"><b><QuotationText>Cost detail</QuotationText></b><span className="q-sp" /><span className="q-p q-p--wrn"><QuotationText>Internal — never shown to the client</QuotationText></span></div>
-          <div className="q-kv"><span>Base cost (internal creator / vendor cost)</span><b>{rowCurrency} {F(projected.cost)}</b></div>
-          <div className="q-kv"><span><QuotationText>Client cost before agency fees</QuotationText></span><b>{rowCurrency} {F(projected.revenue)}</b></div>
-          <div className="q-kv"><span><QuotationText>Agency fees (AF)</QuotationText></span><b>{rowCurrency} {F(projected.af)}</b></div>
-          <div className="q-kv"><span><QuotationText>GP amount</QuotationText></span><b>{rowCurrency} {F(projected.margin)}</b></div>
-          <div className="q-kv"><span><QuotationText>GP %</QuotationText></span><b>{projected.marginPct.toFixed(1)}%</b></div>
-                  {primary ? (
-          <div className="q-inline-cost-editor">
-            {linePending ? (
-              <>
-                <span className="tw-dot warn" aria-hidden style={{ width: 8, height: 8, margin: 0 }} />
-                <span className="tw-p p-y" style={{ fontSize: 9, padding: "1px 5px" }}>
-                  <QuotationText>Unsaved changes</QuotationText></span>
-              </>
-            ) : null}
-            {renderCostDetails(true, true)}
-          </div>
-        ) : (
-          <span className="tw-v inline-flex items-center gap-1.5">
-            {linePending ? (
-              <>
-                <span className="tw-dot warn" aria-hidden style={{ width: 8, height: 8, margin: 0 }} />
-                <span className="tw-p p-y" style={{ fontSize: 9, padding: "1px 5px" }}>
-                  <QuotationText>Unsaved changes</QuotationText></span>
-              </>
-            ) : null}
-            <span className="inline-flex flex-col items-end">
-              <span>{F(clientPrice)} {rowCurrency}</span>
-              {originalPrice ? <span className="text-[11px] font-normal text-muted-foreground">{originalPrice}</span> : null}
-            </span>
-          </span>
-        )}
-          <div className="q-kv"><span><QuotationText>Margin %</QuotationText></span><b>{projected.marginPct.toFixed(1)}%</b></div>
-        </section>
-      </div><footer className="qx-sh__f"><button type="button" className="b b--pri" onClick={() => setExpanded(false)}>Done</button><span className="sp" /><span className="q-help">Changes are staged for quotation Save</span></footer></SheetContent></Sheet>}
+        {!otherService && <section className="qx-panel"><div className="qx-panel__h"><h4>Service description</h4></div><div className="qx-panel__b"><textarea className="ta" aria-label="Package description" value={lineFields.serviceDescription} readOnly={!canManage} onChange={event => updateServiceDescription(event.target.value)} /><p className="q-help">Describe this package. The service chips remain available on the line.</p></div></section>}
+        <section className="qx-panel qx-panel--int" data-editor-section="cost"><div className="qx-panel__h"><h4>Cost &amp; pricing</h4><span className="sp" /><span className="q-help">Internal — never shown to the client</span></div><div className="qx-panel__b">
+          {renderCostDetails(false, true)}
+          <div className="qx-qty"><span className="qx-qty__l">Client cost before agency fees</span><b>{rowCurrency} {F(projected.revenue)}</b></div>
+          <div className="qx-qty"><span className="qx-qty__l">Agency fees (AF)</span><b>{rowCurrency} {F(projected.af)}</b></div>
+          <div className="qx-qty"><span className="qx-qty__l">GP amount</span><b>{rowCurrency} {F(projected.margin)}</b></div>
+          <div className="qx-qty"><span className="qx-qty__l">GP %</span><b>{projected.marginPct.toFixed(1)}%</b></div>
+          <div className="qx-qty"><span className="qx-qty__l"><b>Client total incl. fees</b></span><b>{rowCurrency} {F(projected.clientCost)}</b></div>
+        </div></section>
+      </div><footer className="qx-sh__f"><button type="button" className="b b--pri" onClick={() => setExpanded(false)}>Apply to this line</button><span className="sp" /><span className="q-help">Changes are staged for quotation Save</span></footer></SheetContent></Sheet>}
     </div>
   );
 }
@@ -525,20 +523,27 @@ export function QuotationLinesGrid({
   displayCurrency,
   displayFxRateToEgp,
 }: Props) {
+  const manualSave = useQuotationManualSave();
   const [activeId, setActiveId] = useState<string | null>(null);
   const groups = new Map<string, QuotationItemRow[]>();
   for (const item of items) { const key = quotationCreatorDuplicateKey(item); groups.set(key, [...(groups.get(key) ?? []), item]); }
+  for (const group of groups.values()) group.sort((a,b) => (manualSave.getLinePendingPayload(a.id)?.sort_order ?? a.sort_order) - (manualSave.getLinePendingPayload(b.id)?.sort_order ?? b.sort_order));
+  function moveLine(group: QuotationItemRow[], fromId: string, toId: string) {
+    if (!canManage || manualSave.savePending || fromId === toId) return;
+    const ordered = group.map(item => ({ id: item.id, sort_order: manualSave.getLinePendingPayload(item.id)?.sort_order ?? item.sort_order }));
+    moveQuotationService(ordered,fromId,toId).forEach(item => manualSave.registerLinePending(item.id,{ sort_order: item.sort_order }));
+  }
   const optionCounts = new Map<string, number>();
   for (const item of items) { const key = quotationCreatorDuplicateKey(item); optionCounts.set(key, (optionCounts.get(key) ?? 0) + 1); }
   return (
     <div className="q-grid" role="table" aria-label="Quotation creator lines">
-      <div className="q-row is-head" role="row">
+      <div className="q-row is-head" role="row"><span role="columnheader" aria-label="Reorder service" />
         <span role="columnheader"><input type="checkbox" className="q-ck" checked={allSelected} ref={el => {if(el) el.indeterminate = indeterminate && !allSelected;}} onChange={event => onToggleSelectAll(event.target.checked)} aria-label="Select all lines" disabled={!canManage || items.length === 0} /></span>
         <span role="columnheader"><QuotationText>Creator</QuotationText></span><span role="columnheader"><QuotationText>Quoted on</QuotationText></span><span role="columnheader"><QuotationText>Service</QuotationText></span><span role="columnheader">Repeat</span><span role="columnheader"><QuotationText>Option</QuotationText></span><span role="columnheader" className="q-price"><QuotationText>Client price</QuotationText></span><span role="columnheader">Save status</span><span role="columnheader" className="q-price"><QuotationText>Actions</QuotationText></span>
       </div>
       <label className="q-mobile-select"><input type="checkbox" className="q-ck" checked={allSelected} ref={el=>{if(el)el.indeterminate=indeterminate&&!allSelected;}} onChange={event => onToggleSelectAll(event.target.checked)} disabled={!canManage || items.length === 0} /><QuotationText>Select all lines</QuotationText></label>
       {items.length === 0 && <div className="q-empty" role="status"><b>No lines match this filter</b><p>Try another creator name or username, or clear the search and filters.</p></div>}
-      {Array.from(groups.entries()).sort((a,b) => Number(isOtherService(a[1][0])) - Number(isOtherService(b[1][0]))).map(([key, group], index) => <div key={key} className="q-creator-service-group" role="rowgroup">{isOtherService(group[0]) && <div className="border-b bg-muted px-4 py-2 text-sm font-semibold">Others</div>}{group.map((item, serviceIndex) => <QuotationPackLineRow showCreator={serviceIndex === 0} expanded={activeId === item.id} onActivate={setActiveId} key={item.id} quotationId={quotationId} item={item} draft={drafts[item.id]} index={index} optionCount={optionCounts.get(quotationCreatorDuplicateKey(item)) ?? 1} selected={selectedIds.has(item.id)} onToggleSelect={() => onToggleSelect(item.id)} onDraftChange={onDraftChange} onRemoved={onRemoved} onLineChanged={onLineChanged} onOpenCreator={onOpenCreator} showOriginalCurrency={showOriginalCurrency} hideCostAndFees={hideCostAndFees} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} canManage={canManage} />)}<div className="qx-groupfoot"><span>{group[0].creator_profile_source?.displayName || group[0].creator_name || "Creator"}</span><em>{group.length} service line{group.length === 1 ? "" : "s"}</em></div></div>)}
+      {Array.from(groups.entries()).sort((a,b) => Number(isOtherService(a[1][0])) - Number(isOtherService(b[1][0]))).map(([key, group], index) => <div key={key} className="q-creator-service-group" role="rowgroup">{isOtherService(group[0]) && <div className="border-b bg-muted px-4 py-2 text-sm font-semibold">Others</div>}{group.map((item, serviceIndex) => <QuotationPackLineRow canMoveUp={serviceIndex > 0} canMoveDown={serviceIndex < group.length - 1} onMove={direction => { const target = group[serviceIndex + direction]; if (target) moveLine(group,item.id,target.id); }} onDropLine={id => moveLine(group,id,item.id)} showCreator={serviceIndex === 0} expanded={activeId === item.id} onActivate={setActiveId} key={item.id} quotationId={quotationId} item={item} draft={drafts[item.id]} index={index} optionCount={optionCounts.get(quotationCreatorDuplicateKey(item)) ?? 1} selected={selectedIds.has(item.id)} onToggleSelect={() => onToggleSelect(item.id)} onDraftChange={onDraftChange} onRemoved={onRemoved} onLineChanged={onLineChanged} onOpenCreator={onOpenCreator} showOriginalCurrency={showOriginalCurrency} hideCostAndFees={hideCostAndFees} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} canManage={canManage} />)}<div className="qx-groupfoot"><span>{group[0].creator_profile_source?.displayName || group[0].creator_name || "Creator"}</span><em>{group.length} service line{group.length === 1 ? "" : "s"}</em></div></div>)}
       {financialFooter ?? <div className="q-grid-total">Quotation totals · {uniqueCreatorCount} creators · {items.length} <QuotationText>option lines</QuotationText> <b>{foreignTotalsLabel ?? `${F(totalClientCostEgp)} EGP`}</b></div>}
     </div>
   );

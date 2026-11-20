@@ -67,7 +67,8 @@ export async function updateQuotationItemCommercials(
     gp_value?: number | null;
     af_pct?: number | null;
     deliverables?: QuotationDeliverable[];
-    option_number?: number | null;
+    sort_order?: number;
+  option_number?: number | null;
   option_label?: string | null;
     service_description?: string | null;
     platform?: string | null;
@@ -222,6 +223,10 @@ export async function updateQuotationItemCommercials(
       return { ok: false as const, message: "Invalid option label." };
     }
     patch.option_label = input.option_label;
+  }
+  if (input.sort_order !== undefined) {
+    if (!Number.isSafeInteger(input.sort_order) || input.sort_order < 0) return { ok: false as const, message: "Invalid service order." };
+    patch.sort_order = input.sort_order;
   }
   if (input.option_number !== undefined) {
     patch.option_number =

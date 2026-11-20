@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetTitle, SheetDescription, SheetClose } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { QuotationDeliverableTypeLinesEditor } from "./quotation-deliverable-type-lines";
-import { formatTypeLinesSummary, syncServiceDescriptionWithTypeLines } from "@/lib/quotations/quotation-deliverable-types";
+import { formatTypeLinesSummary, syncServiceDescriptionWithTypeLines, isPostTypeAllowedForCreator } from "@/lib/quotations/quotation-deliverable-types";
 import { loadDeliverableFavorites, saveDeliverableFavorites } from "../deliverable-favorite-actions";
 import type { DeliverableFavorite } from "../deliverable-favorites";
 import type { QuotationDeliverableTypeLine } from "@/lib/domains/commercial/quotation-types";
@@ -59,22 +59,24 @@ export function DeliverableFavoritesProvider({ children }: { children: ReactNode
   return <Context.Provider value={{ favorites, loading, error, save, register, apply }}>{children}</Context.Provider>;
 }
 
-export function QuotationFavoriteButtons({ itemIds, lines = [], description = "", disabled = false, onDeliverables }: {
+export function QuotationFavoriteButtons({ itemIds, lines = [], description = "", disabled = false, onDeliverables, creatorName, allowedPlatforms = [] }: {
   itemIds: string[];
   lines?: QuotationDeliverableTypeLine[];
   description?: string;
   disabled?: boolean;
   onDeliverables?: () => void;
+  creatorName?: string;
+  allowedPlatforms?: string[];
 }) {
   const store = useDeliverableFavorites();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm, resetForm] = useUndoableState({ name: '', selectedLines: [] as QuotationDeliverableTypeLine[], service: '' }, "Favorite package", open && !busy);
   const { name, selectedLines, service } = form;
   const setName = (name: string) => setForm(prev => ({ ...prev, name }));
-  const setService = (service: string) => setForm(prev => ({ ...prev, service }));
   const favorite = store.favorites[0];
-  function showEditor() { resetForm({ name: "", selectedLines: lines, service: description }); setOpen(true); }
+  function showEditor() { setEditingId(null); resetForm({ name: "", selectedLines: lines, service: description }); setOpen(true); }
   function applySelectedFavorite(value: DeliverableFavorite) { store.apply(itemIds, value); setOpen(false); }
   async function persist(next: DeliverableFavorite[]) {
     setBusy(true);
@@ -88,34 +90,31 @@ export function QuotationFavoriteButtons({ itemIds, lines = [], description = ""
     <button type="button" className="q-favorite-button" disabled={disabled} onClick={onDeliverables ?? showEditor}><ListPlusIcon size={12} />Deliverables</button>
     <Sheet open={open} onOpenChange={next => { if (!busy) setOpen(next); }}>
       <SheetContent side="right" showCloseButton={false} className="tq-redesign q-service-sheet qx q-redesign-body q-favorites-sheet">
-        <header className="q-service-sheet__heading"><div><span className="q-service-eyebrow">Quotation services</span><SheetTitle>Favorite deliverables</SheetTitle><SheetDescription>Build reusable service packages. Apply a package to this quotation, then Save to keep your changes.</SheetDescription></div><SheetClose className="q-b q-b--sm">Close</SheetClose></header><div className="q-favorites-body">
+        <header className="qx-sh__h"><div><SheetTitle>Favorite deliverables</SheetTitle><SheetDescription>{creatorName ? `${creatorName} · ` : ""}Reusable packages · apply to this line, then Save the quotation.</SheetDescription></div><SheetClose className="q-b q-b--sm">Close</SheetClose></header><div className="q-favorites-body qx-sh__b">
         {store.error && <p role="alert" className="text-sm text-destructive">{store.error}</p>}
-        {store.favorites.length > 0 && <section className="q-favorites-library"><h3>Saved packages <span>{store.favorites.length}</span></h3><p>Your first package is the one-click favorite.</p>
+        <section className="qx-panel"><div className="qx-panel__h"><h4>Saved packages</h4><span className="sp" /><span>{store.favorites.length}</span></div><div className="qx-panel__b">{!store.favorites.length && <p className="q-help">No saved packages yet. Build one below to reuse across quotations.</p>}
           {store.favorites.map((entry, index) => <div className="q-favorite-card" key={entry.id}>
-            <button type="button" className="q-favorite-card__summary" disabled={disabled || busy} onClick={() => applySelectedFavorite(entry)}><b>{index === 0 ? "★ " : ""}{entry.name}</b><span className="q-favorite-card__description">{formatTypeLinesSummary(entry.lines)}</span></button>
-            <div className="q-favorite-card__actions">{index > 0 && <button type="button" className="q-favorite-button" disabled={busy} onClick={() => void persist([entry, ...store.favorites.filter(f => f.id !== entry.id)])}>Set default</button>}
-            <button type="button" className="q-favorite-button" disabled={busy} onClick={() => { setForm({ name: entry.name, selectedLines: entry.lines, service: entry.description }); }}>Edit</button>
+            <div className="q-favorite-card__summary"><b>{index === 0 ? "★ " : ""}{entry.name}</b><span className="q-favorite-card__description">{formatTypeLinesSummary(entry.lines)}</span></div>
+            {entry.lines.some(line => !isPostTypeAllowedForCreator(line.type, allowedPlatforms)) && <p className="qx-note qx-note--wrn">Includes services unavailable on this creator. Only supported services can be applied.</p>}
+            <div className="q-favorite-card__actions"><button type="button" className="b b--xs" disabled={disabled || busy} onClick={() => applySelectedFavorite(entry)}>Apply to this line</button>{index > 0 && <button type="button" className="q-favorite-button" disabled={busy} onClick={() => void persist([entry, ...store.favorites.filter(f => f.id !== entry.id)])}>Set default</button>}
+            <button type="button" className="q-favorite-button" disabled={busy} onClick={() => { setEditingId(entry.id); setForm({ name: entry.name, selectedLines: entry.lines, service: entry.description }); }}>Edit</button>
             <button type="button" data-action-tone="danger" className="q-favorite-button" disabled={busy} onClick={() => void persist(store.favorites.filter(f => f.id !== entry.id))}>Remove</button></div>
           </div>)}
-        </section>}
-        <section className="q-favorites-editor"><h3>Build a service package</h3>
-          <Label>Deliverable selection</Label>
-          <QuotationDeliverableTypeLinesEditor lines={selectedLines} allowedPlatforms={[]} onChange={next => { setForm(prev => ({ ...prev, service: syncServiceDescriptionWithTypeLines(prev.service, prev.selectedLines, next), selectedLines: next })); }} disabled={busy} workspaceDetails inlinePicker />
-          <Label htmlFor="favorite-service-description">Service description</Label>
-          <Input id="favorite-service-description" value={service} onChange={event => setService(event.target.value)} placeholder={formatTypeLinesSummary(selectedLines) || "Generated from your selection"} />
+        </div></section>
+        <section className="qx-panel"><div className="qx-panel__h"><h4>{editingId ? "Edit package" : "Build a package"}</h4></div><div className="qx-panel__b">
+          <QuotationDeliverableTypeLinesEditor lines={selectedLines} allowedPlatforms={[]} onChange={next => { setForm(prev => ({ ...prev, service: syncServiceDescriptionWithTypeLines(prev.service, prev.selectedLines, next), selectedLines: next })); }} disabled={busy} workspaceDetails hidePicker />
+          <Label>Package description</Label><p className="qx-readout">{service || formatTypeLinesSummary(selectedLines) || "Choose services in Deliverables first, or edit a saved package."}</p>
           <Label htmlFor="deliverable-favorite-name">Favorite name</Label>
           <Input id="deliverable-favorite-name" maxLength={80} value={name} onChange={event => setName(event.target.value)} placeholder="e.g. Reel + Story + Mirrored TikTok" />
-          <p className="q-help">Save favorite updates your shared library. Apply stages this quotation for Save.</p><div className="q-favorites-footer">
+        </div></section></div><footer className="qx-sh__f">
             <button type="button" data-action-tone="success" className="q-favorite-button" disabled={busy || store.loading || !name.trim() || !selectedLines.some(line => line.type)} onClick={async () => {
-              const previous = store.favorites.find(entry => entry.name.toLowerCase() === name.trim().toLowerCase());
+              const previous = store.favorites.find(entry => entry.id === editingId) ?? store.favorites.find(entry => entry.name.toLowerCase() === name.trim().toLowerCase());
               const value = { id: previous?.id ?? crypto.randomUUID(), name: name.trim(), description: service.trim() || formatTypeLinesSummary(selectedLines), lines: selectedLines.filter(line => line.type) };
               const next = previous ? store.favorites.map(entry => entry.id === previous.id ? value : entry) : [...store.favorites, value];
               if (await persist(next)) toast.success("Favorite saved across your quotations.");
             }}>{busy ? "Saving…" : "Save favorite"}</button>
             <button type="button" data-action-tone="primary" className="q-favorite-button" disabled={busy || disabled || !selectedLines.some(line => line.type)} onClick={() => applySelectedFavorite({ id: "selection", name: "Selection", description: service.trim() || formatTypeLinesSummary(selectedLines), lines: selectedLines.filter(line => line.type) })}>Apply to {itemIds.length} line{itemIds.length === 1 ? "" : "s"}</button>
-          </div>
-        </section>
-      </div></SheetContent>
+<p className="q-help">Saving a favorite updates the shared library. Applying only stages this line.</p></footer></SheetContent>
     </Sheet>
   </span>;
 }
