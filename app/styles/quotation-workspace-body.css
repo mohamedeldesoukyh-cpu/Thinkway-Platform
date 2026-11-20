@@ -308,4 +308,5 @@ body:has(.q-main.q-redesign-body) :is([data-slot=dialog-content],[data-slot=popo
 .q-redesign-commercial.qx .qx-zone--hth .qx-hth:nth-of-type(2) b {color:var(--wrn);}
 .q-redesign-commercial.qx .qx-zone--hth .qx-hth:nth-of-type(3) b {color:var(--bad);}
 .q-redesign-commercial.qx .b--fin {background:white;color:var(--ink2);border:1px solid var(--line);box-shadow:none;}
+.q-redesign-commercial.qx button[role=combobox] {font:11.5px/1.5 var(--sans);height:28px;min-height:28px;border-radius:7px;}
 @media (max-width:760px) {.q-redesign-commercial.qx {width:100vw!important;max-width:100vw!important;max-height:100dvh;border-radius:0;}.q-redesign-commercial.qx .cw-card-list {max-height:45dvh;}}
