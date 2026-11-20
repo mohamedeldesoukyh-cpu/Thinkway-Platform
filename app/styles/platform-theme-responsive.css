@@ -57,6 +57,11 @@
 
 .dark .discovery-suite :is(.tw-jump a,.tw-mx > div,.tw-cm__w,.tw-cdt button[aria-pressed=true],.tw-seg button[aria-pressed=true]) {background:var(--tw-surface);color:var(--tw-ink2);border-color:var(--tw-line);}
 .dark .home-dashboard-suite .tw-jn.cur {background:var(--tw-surface);color:var(--tw-ink);}
+.dark .home-dashboard-suite .tw-wordmark {color:var(--tw-ink);}
+.dark .home-dashboard-suite .tw-wordmark em {color:var(--tw-bi);}
+.dark .discovery-suite .tw-mb .go {background:var(--tw-surface);color:var(--tw-bi);}
+.dark .tq-redesign .q-redesign-body :is(.q-lines__h,.q-live-row,.q-main > .sec,.q-cell-repeat input) {background:var(--surf);color:var(--ink);}
+.dark .tq-redesign .q-redesign-body .q-live-row:hover {background:var(--soft);}
 .dark .finance-suite :is(.thinkway-campaign-section-card,[data-slot=card]:not(.tw-tile):not(.fs-tile),input[data-slot=input],[data-slot=select-trigger],textarea,select,button.group\/table-tool) {background:var(--tw-surface);color:var(--tw-ink);border-color:var(--tw-line);}
 .dark .finance-suite:not(:has([data-overview-redesign])) main [data-slot=button] {background:var(--tw-surface);color:var(--tw-ink2);border-color:var(--tw-line);}
 .dark .finance-suite:not(:has([data-overview-redesign])) tfoot td,
@@ -70,11 +75,13 @@
 
 @media (max-width:1023px) {
   /* Desktop summary + toolbars together must not pin most of a phone screen. */
-  .tq-redesign.quotation-editor-rd4 > .q-frozen-summary,
+  .tq-redesign.discovery-suite.quotation-editor-rd4 > .q-frozen-summary,
   .tq-redesign .q-redesign-body.q-header-tools,
   :is(.home-dashboard-suite,.finance-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.campaigns-list-suite,.collections-suite) > .tw-frozen {position:static;}
   .tq-redesign.quotation-editor-rd4 {--q-summary-visible:0px!important;}
-  .tq-redesign .q-redesign-body .q-creator-service-tools {flex-wrap:wrap;white-space:normal;gap:4px 10px;max-width:100%;}
+  .tq-redesign.discovery-suite .q-redesign-body .q-lines__h {position:static;}
+  .tq-redesign.discovery-suite .q-redesign-body .q-creator-service-tools,
+  .tq-redesign.discovery-suite .q-redesign-body .q-creator-service-tools .q-favorite-tools {flex-wrap:wrap;flex-shrink:1;white-space:normal;gap:4px 10px;max-width:100%;}
   .tq-redesign.discovery-suite .q-redesign-body .q-lines__h .tw-b,
   .tq-redesign .q-redesign-body .q-creator-service-tools button,
   .tq-redesign .q-redesign-body :is(.q-opt,.qx-svc__desc,.q-cell-repeat input) {min-height:44px;height:auto;}
