@@ -433,3 +433,8 @@ export function optionNumberLabel(optionNumber: number | null | undefined): stri
   }
   return `Option ${Math.floor(optionNumber)}`;
 }
+
+/** Select the full compatible catalog; clearing also removes hidden/custom selections. */
+export function selectAllDeliverableTypes(checked: boolean, allowedPlatforms: string[]): string[] {
+  return checked ? QUOTATION_POST_TYPES.filter(type => isPostTypeAllowedForCreator(type.value, allowedPlatforms)).map(type => type.value) : [];
+}

@@ -86,7 +86,7 @@ export function UnsavedChangesBar({
             variant="ghost"
             className="h-8 text-xs"
             disabled={isSaving}
-            onClick={onReset}
+            data-action-tone="warning" onClick={onReset}
           >
             {resetLabel}
           </Button>
@@ -97,7 +97,7 @@ export function UnsavedChangesBar({
           variant="outline"
           className="h-8 text-xs"
           disabled={isSaving}
-          onClick={onCancel}
+          data-action-tone="neutral" onClick={onCancel}
         >
           {cancelLabel}
         </Button>
@@ -106,7 +106,7 @@ export function UnsavedChangesBar({
           size="sm"
           className="h-8 text-xs"
           disabled={isSaving}
-          onClick={onSave}
+          data-action-tone="success" onClick={onSave}
         >
           {isSaving ? <Loader2Icon className="size-3.5 animate-spin" /> : null}
           {saveLabel}

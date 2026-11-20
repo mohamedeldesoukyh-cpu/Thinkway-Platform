@@ -56,13 +56,15 @@ export function QuotationClientBrandPanel({ detail, options, disabled, wizard }:
   const tempBrand = wizard?.tempBrand ?? localTempBrand;
 
   useEffect(() => {
-    setLocalTemporary(detail.is_temporary_client || detail.is_temporary_brand);
-    setLocalTempClient(detail.temporary_client_name ?? "");
-    setLocalTempBrand(detail.temporary_brand_name ?? "");
-    setLocalClientId(detail.client_id ?? "");
-    setLocalBrandId(detail.brand_id ?? "");
-    setLocalCampaignId(detail.campaign_header_id ?? "");
+    const restored = manualSave.getClientBrandPending();
+    setLocalTemporary(restored?.useTemporary ?? (detail.is_temporary_client || detail.is_temporary_brand));
+    setLocalTempClient(restored && "temporary_client_name" in restored ? restored.temporary_client_name ?? "" : detail.temporary_client_name ?? "");
+    setLocalTempBrand(restored && "temporary_brand_name" in restored ? restored.temporary_brand_name ?? "" : detail.temporary_brand_name ?? "");
+    setLocalClientId(restored && "client_id" in restored ? restored.client_id ?? "" : detail.client_id ?? "");
+    setLocalBrandId(restored && "brand_id" in restored ? restored.brand_id ?? "" : detail.brand_id ?? "");
+    setLocalCampaignId(restored && "campaign_header_id" in restored ? restored.campaign_header_id ?? "" : detail.campaign_header_id ?? "");
   }, [
+    manualSave.undoRevision,
     detail.id,
     detail.is_temporary_client,
     detail.is_temporary_brand,

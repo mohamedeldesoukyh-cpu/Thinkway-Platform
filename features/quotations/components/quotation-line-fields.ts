@@ -33,7 +33,7 @@ import {
   toDeliverableDrafts,
   type DeliverableDraft,
 } from "@/lib/quotations/quotation-deliverable-drafts";
-import type { QuotationLinePendingPayload } from "@/features/quotations/components/quotation-manual-save";
+import { useOptionalQuotationManualSave, type QuotationLinePendingPayload } from "@/features/quotations/components/quotation-manual-save";
 import type { AutosaveStatus } from "@/lib/hooks/use-debounced-autosave";
 import { linePendingDiffersFromItem } from "@/lib/quotations/quotation-line-pending-diff";
 
@@ -56,6 +56,8 @@ export function useQuotationLineFields(
   /** Live line FX from shared draft (Cost Detail may change currency before remount). */
   liveLineFx?: { costCurrency?: string; fxRateToEgp?: number }
 ) {
+  const undo = useOptionalQuotationManualSave();
+  const undoRevisionSeen = useRef(undo?.undoRevision ?? 0);
   const otherService = isOtherService(item);
   const cacheKey = otherService ? null : quotationCreatorPlatformCacheKey(item);
   const linkedPlatformsKey = (item.creator_profile_source?.linkedPlatforms ?? []).join(",");
@@ -261,6 +263,21 @@ export function useQuotationLineFields(
   deliverableDraftsRef.current = deliverableDrafts;
   const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const localDraftDirtyRef = useRef(false);
+
+  useEffect(() => {
+    if (!undo || undo.undoRevision === undoRevisionSeen.current) return;
+    undoRevisionSeen.current = undo.undoRevision;
+    if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
+    commitTimerRef.current = null;
+    localDraftDirtyRef.current = false;
+    lastDerivedCommercialsKeyRef.current = null;
+    const pending = undo.getLinePendingPayload(item.id);
+    setServiceDescription(pending?.service_description !== undefined ? pending.service_description ?? '' : item.service_description ?? '');
+    const restored = toDeliverableDrafts(pending?.deliverables ?? item.deliverables);
+    const next = restored.length ? restored : [createEmptyDeliverableDraft(item)];
+    deliverableDraftsRef.current = next;
+    setDeliverableDrafts(next);
+  }, [undo, item]);
 
   const commitDeliverableDrafts = useCallback(
     (drafts: DeliverableDraft[]) => {

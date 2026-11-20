@@ -1,4 +1,5 @@
 
+import { useUndoableState } from "@/lib/productivity/workspace-undo";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
 import "@/app/commercial-workspace.css";
@@ -174,7 +175,7 @@ export function AssignmentCommercialWorkspaceDialog({
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
-  const [drafts, setDrafts] = useState<Record<string, CommercialDraft>>({});
+  const [drafts, setDrafts, resetDrafts] = useUndoableState<Record<string, CommercialDraft>>({}, "Campaign pricing", open && canManage && !pending);
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] = useState<HealthFilter>("all");
   const [revisionOpen, setRevisionOpen] = useState(false);
@@ -198,7 +199,7 @@ export function AssignmentCommercialWorkspaceDialog({
 
   useEffect(() => {
     if (!open) return;
-    setDrafts(baseline);
+    resetDrafts(baseline);
     setSelected(new Set(lines.map((line) => line.id)));
     setSearch("");
     setHealthFilter("all");
@@ -281,7 +282,7 @@ export function AssignmentCommercialWorkspaceDialog({
   }
 
   function handleDiscard() {
-    setDrafts(baseline);
+    resetDrafts(baseline);
   }
 
   function handleSave() {
@@ -378,7 +379,7 @@ export function AssignmentCommercialWorkspaceDialog({
         <Button
           type="button"
           size="sm"
-          variant="outline"
+          data-action-tone="finance" variant="outline"
           className={cn("thinkway-campaign-btn h-[27px] gap-1.5 px-2.5 text-[11.5px]", className)}
           disabled={lines.length === 0}
         >
@@ -769,7 +770,7 @@ export function AssignmentCommercialWorkspaceDialog({
         quotationId={revisionQuotationId}
         lines={revisionLines}
         onSubmitted={() => {
-          setDrafts(baseline);
+          resetDrafts(baseline);
           refreshAfterOperationalMutation();
           setOpen(false);
         }}

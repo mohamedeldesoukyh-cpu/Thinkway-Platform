@@ -150,7 +150,7 @@ export function AssignmentGridEditSessionToolbar() {
       {isEditing ? (
         <button
           type="button"
-          className="thinkway-campaign-btn thinkway-campaign-btn-edit"
+          data-action-tone="warning" className="thinkway-campaign-btn thinkway-campaign-btn-edit"
           onClick={cancelEditing}
           disabled={saving}
         >
@@ -168,7 +168,7 @@ export function AssignmentGridEditSessionToolbar() {
       )}
       <button
         type="button"
-        className="thinkway-campaign-btn thinkway-campaign-btn-save"
+        data-action-tone="success" className="thinkway-campaign-btn thinkway-campaign-btn-save"
         onClick={() => {
           void saveAll();
         }}

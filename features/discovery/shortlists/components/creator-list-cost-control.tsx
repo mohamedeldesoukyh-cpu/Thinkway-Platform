@@ -47,7 +47,7 @@ export function CreatorListCostControl({ shortlistId, value, disabled }: { short
       <input id="creator-list-total-cost" className="q-in" aria-label="Total Avg Cost amount" aria-invalid={invalid} aria-describedby="sl-cost-feedback" inputMode="decimal" value={amount} placeholder="Not set" disabled={disabled || pending} onChange={event => { setAmount(event.target.value); setFeedback(""); setInvalid(false); }} />
       <select className="q-sel" aria-label="Total Avg Cost currency" value={currency} onChange={event => setCurrency(event.target.value)} disabled={disabled || pending}>{COMMERCIAL_CURRENCIES.map(code => <option key={code} value={code}>{code}</option>)}</select>
       <button className="sl-tac__tg" type="button" aria-pressed={visible} aria-label="Show Total Avg Cost in Creator List" title="Visibility in Creator List output only" onClick={() => save(!visible)} disabled={disabled || pending}><s />{visible ? "Shown" : "Hidden"}</button>
-      <button type="submit" className="q-b q-b--pri q-b--sm" disabled={disabled || pending}>{pending ? "Saving…" : "Save"}</button>
+      <button data-action-tone="success" type="submit" className="q-b q-b--pri q-b--sm" disabled={disabled || pending}>{pending ? "Saving…" : "Save"}</button>
       <span id="sl-cost-feedback" role="status" className={"sl-tac__st " + (invalid ? "err" : feedback ? "ok" : "")}>{feedback}</span>
     </form>
   );

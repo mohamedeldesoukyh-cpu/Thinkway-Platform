@@ -1,6 +1,7 @@
 
 import {
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -25,6 +26,7 @@ import {
   QUOTATION_POST_TYPES,
   quotationPostTypeLabel,
   toggleDeliverableType,
+  selectAllDeliverableTypes,
 } from "@/lib/quotations/quotation-deliverable-types";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +53,9 @@ export function QuotationPostTypeMultiSelect({
   defaultOpen,
   compact = false,
 }: Props) {
+  const listId = useId();
+  const availableTypes = selectAllDeliverableTypes(true, allowedPlatforms);
+  const allSelected = availableTypes.length > 0 && availableTypes.every(type => value.includes(type));
   const [open, setOpen] = useState(defaultOpen ?? false);
   const [query, setQuery] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -71,28 +76,12 @@ export function QuotationPostTypeMultiSelect({
   }, [query]);
 
   useEffect(() => {
-    if (!defaultOpen) return;
-    setOpen(true);
-  }, [defaultOpen]);
-
-  useEffect(() => {
-    if (!open) {
-      setQuery("");
-      setHighlightedIndex(0);
-      return;
-    }
+    if (!open) return;
     const id = window.requestAnimationFrame(() => {
       searchRef.current?.focus();
     });
     return () => window.cancelAnimationFrame(id);
   }, [open]);
-
-  useEffect(() => {
-    setHighlightedIndex((prev) => {
-      if (filtered.length === 0) return 0;
-      return Math.min(prev, filtered.length - 1);
-    });
-  }, [filtered.length]);
 
   useEffect(() => {
     if (!open || filtered.length === 0) return;
@@ -111,6 +100,8 @@ export function QuotationPostTypeMultiSelect({
     if (event.key === "Enter") {
       event.preventDefault();
       setOpen(false);
+      setQuery("");
+      setHighlightedIndex(0);
       return;
     }
 
@@ -212,8 +203,7 @@ export function QuotationPostTypeMultiSelect({
                 event.key === "ArrowUp" ||
                 event.key === "Home" ||
                 event.key === "End" ||
-                event.key === "Enter" ||
-                event.key === " "
+                event.key === "Enter"
               ) {
                 handleListKeyDown(event);
                 return;
@@ -223,12 +213,16 @@ export function QuotationPostTypeMultiSelect({
             autoComplete="off"
             spellCheck={false}
             aria-autocomplete="list"
-            aria-controls="quotation-post-type-list"
+            aria-controls={listId}
           />
+        </div>
+        <div className="q-type-select-actions" onKeyDown={event => event.stopPropagation()}>
+          <label><Checkbox checked={allSelected ? true : value.length ? "indeterminate" : false} disabled={availableTypes.length === 0} onCheckedChange={checked => onChange(selectAllDeliverableTypes(checked === true, allowedPlatforms))} aria-label="Select all available services" /><span>Select all available <small>({availableTypes.length})</small></span></label>
+          <button type="button" disabled={!value.length} onClick={() => onChange([])}>Clear all</button>
         </div>
         <div
           ref={listRef}
-          id="quotation-post-type-list"
+          id={listId}
           role="listbox"
           aria-multiselectable="true"
           aria-label="Post types"

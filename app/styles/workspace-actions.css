@@ -1,0 +1,16 @@
+/* Shared action semantics for shortlist, quotation and campaign controls. */
+button[data-action-tone], a[data-action-tone] {
+ --action-bg: #f8fafc; --action-ink: #334155; --action-border: #cbd5e1; --action-hover: #eef2f6;
+ background: var(--action-bg) !important; color: var(--action-ink) !important;
+ border-color: var(--action-border) !important; box-shadow: none !important;
+ transition: background-color 120ms, border-color 120ms, box-shadow 120ms;
+}
+[data-action-tone="primary"] { --action-bg: #155eef !important; --action-ink: #fff !important; --action-border: #155eef !important; --action-hover: #1849a9 !important; }
+[data-action-tone="success"] { --action-bg: #087443 !important; --action-ink: #fff !important; --action-border: #087443 !important; --action-hover: #065f36 !important; }
+[data-action-tone="danger"] { --action-bg: #fff1f2 !important; --action-ink: #b42318 !important; --action-border: #fda29b !important; --action-hover: #fee4e2 !important; }
+[data-action-tone="warning"] { --action-bg: #fffaeb !important; --action-ink: #93370d !important; --action-border: #fedf89 !important; --action-hover: #fef0c7 !important; }
+[data-action-tone="favorite"] { --action-bg: #f4f3ff !important; --action-ink: #6941c6 !important; --action-border: #d6bbfb !important; --action-hover: #ebe9fe !important; }
+[data-action-tone="finance"] { --action-bg: #eef4ff !important; --action-ink: #3538cd !important; --action-border: #c7d7fe !important; --action-hover: #e0eaff !important; }
+button[data-action-tone]:hover:not(:disabled), a[data-action-tone]:hover { background: var(--action-hover) !important; }
+button[data-action-tone]:focus-visible, a[data-action-tone]:focus-visible { outline: 2px solid #155eef; outline-offset: 3px; }
+button[data-action-tone]:disabled { background: #f1f5f9 !important; border-color: #e2e8f0 !important; color: #64748b !important; opacity: 1; cursor: not-allowed; }

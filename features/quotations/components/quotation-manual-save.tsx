@@ -11,6 +11,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useWorkspaceUndo } from "@/lib/productivity/workspace-undo";
 import { useRouter } from "next/navigation";
 import { startTransition } from "react";
 import { toast } from "sonner";
@@ -98,6 +99,9 @@ type QuotationManualSaveContextValue = {
   savePending: boolean;
   saveAll: () => Promise<boolean>;
   discardAll: () => Promise<void>;
+  undoRevision: number;
+  getMetaPending: () => QuotationMetaPendingPayload | null;
+  getClientBrandPending: () => QuotationClientBrandPendingPayload | null;
 };
 
 const QuotationManualSaveContext = createContext<QuotationManualSaveContextValue | null>(null);
@@ -134,6 +138,8 @@ type ProviderProps = {
 
 export function QuotationManualSaveProvider({ quotationId, items, children }: ProviderProps) {
   const router = useRouter();
+  const history = useWorkspaceUndo();
+  const [undoRevision, setUndoRevision] = useState(0);
   const { confirm } = useConfirmAction();
   const linePendingRef = useRef(new Map<string, QuotationLinePendingPayload>());
   const metaPendingRef = useRef<QuotationMetaPendingPayload | null>(null);
@@ -184,8 +190,30 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
     }
   }, []);
 
+  const snapshot = useCallback(() => structuredClone({ lines: linePendingRef.current, meta: metaPendingRef.current, clientBrand: clientBrandPendingRef.current }), []);
+  const restore = useCallback((state: ReturnType<typeof snapshot>) => {
+    linePendingRef.current = new Map([...structuredClone(state.lines)].filter(([id]) => itemsByIdRef.current.has(id)));
+    metaPendingRef.current = structuredClone(state.meta);
+    clientBrandPendingRef.current = structuredClone(state.clientBrand);
+    syncPendingState();
+    setPendingLineIds(new Set(linePendingRef.current.keys()));
+    setUndoRevision(value => value + 1);
+  }, [syncPendingState]);
+  const recordEdit = useCallback((before: ReturnType<typeof snapshot>) => {
+    const after = snapshot();
+    const serialize = (state: typeof before) => JSON.stringify({ ...state, lines: [...state.lines] });
+    if (serialize(before) === serialize(after)) return;
+    history?.record({ owner: 'quotation:' + quotationId, label: "Quotation edit",
+      undo: () => restore(before), redo: () => restore(after), available: () => !savePendingRef.current });
+  }, [history, quotationId, restore, snapshot]);
+  useEffect(() => history?.beforeReplay(() => {
+    if (!savePendingRef.current) for (const flush of saveFlushHandlersRef.current) flush();
+  }), [history]);
+  useEffect(() => () => history?.remove('quotation:' + quotationId), [history, quotationId]);
+
   const registerLinePending = useCallback(
     (itemId: string, payload: QuotationLinePendingPayload) => {
+      const before = snapshot();
       const item = itemsByIdRef.current.get(itemId);
       const prev = linePendingRef.current.get(itemId) ?? {};
       // Omit undefined keys so a deliverable-only flush cannot wipe staged Master fields.
@@ -221,11 +249,13 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
         if (linePendingRef.current.has(itemId)) {
           linePendingRef.current.delete(itemId);
           syncPendingState();
+          recordEdit(before);
         }
         return;
       }
 
       linePendingRef.current.set(itemId, merged);
+      recordEdit(before);
       setPendingLineIds((current) => {
         // A repeated edit must refresh the displayed pending label.
         const next = new Set(current);
@@ -234,21 +264,25 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       });
       setSaveStatus("pending");
     },
-    [syncPendingState]
+    [syncPendingState, snapshot, recordEdit]
   );
 
   const registerMetaPending = useCallback(
     (patch: QuotationMetaPendingPayload) => {
+      const before = snapshot();
       metaPendingRef.current = { ...(metaPendingRef.current ?? {}), ...patch };
+      recordEdit(before);
       setHasMetaPending(true);
       setSaveStatus("pending");
     },
-    []
+    [snapshot, recordEdit]
   );
 
   const registerClientBrandPending = useCallback(
     (payload: QuotationClientBrandPendingPayload | null) => {
+      const before = snapshot();
       clientBrandPendingRef.current = payload;
+      recordEdit(before);
       setHasClientBrandPending(payload != null);
       if (
         payload == null &&
@@ -260,7 +294,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
         setSaveStatus("pending");
       }
     },
-    []
+    [snapshot, recordEdit]
   );
 
   const registerSaveFlush = useCallback((flush: () => void) => {
@@ -294,6 +328,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
         return true;
       }
 
+      history?.clear();
       setSavePending(true);
       savePendingRef.current = true;
       setSaveStatus("saving");
@@ -552,7 +587,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       setSavePending(false);
       savePendingRef.current = false;
     }
-  }, [quotationId, router, confirm, syncPendingState]);
+  }, [quotationId, router, confirm, syncPendingState, history]);
 
   const discardAll = useCallback(async () => {
     if (savePendingRef.current || !hasUnsavedRef.current) return;
@@ -562,6 +597,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       confirmLabel: "Discard changes",
     });
     if (!accepted || savePendingRef.current) return;
+    history?.clear();
     linePendingRef.current.clear();
     metaPendingRef.current = null;
     clientBrandPendingRef.current = null;
@@ -571,7 +607,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
     setDiscardRevision((revision) => revision + 1);
     router.refresh();
     toast.success("Unsaved changes discarded.");
-  }, [confirm, router, syncPendingState]);
+  }, [confirm, router, syncPendingState, history]);
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -598,6 +634,9 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       savePending,
       saveAll,
       discardAll,
+      undoRevision,
+      getMetaPending: () => metaPendingRef.current,
+      getClientBrandPending: () => clientBrandPendingRef.current,
     }),
     [
       registerLinePending,
@@ -612,6 +651,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       savePending,
       saveAll,
       discardAll,
+      undoRevision,
     ]
   );
 
@@ -639,3 +679,5 @@ export function useQuotationManualSave(): QuotationManualSaveContextValue {
   }
   return ctx;
 }
+
+export function useOptionalQuotationManualSave() { return useContext(QuotationManualSaveContext); }

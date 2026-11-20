@@ -293,7 +293,7 @@ export function QuotationWorkspaceHeader({
               {detail.canManage ? (
                 <button
                   type="button"
-                  className="tw-b sm pri"
+                  data-action-tone="success" className="tw-b sm pri"
                   disabled={savePending || !hasUnsavedChanges}
                   onClick={onSave}
                 >
@@ -302,7 +302,7 @@ export function QuotationWorkspaceHeader({
                   ) : null}
                   <QuotationText>Save</QuotationText></button>
               ) : null}
-              {detail.canManage && <button type="button" className="tw-b sm"
+              {detail.canManage && <button type="button" data-action-tone="warning" className="tw-b sm"
                 disabled={savePending || !hasUnsavedChanges} onClick={onDiscard}>
                 <QuotationText>Discard changes</QuotationText>
               </button>}

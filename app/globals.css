@@ -12,6 +12,7 @@
 @import "./thinkway-dropdown.css" layer(components);
 @import "./styles/chrome-logo.css" layer(components);
 @import "./styles/responsive.css";
+@import "./styles/workspace-actions.css";
 
 @custom-variant dark (&:is(.dark *));
 

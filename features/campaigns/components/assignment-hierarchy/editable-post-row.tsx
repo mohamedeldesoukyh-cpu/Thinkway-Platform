@@ -1,5 +1,6 @@
 "use client";
 
+import { useUndoableState } from "@/lib/productivity/workspace-undo";
 import { ASSIGNMENT_CHILD_GRID_COLUMN_METAS } from "@/lib/tables/assignment-grid-column-metas";
 import { RecordLiveDateButton } from "./record-live-date-button";
 import { PlannedPostingDateButton } from "./planned-posting-date-button";
@@ -221,10 +222,11 @@ export function EditablePostRow({
   const useDeliverableCommercial = Boolean(typeCommercial) || deliverableScoped || isFirstOfType;
 
   const commercial = useOperationalCommercialDraft(
-    commercialInitial(deliverable, post, useDeliverableCommercial, typeCommercial, mixedTypes)
+    commercialInitial(deliverable, post, useDeliverableCommercial, typeCommercial, mixedTypes),
+    fieldsActive && !gridEdit.saving && !pending
   );
 
-  const [meta, setMeta] = useState<MetaDraft>(() => ({
+  const [meta, setMeta, resetMeta] = useUndoableState<MetaDraft>(() => ({
     platform: post.platform,
     deliverable_type: post.deliverable_type,
     live_date: post.live_date ?? "",
@@ -232,12 +234,12 @@ export function EditablePostRow({
     workflow_status: post.workflow_status,
     billing_status: post.billing_status,
     notes: post.notes ?? "",
-  }));
+  }), "Campaign service details", fieldsActive && !gridEdit.saving && !pending);
 
   useEffect(() => {
     if (fieldsActive) return;
     commercial.reset(commercialInitial(deliverable, post, useDeliverableCommercial, typeCommercial, mixedTypes));
-    setMeta({
+    resetMeta({
       platform: post.platform,
       deliverable_type: post.deliverable_type,
       live_date: post.live_date ?? "",

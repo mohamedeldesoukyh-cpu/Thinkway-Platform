@@ -54,7 +54,7 @@ type Props = {
 
 export function QuotationDocumentMetaPanel({ detail, layout = "default" }: Props) {
   const flush = layout === "flush";
-  const { registerMetaPending, saveStatus, hasUnsavedChanges } = useQuotationManualSave();
+  const { registerMetaPending, saveStatus, hasUnsavedChanges, undoRevision, getMetaPending } = useQuotationManualSave();
   const [preparedBy, setPreparedBy] = useState(detail.prepared_by_name ?? "");
   const [reviewedBy, setReviewedBy] = useState(detail.reviewed_by_name ?? "");
   const [clientSignatory, setClientSignatory] = useState(detail.client_signature_name ?? "");
@@ -66,16 +66,19 @@ export function QuotationDocumentMetaPanel({ detail, layout = "default" }: Props
   const [status, setStatus] = useState<QuotationStatus>(detail.status);
 
   useEffect(() => {
-    setPreparedBy(detail.prepared_by_name ?? "");
-    setReviewedBy(detail.reviewed_by_name ?? "");
-    setClientSignatory(detail.client_signature_name ?? "");
-    setIssueDate(detail.issue_date);
-    setValidityDate(detail.validity_date ?? "");
-    setVersion(detail.version);
-    setDepartment(detail.department ?? "Influencer Marketing");
-    setChangeSummary(detail.change_summary ?? "");
-    setStatus(detail.status);
+    const restored = { ...detail, ...getMetaPending() };
+    setPreparedBy(restored.prepared_by_name ?? "");
+    setReviewedBy(restored.reviewed_by_name ?? "");
+    setClientSignatory(restored.client_signature_name ?? "");
+    setIssueDate(restored.issue_date);
+    setValidityDate(restored.validity_date ?? "");
+    setVersion(restored.version);
+    setDepartment(restored.department ?? "Influencer Marketing");
+    setChangeSummary(restored.change_summary ?? "");
+    setStatus(restored.status);
   }, [
+    undoRevision,
+    getMetaPending,
     detail.id,
     detail.prepared_by_name,
     detail.reviewed_by_name,

@@ -496,7 +496,7 @@ export function QuotationCommercialWorkspaceDialog({
         <DialogTrigger asChild>
           <Button
             type="button"
-            variant="outline"
+            data-action-tone="finance" variant="outline"
             size="sm"
             className={cn(triggerClassName, COMMERCIAL_WORKSPACE_TRIGGER_CLASS)}
           >

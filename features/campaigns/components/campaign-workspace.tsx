@@ -1,4 +1,5 @@
 "use client";
+import { WorkspaceUndoProvider } from "@/lib/productivity/workspace-undo";
 import { buildDocumentationUnitsFromHierarchy } from "@/lib/services/deliverables/build-documentation-units";
 
 import { isClientIoGenerated } from "@/lib/campaigns/sync-campaign-header-status";
@@ -76,7 +77,7 @@ type CampaignWorkspaceViewProps = {
   initialAssignmentHierarchy: AssignmentHierarchy;
 };
 
-export function CampaignWorkspaceView({
+function CampaignWorkspaceViewBody({
   workspace,
   defaultTab = "overview",
   initialAssignmentHierarchy,
@@ -711,4 +712,8 @@ export function CampaignWorkspaceView({
     </CampaignOperationalRefreshProvider>
     </CampaignCurrencyProvider>
   );
+}
+
+export function CampaignWorkspaceView(props: Parameters<typeof CampaignWorkspaceViewBody>[0]) {
+  return <WorkspaceUndoProvider><CampaignWorkspaceViewBody {...props} /></WorkspaceUndoProvider>;
 }

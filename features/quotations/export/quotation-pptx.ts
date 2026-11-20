@@ -3254,7 +3254,7 @@ export async function buildQuotationPptxBuffer(
       ...quotationListPdfOptions(doc), pageSelector: ".page", imageType: "jpeg", quality: 90, deviceScaleFactor: 1.5,
     });
     if (!images.ok) throw new Error(images.error);
-    return buildPptxFromPageImages(images.pages, doc.name);
+    return buildPptxFromPageImages(images.pages, doc.name, { widescreen: doc.source === "shortlist" });
   }
   // Creator decks (Showcase / Pitch / lump-sum variants): pixel-parity with Preview + PDF.
   // Rebuild slides from the same HTML pages so PPTX cannot drift from the redesign.

@@ -15,7 +15,7 @@ export function QuotationRateCardToolbarButton() {
   const ctx = useContext(RateCardContext);
   const {t} = useRateLanguage();
   if (!ctx) return null;
-  return <button type="button" className="tw-b sm" style={{color: "#e05c68"}} onClick={() => ctx.launch()}>{t("apply")}</button>;
+  return <button type="button" className="tw-b sm" data-action-tone="finance" onClick={() => ctx.launch()}>{t("apply")}</button>;
 }export function QuotationLineRateCardButton({itemId,index,showButton=true}:{itemId:string;index:number;showButton?:boolean}) {
   const ctx=useContext(RateCardContext);const {t,lang}=useRateLanguage();
   if(!ctx)return null;

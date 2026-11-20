@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from "react";
+import { useUndoableState } from "@/lib/productivity/workspace-undo";
+import { useCallback, useMemo } from "react";
 
 import {
   roundOperationalAmount,
@@ -24,24 +25,24 @@ type Initial = {
   cost: number;
 };
 
-export function useOperationalCommercialDraft(initial: Initial) {
-  const [draft, setDraft] = useState<OperationalCommercialDraft>(() => ({
+export function useOperationalCommercialDraft(initial: Initial, enabled = true) {
+  const [draft, setDraft, resetDraft] = useUndoableState<OperationalCommercialDraft>(() => ({
     qty: initial.qty,
     revPerAd: initial.revPerAd,
     rev: initial.rev,
     costPerAd: initial.costPerAd,
     cost: initial.cost,
-  }));
+  }), "Campaign commercial values", enabled);
 
   const reset = useCallback((next: Initial) => {
-    setDraft({
+    resetDraft({
       qty: next.qty,
       revPerAd: next.revPerAd,
       rev: next.rev,
       costPerAd: next.costPerAd,
       cost: next.cost,
     });
-  }, []);
+  }, [resetDraft]);
 
   const setQty = useCallback((qty: number) => {
     setDraft((prev) => {
@@ -53,23 +54,23 @@ export function useOperationalCommercialDraft(initial: Initial) {
         cost: roundOperationalAmount(q * prev.costPerAd),
       };
     });
-  }, []);
+  }, [setDraft]);
 
   const setRevPerAd = useCallback((revPerAd: number) => {
     setDraft((prev) => ({ ...prev, ...syncCommercialFromRevPerAd(prev.qty, revPerAd) }));
-  }, []);
+  }, [setDraft]);
 
   const setRev = useCallback((rev: number) => {
     setDraft((prev) => ({ ...prev, ...syncCommercialFromRev(prev.qty, rev) }));
-  }, []);
+  }, [setDraft]);
 
   const setCostPerAd = useCallback((costPerAd: number) => {
     setDraft((prev) => ({ ...prev, ...syncCommercialFromCostPerAd(prev.qty, costPerAd) }));
-  }, []);
+  }, [setDraft]);
 
   const setCost = useCallback((cost: number) => {
     setDraft((prev) => ({ ...prev, ...syncCommercialFromCost(prev.qty, cost) }));
-  }, []);
+  }, [setDraft]);
 
   return useMemo(
     () => ({

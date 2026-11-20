@@ -1,4 +1,5 @@
 "use client";
+import { WorkspaceUndoProvider, useUndoableState } from "@/lib/productivity/workspace-undo";
 import { ShortlistCreatorOrderDialog } from "./shortlist-creator-order-dialog";
 import { WorkspaceScrollSummary } from "@/features/discovery/components/workspace-scroll-summary";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
@@ -163,7 +164,7 @@ const MOVEMENT_LABELS: Record<CreatorMovementAction, string> = {
   shortlist_archived: "Archived",
 };
 
-export function ShortlistWorkspace({
+function ShortlistWorkspaceBody({
   detail,
   seed,
   campaigns,
@@ -179,7 +180,7 @@ export function ShortlistWorkspace({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const confirmDelete = useConfirmDelete();
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useUndoableState<Set<string>>(new Set(), "Shortlist creator selection", !isPending);
   const [creatorSearch, setCreatorSearch] = useState("");
   const creatorSearchRef = useRef<HTMLInputElement>(null);
   const focusCreatorSearch = () => creatorSearchRef.current?.focus({ preventScroll: true });
@@ -1398,4 +1399,8 @@ function ShortlistWorkspaceOverflowMenu({
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+export function ShortlistWorkspace(props: Parameters<typeof ShortlistWorkspaceBody>[0]) {
+  return <WorkspaceUndoProvider key={props.detail.id}><ShortlistWorkspaceBody {...props} /></WorkspaceUndoProvider>;
 }

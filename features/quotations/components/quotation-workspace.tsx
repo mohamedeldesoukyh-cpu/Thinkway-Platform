@@ -1,4 +1,5 @@
 "use client";
+import { WorkspaceUndoProvider } from "@/lib/productivity/workspace-undo";
 import { useLiveQuotationEnrichment } from "./use-live-quotation-enrichment";
 import { appendProposalOptions, type ProposalOption } from "@/features/quotations/export/proposal-options";
 import { isQuotationListTemplate } from "@/features/quotations/export/quotation-template";
@@ -121,7 +122,7 @@ import type {
   QuotationItemRow,
 } from "@/features/quotations/types";
 
-export function QuotationWorkspace({
+function QuotationWorkspaceBody({
   detail,
   formOptions,
   promoteOptions,
@@ -161,6 +162,27 @@ function QuotationWorkspaceContent({
   const { language } = useQuotationDesignLocale();
   const manualSave = useQuotationManualSave();
   const [drafts, setDrafts] = useState(() => draftsFromItems(detail.items));
+  const undoRevisionSeen = useRef(manualSave.undoRevision);
+  useEffect(() => {
+    if (undoRevisionSeen.current === manualSave.undoRevision) return;
+    undoRevisionSeen.current = manualSave.undoRevision;
+    setDrafts(Object.fromEntries(detail.items.map(item => {
+      const pending = manualSave.getLinePendingPayload(item.id);
+      const draft = draftFromQuotationItem(item);
+      if (pending) {
+        draft.mode = pending.mode ?? draft.mode;
+        draft.cost = pending.cost ?? draft.cost;
+        draft.revenue = pending.revenue ?? draft.revenue;
+        draft.costCurrency = pending.cost_currency ?? draft.costCurrency;
+        draft.gpPct = pending.gp_pct ?? draft.gpPct;
+        draft.gpValue = pending.gp_value ?? draft.gpValue;
+        draft.afPct = pending.af_pct ?? draft.afPct;
+        if (pending.cost_fx_override !== undefined) draft.costFxOverride = pending.cost_fx_override;
+        if (pending.revenue_fx_override !== undefined) draft.revenueFxOverride = pending.revenue_fx_override;
+      }
+      return [item.id, draft];
+    })));
+  }, [manualSave, detail.items]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [creatorSearch, setCreatorSearch] = useState("");
   const creatorSearchRef = useRef<HTMLInputElement>(null);
@@ -1081,12 +1103,13 @@ function EmptyState({
 }
 
 function HeaderNotes({ detail }: { detail: QuotationDetail }) {
-  const { registerMetaPending, saveStatus, hasUnsavedChanges } = useQuotationManualSave();
+  const { registerMetaPending, saveStatus, hasUnsavedChanges, undoRevision, getMetaPending } = useQuotationManualSave();
   const [notes, setNotes] = useState(detail.notes ?? "");
 
   useEffect(() => {
-    setNotes(detail.notes ?? "");
-  }, [detail.id, detail.notes]);
+    const pending = getMetaPending();
+    setNotes(pending?.notes !== undefined ? pending.notes ?? "" : detail.notes ?? "");
+  }, [detail.id, detail.notes, undoRevision, getMetaPending]);
 
   return (
     <div>
@@ -1109,4 +1132,8 @@ function HeaderNotes({ detail }: { detail: QuotationDetail }) {
       />
     </div>
   );
+}
+
+export function QuotationWorkspace(props: Parameters<typeof QuotationWorkspaceBody>[0]) {
+  return <WorkspaceUndoProvider key={props.detail.id}><QuotationWorkspaceBody {...props} /></WorkspaceUndoProvider>;
 }

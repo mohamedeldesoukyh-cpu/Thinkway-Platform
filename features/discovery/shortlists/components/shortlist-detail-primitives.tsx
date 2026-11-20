@@ -133,6 +133,7 @@ export const ShortlistToolbarButton = forwardRef<
     <button
       type="button"
       ref={ref}
+      data-action-tone={variant === "danger" ? "danger" : variant === "warn" ? "warning" : variant === "primary" || variant === "glow" ? "primary" : "neutral"}
       className={cn(
         SHORTLIST_TOOLBAR_BUTTON_CLASS,
         (variant === "primary" || variant === "glow") && "sl-primary",

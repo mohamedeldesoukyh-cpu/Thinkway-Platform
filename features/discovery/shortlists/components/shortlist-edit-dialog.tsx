@@ -1,5 +1,6 @@
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useUndoableState } from "@/lib/productivity/workspace-undo";
+import { useEffect, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
@@ -46,19 +47,16 @@ export function ShortlistEditDialog({
   brands,
 }: Props) {
   const router = useRouter();
-  const [name, setName] = useState(detail.name);
-  const [description, setDescription] = useState(detail.description ?? "");
-  const [clientId, setClientId] = useState(detail.client_id ?? NO_CLIENT);
-  const [brandId, setBrandId] = useState(detail.brand_id ?? NO_BRAND);
   const [isPending, startTransition] = useTransition();
-
+  const [form, setForm, resetForm] = useUndoableState({ name: detail.name, description: detail.description ?? '', clientId: detail.client_id ?? NO_CLIENT, brandId: detail.brand_id ?? NO_BRAND }, "Shortlist details", open && !isPending);
+  const { name, description, clientId, brandId } = form;
+  const setName = (name: string) => setForm(prev => ({ ...prev, name }));
+  const setDescription = (description: string) => setForm(prev => ({ ...prev, description }));
+  const setBrandId = (brandId: string) => setForm(prev => ({ ...prev, brandId }));
   useEffect(() => {
     if (!open) return;
-    setName(detail.name);
-    setDescription(detail.description ?? "");
-    setClientId(detail.client_id ?? NO_CLIENT);
-    setBrandId(detail.brand_id ?? NO_BRAND);
-  }, [open, detail]);
+    resetForm({ name: detail.name, description: detail.description ?? '', clientId: detail.client_id ?? NO_CLIENT, brandId: detail.brand_id ?? NO_BRAND });
+  }, [open, detail, resetForm]);
 
   const clientOptions = useMemo(
     () =>
@@ -82,15 +80,8 @@ export function ShortlistEditDialog({
   }, [brands, clientId]);
 
   function handleClientChange(nextClientId: string) {
-    setClientId(nextClientId);
-    if (!nextClientId) {
-      setBrandId(NO_BRAND);
-      return;
-    }
-    const brandStillValid = brands.some(
-      (brand) => brand.id === brandId && brand.client_id === nextClientId
-    );
-    if (!brandStillValid) setBrandId(NO_BRAND);
+    const brandStillValid = brands.some(brand => brand.id === brandId && brand.client_id === nextClientId);
+    setForm(prev => ({ ...prev, clientId: nextClientId, brandId: nextClientId && brandStillValid ? prev.brandId : NO_BRAND }));
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {

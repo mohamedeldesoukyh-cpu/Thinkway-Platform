@@ -1,9 +1,10 @@
 "use client";
 
+import { useUndoableState } from "@/lib/productivity/workspace-undo";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { StarIcon, ListPlusIcon } from "lucide-react";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetTitle, SheetDescription, SheetClose } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { QuotationDeliverableTypeLinesEditor } from "./quotation-deliverable-type-lines";
@@ -66,12 +67,13 @@ export function QuotationFavoriteButtons({ itemIds, lines = [], description = ""
 }) {
   const store = useDeliverableFavorites();
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [selectedLines, setSelectedLines] = useState<QuotationDeliverableTypeLine[]>([]);
-  const [service, setService] = useState("");
   const [busy, setBusy] = useState(false);
+  const [form, setForm, resetForm] = useUndoableState({ name: '', selectedLines: [] as QuotationDeliverableTypeLine[], service: '' }, "Favorite package", open && !busy);
+  const { name, selectedLines, service } = form;
+  const setName = (name: string) => setForm(prev => ({ ...prev, name }));
+  const setService = (service: string) => setForm(prev => ({ ...prev, service }));
   const favorite = store.favorites[0];
-  function showEditor() { setName(""); setSelectedLines(lines); setService(description); setOpen(true); }
+  function showEditor() { resetForm({ name: "", selectedLines: lines, service: description }); setOpen(true); }
   function applySelectedFavorite(value: DeliverableFavorite) { store.apply(itemIds, value); setOpen(false); }
   async function persist(next: DeliverableFavorite[]) {
     setBusy(true);
@@ -80,39 +82,39 @@ export function QuotationFavoriteButtons({ itemIds, lines = [], description = ""
     finally { setBusy(false); }
   }
   return <span className="q-favorite-tools">
-    <button type="button" className="q-favorite-button" disabled={disabled || store.loading} title={favorite ? `Apply ${favorite.name}` : "Set your first favorite"}
+    <button type="button" data-action-tone="favorite" className="q-favorite-button q-favorite-button--saved" disabled={disabled || store.loading} title={favorite ? `Apply ${favorite.name}` : "Set your first favorite"}
       onClick={() => favorite ? applySelectedFavorite(favorite) : showEditor()}><StarIcon size={12} />Favorite</button>
     <button type="button" className="q-favorite-button" disabled={disabled} onClick={showEditor}><ListPlusIcon size={12} />Deliverables</button>
-    <Dialog open={open} onOpenChange={next => { if (!busy) setOpen(next); }}>
-      <DialogContent className="max-h-[85dvh] overflow-y-auto rounded-2xl sm:max-w-lg">
-        <DialogHeader><DialogTitle>Favorite deliverables</DialogTitle><DialogDescription>Save selections for use across all your quotations. The first favorite is your one-click choice. Applying changes stages them for Save.</DialogDescription></DialogHeader>
+    <Sheet open={open} onOpenChange={next => { if (!busy) setOpen(next); }}>
+      <SheetContent side="right" showCloseButton={false} className="tq-redesign q-service-sheet q-favorites-sheet">
+        <header className="q-service-sheet__heading"><div><span className="q-service-eyebrow">Quotation services</span><SheetTitle>Favorite deliverables</SheetTitle><SheetDescription>Build reusable service packages. Apply a package to this quotation, then Save to keep your changes.</SheetDescription></div><SheetClose className="q-b q-b--sm">Close</SheetClose></header><div className="q-favorites-body">
         {store.error && <p role="alert" className="text-sm text-destructive">{store.error}</p>}
-        {store.favorites.length > 0 && <div className="space-y-2">
-          {store.favorites.map((entry, index) => <div className="flex items-center gap-2 rounded-lg border p-2" key={entry.id}>
-            <button type="button" className="min-w-0 flex-1 text-left text-sm" disabled={disabled || busy} onClick={() => applySelectedFavorite(entry)}><b>{index === 0 ? "★ " : ""}{entry.name}</b><span className="block truncate text-xs text-slate-500">{formatTypeLinesSummary(entry.lines)}</span></button>
-            {index > 0 && <button type="button" className="q-favorite-button" disabled={busy} onClick={() => void persist([entry, ...store.favorites.filter(f => f.id !== entry.id)])}>Set default</button>}
-            <button type="button" className="q-favorite-button" disabled={busy} onClick={() => { setName(entry.name); setSelectedLines(entry.lines); setService(entry.description); }}>Edit</button>
-            <button type="button" className="q-favorite-button" disabled={busy} onClick={() => void persist(store.favorites.filter(f => f.id !== entry.id))}>Remove</button>
+        {store.favorites.length > 0 && <section className="q-favorites-library"><h3>Saved packages <span>{store.favorites.length}</span></h3><p>Your first package is the one-click favorite.</p>
+          {store.favorites.map((entry, index) => <div className="q-favorite-card" key={entry.id}>
+            <button type="button" className="q-favorite-card__summary" disabled={disabled || busy} onClick={() => applySelectedFavorite(entry)}><b>{index === 0 ? "★ " : ""}{entry.name}</b><span className="q-favorite-card__description">{formatTypeLinesSummary(entry.lines)}</span></button>
+            <div className="q-favorite-card__actions">{index > 0 && <button type="button" className="q-favorite-button" disabled={busy} onClick={() => void persist([entry, ...store.favorites.filter(f => f.id !== entry.id)])}>Set default</button>}
+            <button type="button" className="q-favorite-button" disabled={busy} onClick={() => { setForm({ name: entry.name, selectedLines: entry.lines, service: entry.description }); }}>Edit</button>
+            <button type="button" data-action-tone="danger" className="q-favorite-button" disabled={busy} onClick={() => void persist(store.favorites.filter(f => f.id !== entry.id))}>Remove</button></div>
           </div>)}
-        </div>}
-        <div className="space-y-3 rounded-xl border bg-slate-50 p-3">
+        </section>}
+        <section className="q-favorites-editor"><h3>Build a service package</h3>
           <Label>Deliverable selection</Label>
-          <QuotationDeliverableTypeLinesEditor lines={selectedLines} allowedPlatforms={[]} onChange={next => { setService(syncServiceDescriptionWithTypeLines(service, selectedLines, next)); setSelectedLines(next); }} disabled={busy} workspaceDetails />
+          <QuotationDeliverableTypeLinesEditor lines={selectedLines} allowedPlatforms={[]} onChange={next => { setForm(prev => ({ ...prev, service: syncServiceDescriptionWithTypeLines(prev.service, prev.selectedLines, next), selectedLines: next })); }} disabled={busy} workspaceDetails />
           <Label htmlFor="favorite-service-description">Service description</Label>
           <Input id="favorite-service-description" value={service} onChange={event => setService(event.target.value)} placeholder={formatTypeLinesSummary(selectedLines) || "Generated from your selection"} />
           <Label htmlFor="deliverable-favorite-name">Favorite name</Label>
           <Input id="deliverable-favorite-name" maxLength={80} value={name} onChange={event => setName(event.target.value)} placeholder="e.g. Reel + Story + Mirrored TikTok" />
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="q-favorite-button" disabled={busy || store.loading || !name.trim() || !selectedLines.some(line => line.type)} onClick={async () => {
+          <div className="q-favorites-footer">
+            <button type="button" data-action-tone="success" className="q-favorite-button" disabled={busy || store.loading || !name.trim() || !selectedLines.some(line => line.type)} onClick={async () => {
               const previous = store.favorites.find(entry => entry.name.toLowerCase() === name.trim().toLowerCase());
               const value = { id: previous?.id ?? crypto.randomUUID(), name: name.trim(), description: service.trim() || formatTypeLinesSummary(selectedLines), lines: selectedLines.filter(line => line.type) };
               const next = previous ? store.favorites.map(entry => entry.id === previous.id ? value : entry) : [...store.favorites, value];
               if (await persist(next)) toast.success("Favorite saved across your quotations.");
             }}>{busy ? "Saving…" : "Save favorite"}</button>
-            <button type="button" className="q-favorite-button" disabled={busy || disabled || !selectedLines.some(line => line.type)} onClick={() => applySelectedFavorite({ id: "selection", name: "Selection", description: service.trim() || formatTypeLinesSummary(selectedLines), lines: selectedLines.filter(line => line.type) })}>Apply to {itemIds.length} line{itemIds.length === 1 ? "" : "s"}</button>
+            <button type="button" data-action-tone="primary" className="q-favorite-button" disabled={busy || disabled || !selectedLines.some(line => line.type)} onClick={() => applySelectedFavorite({ id: "selection", name: "Selection", description: service.trim() || formatTypeLinesSummary(selectedLines), lines: selectedLines.filter(line => line.type) })}>Apply to {itemIds.length} line{itemIds.length === 1 ? "" : "s"}</button>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </section>
+      </div></SheetContent>
+    </Sheet>
   </span>;
 }
