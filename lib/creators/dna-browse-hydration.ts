@@ -395,7 +395,8 @@ export async function loadStagingDnaByProfileIds(
 
 export async function hydrateCreatorsWithDna(
   supabase: SupabaseClient,
-  creators: UnifiedCreatorResult[]
+  creators: UnifiedCreatorResult[],
+  loadedCanonical?: Map<string, CreatorDNADocument>
 ): Promise<UnifiedCreatorResult[]> {
   if (creators.length === 0) return creators;
 
@@ -407,7 +408,7 @@ export async function hydrateCreatorsWithDna(
     .filter((id): id is string => Boolean(id));
 
   const [canonical, staging] = await Promise.all([
-    loadCanonicalDnaByInfluencerIds(supabase, influencerIds),
+    loadedCanonical ?? loadCanonicalDnaByInfluencerIds(supabase, influencerIds),
     loadStagingDnaByProfileIds(supabase, profileIds),
   ]);
 

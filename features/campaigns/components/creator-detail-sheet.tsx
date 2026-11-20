@@ -1,6 +1,7 @@
 "use client";
 import { CreatorCategoryEditor } from "@/features/discovery/components/creator-category-editor";
 import { sameCreatorIdentity } from "@/lib/creators/same-creator-identity";
+import { loadCreatorProfile } from "@/features/discovery/lib/load-creator-profile";
 import { useRouter } from "next/navigation";
 import { SimilarCreatorActions, type SimilarCreatorTarget } from "@/features/discovery/components/similar-creator-actions";
 import { stashCompareQueue } from "@/features/discovery/components/creator-compare/compare-storage";
@@ -72,7 +73,6 @@ import {
   addCreatorToCampaignShortlistAction,
   getCreatorHistoricalMetricsAction,
   getSimilarCreatorsAction,
-  getUnifiedCreatorCoreDetailAction,
 } from "@/features/campaigns/creator-discovery-actions";
 import { startLoadTimer } from "@/lib/performance/progressive-load";
 import { getInfluencerQuotationPriceReferenceAction } from "@/features/quotations/actions";
@@ -988,7 +988,7 @@ export function CreatorDetailSheet({
 
       void (async () => {
         const phase1 = startLoadTimer("creator-detail.sheet.phase1-core");
-        const coreCreator = coreDetailLoaded ? creator : await getUnifiedCreatorCoreDetailAction(unifiedId);
+        const coreCreator = coreDetailLoaded ? creator : await loadCreatorProfile(unifiedId);
         phase1.end({ ok: Boolean(coreCreator) });
         if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
 

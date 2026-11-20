@@ -1937,12 +1937,12 @@ async function fetchInternalCreators(
       categories,
     }, pathOpt);
     if (skipDna) return filtered;
-    return hydrateCreatorsWithDna(supabase, filtered);
+    return hydrateCreatorsWithDna(supabase, filtered, skipPreMapDna ? undefined : dnaByInfluencer);
   }
 
   searchTrace("6_internal_hydration", { count: results.length }, pathOpt);
   if (skipDna) return results;
-  return hydrateCreatorsWithDna(supabase, results);
+  return hydrateCreatorsWithDna(supabase, results, skipPreMapDna ? undefined : dnaByInfluencer);
 }
 
 type CreatorSearchHitsResult = {
