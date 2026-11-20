@@ -322,6 +322,7 @@ body:has(.q-main.q-redesign-body) :is([data-slot=dialog-content],[data-slot=popo
 }
 .tq-redesign .q-redesign-body.q-main {padding:0 14px 56px!important;}
 .tq-redesign .q-redesign-body .q-lines__h {padding:13px 16px;gap:8px;}
+.tq-redesign .q-redesign-body .q-lines-container>.tw-c {background:var(--surf);border:1px solid var(--hair);}
 .tq-redesign .q-redesign-body .q-lines__h input[type=search] {width:230px;height:28px;font-size:11px;background:var(--surf);color:var(--ink);}
 .tq-redesign .q-redesign-body .q-creator-service-group {margin:0 10px 8px;}
 .tq-redesign .q-redesign-body .q-creator-service-group:first-of-type {margin-top:8px;}
