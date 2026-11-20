@@ -381,7 +381,7 @@ function QuotationPackLineRow({
             </div>
           </DiscoverySuiteCreatorCell>}
           {canManage && !otherService ? <div className={`q-creator-service-tools${showCreator ? " q-creator-service-tools--first" : ""}`}>
-            {showCreator && <button type="button" className="q-b q-b--sm" onClick={handleAddOption} disabled={pending} aria-label={`Add service line for ${name}`}>{pending ? "Adding service…" : "+ Add service"}</button>}
+            {showCreator && <button type="button" className="q-b q-b--sm" onClick={handleAddOption} disabled={pending} aria-label={`Add service line for ${name}`}>{pending ? "Adding service line…" : "+Add service Line"}</button>}
             <QuotationFavoriteButtons creatorName={name} allowedPlatforms={allowedCreatorPlatforms} itemIds={[item.id]} lines={primary ? deliverableTypeLines(primary) : []} description={lineFields.serviceDescription} disabled={pending} />
           </div> : null}
 
