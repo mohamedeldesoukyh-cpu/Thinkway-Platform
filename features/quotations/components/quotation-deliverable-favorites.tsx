@@ -87,7 +87,7 @@ export function QuotationFavoriteButtons({ itemIds, lines = [], description = ""
   return <span className="q-favorite-tools">
     <button type="button" data-action-tone="favorite" className="q-favorite-button q-favorite-button--saved" disabled={disabled || store.loading} title={onDeliverables ? "Favorite packages" : favorite ? `Apply ${favorite.name}` : "Set your first favorite"}
       onClick={() => onDeliverables ? showEditor() : favorite ? applySelectedFavorite(favorite) : showEditor()}><StarIcon size={12} />Apply Favorite</button>
-    <button type="button" className="q-favorite-button" disabled={disabled} onClick={onDeliverables ?? showEditor}><ListPlusIcon size={12} />Deliverables</button>
+    <button type="button" className="q-favorite-button" disabled={disabled} onClick={onDeliverables ?? showEditor}><ListPlusIcon size={12} />Saved Deliverables</button>
     <Sheet modal={false} open={open} onOpenChange={next => { if (!busy) setOpen(next); }}>
       <SheetContent showOverlay={false} side="right" showCloseButton={false} className="tq-redesign q-service-sheet qx q-redesign-body q-favorites-sheet">
         <header className="qx-sh__h"><div><SheetTitle>Favorite deliverables</SheetTitle><SheetDescription>{creatorName ? `${creatorName} · ` : ""}Reusable packages · apply to this line, then Save the quotation.</SheetDescription></div><SheetClose className="q-b q-b--sm">Close</SheetClose></header><div className="q-favorites-body qx-sh__b">
