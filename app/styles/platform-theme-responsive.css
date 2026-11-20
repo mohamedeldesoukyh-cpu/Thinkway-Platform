@@ -91,6 +91,7 @@
 @media (max-width:1023px) {
   .workspace-redesign .wr-context-header {margin-inline:0;}
   .wr-responsive-table td {white-space:normal;overflow-wrap:anywhere;}
+  .wr-responsive-table td .platform-v6-link {white-space:normal;overflow-wrap:anywhere;}
   .tq-redesign.discovery-suite .q-redesign-body .q-cell-actions {gap:8px;flex-wrap:wrap;}
   .tq-redesign.discovery-suite .q-redesign-body .q-cell-actions .q-b {width:auto;min-width:44px;min-height:44px;padding:0 10px;}
   .tq-redesign.discovery-suite .q-redesign-body .q-cell-actions .q-mobile-action {display:inline-flex;}
