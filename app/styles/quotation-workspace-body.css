@@ -73,7 +73,7 @@
 .tq-redesign .q-redesign-body .q-line-group { border: 0; }
 .tq-redesign .q-redesign-body .q-live-row { border-bottom: 1px solid var(--q-hair); }
 .tq-redesign .q-redesign-body .q-line-group:last-child .q-live-row { border-bottom: 0; }
-.tq-redesign .q-redesign-body .q-cell-creator .tw-avx { width: 30px !important; height: 30px !important; }
+.tq-redesign .q-redesign-body .q-cell-creator .tw-avx { width: 64px !important; height: 64px !important; flex-shrink: 0; }
 .tq-redesign .q-redesign-body .q-cell-creator .nm { font-size: 13px; }
 .tq-redesign .q-redesign-body .q-cell-creator .hd { font-size: 11px; }
 .tq-redesign .q-redesign-body .q-creator-service-tools { gap: 5px; flex-wrap: nowrap; }
