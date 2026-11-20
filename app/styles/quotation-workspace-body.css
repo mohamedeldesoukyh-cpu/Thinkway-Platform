@@ -337,7 +337,9 @@ body:has(.q-main.q-redesign-body) :is([data-slot=dialog-content],[data-slot=popo
 .tq-redesign .q-redesign-body .q-cell-creator .q-creator-service-tools--first {margin-top:8px;margin-inline-start:39px;}
 .tq-redesign .q-redesign-body .q-creator-service-tools button {font-size:11px!important;font-weight:500!important;}
 .tq-redesign .q-redesign-body .q-cell-creator .q-creator-service-tools--first {margin-inline-start:0;}
-.tq-redesign .q-redesign-body .q-creator-service-tools {flex-wrap:wrap;row-gap:4px;}
+.tq-redesign .q-redesign-body .q-creator-service-tools,
+.tq-redesign .q-redesign-body .q-creator-service-tools .q-favorite-tools {flex-wrap:nowrap;flex-shrink:0;align-items:center;}
+.tq-redesign .q-redesign-body .q-creator-service-tools button {white-space:nowrap;flex-shrink:0;}
 .tq-redesign .q-redesign-body .q-creator-service-tools>.q-b {color:var(--blue-i)!important;}
 .tq-redesign .q-redesign-body .q-cell-service {padding:5px 0;}
 .tq-redesign .q-redesign-body .q-dels {gap:5px;}
