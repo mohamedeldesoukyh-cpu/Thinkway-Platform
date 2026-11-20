@@ -34,6 +34,7 @@ import {
   assignmentsLayerAtLeast,
   getAssignmentsUiLayer,
 } from "@/lib/campaigns/assignments-ui-layer";
+import { assignmentDeliveryProgress } from "@/lib/campaigns/assignment-delivery-progress";
 import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
 import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
 
@@ -184,9 +185,6 @@ export function CampaignLinesTabInner({
     (sum, group) => sum + (group.deliverables?.length ?? 0),
     0
   );
-  const completedCount = workspace.lines.filter((line) =>
-    ["posted", "verified", "invoiced", "paid", "closed"].includes(line.assignment_status)
-  ).length;
   const readyCount = workspace.lines.filter((line) =>
     ["approved", "scheduled"].includes(line.assignment_status)
   ).length;
@@ -195,20 +193,9 @@ export function CampaignLinesTabInner({
       !line.influencer_id?.trim() && !line.campaign_influencer_id?.trim();
     return unassigned || line.assignment_status === "draft";
   }).length;
-  const progressPercent =
-    workspace.lines.length > 0
-      ? Math.round((completedCount / workspace.lines.length) * 100)
-      : 0;
-  const completionPercent =
-    workspace.lines.length > 0
-      ? Math.round(
-          (workspace.lines.filter((line) =>
-            ["verified", "invoiced", "paid", "closed"].includes(line.assignment_status)
-          ).length /
-            workspace.lines.length) *
-            100
-        )
-      : 0;
+  const delivery = assignmentDeliveryProgress(workspace.lines, assignmentHierarchy.groups);
+  const { progressPercent, completionPercent } = delivery;
+  const deliveryUnavailable = Boolean(assignmentHierarchy.load_error || assignmentHierarchy.skipped_line_ids?.length);
 
   return (
     <>
@@ -241,14 +228,14 @@ export function CampaignLinesTabInner({
           },
           {
             key: "progress",
-            label: "Progress",
-            value: `${progressPercent}%`,
+            label: "Assignments live",
+            value: deliveryUnavailable ? "Unavailable" : `${progressPercent}% · ${delivery.live}/${delivery.total}`,
             tone: progressPercent >= 50 ? "pos" : "mut",
           },
           {
             key: "completion",
-            label: "Completion",
-            value: `${completionPercent}%`,
+            label: "Verified complete",
+            value: deliveryUnavailable ? "Unavailable" : `${completionPercent}% · ${delivery.verified}/${delivery.total}`,
             tone: completionPercent >= 50 ? "pos" : "mut",
           },
           {

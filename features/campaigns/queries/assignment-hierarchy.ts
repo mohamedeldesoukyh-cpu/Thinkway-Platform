@@ -101,11 +101,9 @@ function deriveCollectionStatus(
 }
 
 function deriveWorkflowStatusFromPosts(
-  posts: AssignmentPostOperationalRow[],
-  billingStatus: AssignmentDeliverableBillingStatus
+  posts: AssignmentPostOperationalRow[]
 ): string {
   if (posts.length === 0) {
-    if (billingStatus === "invoiced" || billingStatus === "collected") return "posted";
     return "draft";
   }
   const priority = [
@@ -559,7 +557,7 @@ async function loadCampaignAssignmentHierarchy(
       invoice_id: invoiceLink?.invoice_id ?? null,
       invoice_document_number: invoiceLink?.document_number ?? null,
       payout_status: line?.vendor_payment_status ?? null,
-      workflow_status: deriveWorkflowStatusFromPosts(posts, billingStatus),
+      workflow_status: deriveWorkflowStatusFromPosts(posts),
       posts,
       remaining_amount: Number(row.remaining_amount),
       invoiced_amount: Number(row.invoiced_amount),
