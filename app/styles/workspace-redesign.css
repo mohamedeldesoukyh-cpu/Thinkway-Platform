@@ -255,7 +255,7 @@
 
 /* Radix overlays are portalled to body. Match only while this workspace is mounted;
    retain their focus traps, dismissal, form submission and individual widths. */
-body:has(.workspace-redesign) :is([data-slot="dialog-content"], [data-slot="sheet-content"]) {
+body:has(.workspace-redesign) :is([data-slot="dialog-content"], [data-slot="sheet-content"]:not(.tw-sb)) {
   --popover: #fff; --popover-foreground: #111827; --foreground: #111827;
   --muted-foreground: #64748b; --border: #e7ecf4; --input: #d8e0ee;
   --background: #fff; --card: #fff; --primary: #0057ff; --primary-foreground: #fff;
@@ -272,14 +272,14 @@ body:has(.workspace-redesign) :is([data-slot="dialog-description"], [data-slot="
   display: block; white-space: normal; overflow-wrap: anywhere; overflow: visible;
   -webkit-line-clamp: unset; line-height: 1.5; max-width: 100%;
 }
-body:has(.workspace-redesign) :is([data-slot="dialog-content"], [data-slot="sheet-content"]) :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]) {
+body:has(.workspace-redesign) :is([data-slot="dialog-content"], [data-slot="sheet-content"]:not(.tw-sb)) :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]) {
   border-radius: 7px; border-color: #d8e0ee; min-height: 34px;
 }
-body:has(.workspace-redesign) :is([data-slot="dialog-content"], [data-slot="sheet-content"]) :is(.truncate, label, p, [data-slot="button"], [data-slot="badge"]) {
+body:has(.workspace-redesign) :is([data-slot="dialog-content"], [data-slot="sheet-content"]:not(.tw-sb)) :is(.truncate, label, p, [data-slot="button"], [data-slot="badge"]) {
   white-space: normal; overflow-wrap: anywhere; text-overflow: clip;
   min-width: 0; max-width: 100%;
 }
-body:has(.workspace-redesign) :is([data-slot="dialog-content"], [data-slot="sheet-content"]) [data-slot="button"] { border-radius: 7px; height: auto; min-height: 34px; }
+body:has(.workspace-redesign) :is([data-slot="dialog-content"], [data-slot="sheet-content"]:not(.tw-sb)) [data-slot="button"] { border-radius: 7px; height: auto; min-height: 34px; }
 body:has(.workspace-redesign) :is([data-slot="dialog-footer"], [data-slot="sheet-footer"]) { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
 
 @media (max-width: 860px) {
