@@ -492,6 +492,7 @@ function QuotationPackLineRow({
           <div className="qx-qty"><span className="qx-qty__l">Agency fees (AF)</span><b>{rowCurrency} {F(projected.af)}</b></div>
           <div className="qx-qty"><span className="qx-qty__l">GP amount</span><b>{rowCurrency} {F(projected.margin)}</b></div>
           <div className="qx-qty"><span className="qx-qty__l">GP %</span><b>{projected.marginPct.toFixed(1)}%</b></div>
+          <div className="qx-qty"><span className="qx-qty__l" title="Gross profit divided by base cost">Markup / cost margin %</span><b>{projected.cost > 0 ? `${(projected.margin / projected.cost * 100).toFixed(1)}%` : "—"}</b></div>
           <div className="qx-qty"><span className="qx-qty__l"><b>Client total incl. fees</b></span><b>{rowCurrency} {F(projected.clientCost)}</b></div>
         </div></section>
       </div><footer className="qx-sh__f"><button type="button" className="b b--pri" onClick={() => setExpanded(false)}>Apply to this line</button><button type="button" className="b" onClick={cancelEditor}>Cancel</button><span className="sp" /><span className="q-help">Staged for quotation Save</span></footer></SheetContent></Sheet>}

@@ -222,7 +222,7 @@ export function QuotationCommercialWorkspaceDialog({
   useEffect(() => {
     if (!open) return;
     setColumnPrefs(readCommercialWorkspaceColumnPrefs());
-    setSelectedIds(new Set(items.map((item) => item.id)));
+    setSelectedIds(new Set());
     setHistory(createCommercialDraftHistory(drafts));
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- snapshot on open only
 
@@ -435,21 +435,21 @@ export function QuotationCommercialWorkspaceDialog({
         style={{ borderColor: CS.line, backgroundColor: "#fff", color: CS.dark }}
       >
         <div
-          className="qx-sh__h shrink-0"
+          className="qx-sh__h q-cw-heading shrink-0"
           style={{ borderBottom: `0.5px solid ${CS.line}` }}
         >
           <DialogTitle className="m-0 text-base font-semibold" style={{ color: CS.dark }}>
-            Commercial Workspace
+            Commercial workspace
           </DialogTitle>
           <p className="m-0 mt-0.5 text-xs" style={{ color: CS.gray }}>
-            {rows.length} lines · shared draft with Creators grid · explicit Save
+            {rows.length} lines · same staged draft as the creators grid · Save stays on the quotation
             {!canManage ? " · read-only" : null}
           </p>
         </div>
 
         {/* Frozen totals + selection + health */}
         <div
-          className="shrink-0 space-y-3 px-5 py-3"
+          className="q-cw-controls shrink-0"
           style={{ borderBottom: `0.5px solid ${CS.line}`, background: "#fff" }}
         >
           <div className="qx-cw__sum">
@@ -465,18 +465,18 @@ export function QuotationCommercialWorkspaceDialog({
               <div><u>Total incl. fees</u><b>{fmtStat(quotationTotals.revenue, displayCurrency, displayFxRateToEgp)}</b></div>
             </div></div>
             <div className="qx-zone qx-zone--hth"><div className="qx-zone__h">Commercial health</div>
-              <button className="qx-hth" onClick={() => setQuickFilter("band_healthy")}><span>Healthy</span><b>{health.healthy}</b></button>
-              <button className="qx-hth" onClick={() => setQuickFilter("band_warning")}><span>Warning</span><b>{health.warning}</b></button>
-              <button className="qx-hth" onClick={() => setQuickFilter("band_critical")}><span>Critical</span><b>{health.critical}</b></button>
+              <button className="qx-hth" onClick={() => setQuickFilter("band_healthy")}><span>Healthy · GP ≥ 25%</span><b>{health.healthy}</b></button>
+              <button className="qx-hth" onClick={() => setQuickFilter("band_warning")}><span>Warning · GP 15–25%</span><b>{health.warning}</b></button>
+              <button className="qx-hth" onClick={() => setQuickFilter("band_critical")}><span>Critical · GP under 15%</span><b>{health.critical}</b></button>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="q-cw-toolbar flex flex-wrap items-center gap-2">
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Filter influencers…"
-              className="h-8 w-[180px] text-xs"
+              placeholder="Filter creators…"
+              className="h-8 w-[190px] text-xs"
             />
             <Select
               value={quickFilter}
@@ -504,7 +504,7 @@ export function QuotationCommercialWorkspaceDialog({
                     setBulkKind(v as CommercialWorkspaceBulkOp["kind"])
                   }
                 >
-                  <SelectTrigger className="h-8 w-[180px] text-xs">
+                  <SelectTrigger className="q-cw-bulk-kind h-8 w-[100px] text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -563,6 +563,12 @@ export function QuotationCommercialWorkspaceDialog({
               >
                 <Redo2Icon className="size-3.5" />
               </Button>
+              <div className="q-cw-visible-columns" aria-label="Visible commercial columns">
+                {([['cost','COST'],['revenue','CLIENT'],['gp','GP'],['afPct','AF']] as const).map(([id,label]) => <label key={id}><input type="checkbox" checked={columnPrefs[id]} onChange={() => {
+                  if (id !== 'gp') { toggleColumn(id); return; }
+                  setColumnPrefs(prev => { const next = {...prev,gp:!prev.gp,gpPct:!prev.gp,gpPctInput:!prev.gp};writeCommercialWorkspaceColumnPrefs(next);return next; });
+                }} />{label}</label>)}
+              </div>
               <Button
                 type="button"
                 size="sm"
@@ -571,7 +577,7 @@ export function QuotationCommercialWorkspaceDialog({
                 onClick={() => setColumnsOpen((v) => !v)}
               >
                 <Columns3Icon className="size-3.5" />
-                Columns
+                <span className="sr-only">More columns</span>
               </Button>
             </div>
           </div>
@@ -595,7 +601,7 @@ export function QuotationCommercialWorkspaceDialog({
           ) : null}
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pb-2">
+        <div className="q-cw-table flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="cw-card-list min-h-0 flex-1 overflow-auto"><div className="qx-cwhead" style={{gridTemplateColumns:commercialGridColumns(show)}}><input type="checkbox" checked={allFilteredSelected} aria-label="Select filtered" onChange={() => setSelectedIds(prev => { const next = new Set(prev); filtered.forEach(row => allFilteredSelected ? next.delete(row.itemId) : next.add(row.itemId)); return next; })}/><button type="button" className="q-cw-sort" onClick={() => setTableSort(prev => ({field:"influencer",direction:prev?.field === "influencer" && prev.direction === "asc" ? "desc" : "asc"}))}>Creator / line</button>{show("mode") && <span>Cost + …</span>}{show("cost") && <button type="button" className="q-cw-sort num" onClick={() => setTableSort(prev => ({field:"cost",direction:prev?.field === "cost" && prev.direction === "asc" ? "desc" : "asc"}))}>Cost</button>}{show("revenue") && <button type="button" className="q-cw-sort num" onClick={() => setTableSort(prev => ({field:"revenue",direction:prev?.field === "revenue" && prev.direction === "asc" ? "desc" : "asc"}))}>Client cost</button>}{(show("gpPctInput") || show("gpPct")) && <span className="num">GP / markup %</span>}{show("gp") && <button type="button" className="q-cw-sort num" onClick={() => setTableSort(prev => ({field:"gp",direction:prev?.field === "gp" && prev.direction === "asc" ? "desc" : "asc"}))}>GP margin</button>}{show("afPct") && <span className="num">AF %</span>}<span className="num">Client incl. fees</span></div>
             {sortedRows.length === 0 ? (
               <div className="cgroup quotation-creator-card">
