@@ -365,6 +365,7 @@ body:has(.q-main.q-redesign-body) :is([data-slot=dialog-content],[data-slot=popo
 .tq-redesign .q-redesign-body [data-action-tone=success]:disabled {opacity:.42;}
 .tq-redesign .q-redesign-body [data-action-tone=warning] {background:var(--surf)!important;color:var(--ink2)!important;border-color:var(--line)!important;}
 @media (min-width:1051px) {
+  .tq-redesign .q-redesign-body .q-grid {--quotation-body-columns:18px 22px minmax(340px,1fr) 56px minmax(150px,3fr) 46px 108px 124px 78px 56px;}
   .tq-redesign .q-redesign-body .q-grid .q-row {padding:0 14px;gap:0 12px;}
   .tq-redesign .q-redesign-body .q-grid .q-row.is-head {padding:0 14px;}
 }
