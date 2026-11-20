@@ -1,9 +1,13 @@
 /* Shared suite compatibility layer. Keep brand headers, charts, avatars and
    document previews intact; map workspace surfaces to the active app theme. */
-.dark, .dark .workspace-redesign {
+.dark, .dark .workspace-redesign, .dark body:has(.workspace-redesign) {
   --wr-ink:#eef2f8;--wr-muted:#a6b4c8;--wr-bg:#101620;--wr-soft:#202d40;
   --wr-surface:#182231;--wr-hair:#2c3a4e;--wr-line:#3a4a60;--wr-blue-ink:#8bb8ff;
-  --wr-warning-bg:#3c301b;
+  --wr-warning-bg:#3c301b;--wr-lav:#1d3152;
+}
+.dark :is(.workspace-redesign, body:has(.workspace-redesign) [role="dialog"], body:has(.workspace-redesign) [data-radix-popper-content-wrapper]) {
+  --secondary:#202d40;--secondary-foreground:#cbd5e1;
+  --accent:#1d3152;--accent-foreground:#8bb8ff;
 }
 .dark .workspace-redesign :is(.client-detail-suite,.campaign-detail-suite,.campaigns-list-suite,.collections-suite) {--tw-ink2:#cbd5e1;color:var(--wr-ink);}
 .dark .workspace-redesign [data-slot=table-row]:hover {background:var(--wr-soft);}
