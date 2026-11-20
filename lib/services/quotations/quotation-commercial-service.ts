@@ -91,11 +91,16 @@ export async function updateQuotationItemCommercials(
     };
   }
 ) {
-  const { data: quotationMeta } = await supabase
+  // Independent reads share one network wait; all guards still run before writes.
+  const [{ data: quotationMeta }, { data: savedItem, error: savedError }] = await Promise.all([supabase
     .from("quotations")
     .select("status, issue_date")
     .eq("id", input.quotation_id)
-    .maybeSingle();
+    .maybeSingle(),
+    supabase.from("quotation_items")
+      .select("cost_currency,cost_fx_override,revenue_fx_override")
+      .eq("id", input.item_id).eq("quotation_id", input.quotation_id).maybeSingle(),
+  ]);
   if (!quotationMeta) return { ok: false as const, message: "Quotation not found." };
   const locked = approvedQuotationMutationError(
     (quotationMeta as { status: QuotationStatus }).status
@@ -103,8 +108,6 @@ export async function updateQuotationItemCommercials(
   if (locked) return locked;
   const issueDate =
     (quotationMeta as { issue_date?: string | null } | null)?.issue_date ?? null;
-  const { data: savedItem, error: savedError } = await supabase.from("quotation_items")
-    .select("cost_currency,cost_fx_override,revenue_fx_override").eq("id", input.item_id).eq("quotation_id", input.quotation_id).maybeSingle();
   if (savedError || !savedItem) return { ok: false as const, message: savedError?.message ?? "Quotation line not found." };
   const saved = savedItem as unknown as { cost_currency: string; cost_fx_override: string | null; revenue_fx_override: string | null };
   const currency = input.cost_currency.toUpperCase();

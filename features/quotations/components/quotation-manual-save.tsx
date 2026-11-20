@@ -15,6 +15,7 @@ import { useWorkspaceUndo } from "@/lib/productivity/workspace-undo";
 import { useRouter } from "next/navigation";
 import { startTransition } from "react";
 import { toast } from "sonner";
+import { QuotationSavingDialog } from "./quotation-saving-dialog";
 
 import { useConfirmAction } from "@/components/shared/confirm-action-provider";
 import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
@@ -30,7 +31,7 @@ import {
 import {
   finalizeQuotationSave,
   updateQuotationHeader,
-  updateQuotationItemCommercials,
+  updateQuotationLinesBatch,
 } from "@/features/quotations/actions";
 import { updateQuotationClientBrand } from "@/features/quotations/lifecycle-actions";
 import type { QuotationDeliverable, QuotationItemRow } from "@/features/quotations/types";
@@ -154,6 +155,11 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
   const [saveStatus, setSaveStatus] = useState<AutosaveStatus>("idle");
   const [savePending, setSavePending] = useState(false);
   const savePendingRef = useRef(false);
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  const confirmSave = useCallback(async (options: Parameters<typeof confirm>[0]) => {
+    setAwaitingConfirmation(true);
+    try { return await confirm(options); } finally { setAwaitingConfirmation(false); }
+  }, [confirm]);
   const [discardRevision, setDiscardRevision] = useState(0);
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [revisionCampaignHeaderId, setRevisionCampaignHeaderId] = useState<
@@ -351,10 +357,9 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
           confirmCommercialSync,
         } as const;
 
-        return Promise.all(
-          pendingEntries.map(async ([itemId, payload]) => {
-            const item = itemById.get(itemId);
-            if (!item) return { ok: true as const };
+        return updateQuotationLinesBatch(quotationId,
+          pendingEntries.map(([itemId, payload]) => {
+            const item = itemById.get(itemId)!;
 
             const rolled = payload.deliverables?.length
               ? rollupDeliverableCommercials(payload.deliverables, {
@@ -370,8 +375,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
             });
 
             const { commercial_source: _source, ...commercialPayload } = payload;
-            return updateQuotationItemCommercials(
-              {
+            return { input: {
                 item_id: itemId,
                 quotation_id: quotationId,
                 ...commercialPayload,
@@ -388,13 +392,13 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
                 gp_value: useRolled ? rolled!.gpValue : (payload.gp_value ?? item.gp_value),
                 af_pct: useRolled ? rolled!.afPct : (payload.af_pct ?? item.af_pct),
               },
-              {
+              options: {
                 ...saveOptions,
                 idempotencyKey: confirmCommercialSync
                   ? `quote-save:${quotationId}:${itemId}:${Date.now()}`
                   : undefined,
               }
-            );
+            };
           })
         );
       };
@@ -408,7 +412,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
         const copy = financeLockConfirmationCopy();
         const meta =
           "commercialSync" in financeGate ? financeGate.commercialSync : null;
-        const accepted = await confirm({
+        const accepted = await confirmSave({
           title: meta?.confirmationTitle ?? copy.title,
           description: meta?.confirmationDescription ?? copy.description,
           confirmLabel: copy.confirmLabel,
@@ -500,7 +504,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       );
       if (syncGate && !syncGate.ok && "commercialSync" in syncGate) {
         const meta = syncGate.commercialSync;
-        const accepted = await confirm({
+        const accepted = await confirmSave({
           title: meta?.confirmationTitle ?? "Update linked Campaign?",
           description:
             meta?.confirmationDescription ??
@@ -588,7 +592,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       setSavePending(false);
       savePendingRef.current = false;
     }
-  }, [quotationId, router, confirm, syncPendingState, history]);
+  }, [quotationId, router, confirmSave, syncPendingState, history]);
 
   const discardAll = useCallback(async () => {
     if (savePendingRef.current || !hasUnsavedRef.current) return;
@@ -659,6 +663,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
   return (
     <QuotationManualSaveContext.Provider value={value}>
       <QuotationManualSaveShortcuts />
+      <QuotationSavingDialog open={savePending && !awaitingConfirmation} />
       <Fragment key={discardRevision}>{children}</Fragment>
       {revisionCampaignHeaderId ? (
         <CommercialRevisionDialog

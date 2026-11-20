@@ -550,7 +550,11 @@ export function QuotationLinesGrid({
   const manualSave = useQuotationManualSave();
   const [activeId, setActiveId] = useState<string | null>(null);
   const groups = new Map<string, QuotationItemRow[]>();
-  for (const item of items) { const key = quotationCreatorDuplicateKey(item); groups.set(key, [...(groups.get(key) ?? []), item]); }
+  for (const item of items) {
+    const key = quotationCreatorDuplicateKey(item);
+    const group = groups.get(key);
+    if (group) group.push(item); else groups.set(key, [item]);
+  }
   for (const group of groups.values()) group.sort((a,b) => (manualSave.getLinePendingPayload(a.id)?.sort_order ?? a.sort_order) - (manualSave.getLinePendingPayload(b.id)?.sort_order ?? b.sort_order));
   function moveLine(group: QuotationItemRow[], fromId: string, toId: string) {
     if (!canManage || manualSave.savePending || fromId === toId) return;

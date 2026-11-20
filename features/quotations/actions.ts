@@ -236,6 +236,14 @@ export async function updateQuotationItemCommercials(
 > {
   const actor = await getActor();
   if (!actor.ok) return actor;
+  return updateQuotationLineWithActor(actor, input, options);
+}
+
+async function updateQuotationLineWithActor(
+  actor: Extract<Awaited<ReturnType<typeof getActor>>, { ok: true }>,
+  input: Parameters<typeof updateQuotationItemCommercials>[0],
+  options?: Parameters<typeof updateQuotationItemCommercials>[1]
+): ReturnType<typeof updateQuotationItemCommercials> {
   const result = await updateQuotationItemCommercialsService(
     actor.supabase,
     actor.userId,
@@ -269,6 +277,29 @@ export async function updateQuotationItemCommercials(
       commercialSynced: result.commercialSynced,
     },
   };
+}
+
+/** One authenticated request instead of one queued browser action per line.
+ * Keep writes ordered: linked campaign/shortlist synchronization shares state. */
+export async function updateQuotationLinesBatch(
+  quotationId: string,
+  entries: Array<{ input: Parameters<typeof updateQuotationItemCommercials>[0]; options?: Parameters<typeof updateQuotationItemCommercials>[1] }>
+): Promise<Array<Awaited<ReturnType<typeof updateQuotationItemCommercials>>>> {
+  const actor = await getActor();
+  if (!actor.ok) return entries.map(() => actor);
+  if (entries.length > 500 || entries.some(entry => entry.input.quotation_id !== quotationId) || new Set(entries.map(entry => entry.input.item_id)).size !== entries.length) {
+    return entries.map(() => ({ ok: false as const, message: "Invalid quotation save batch." }));
+  }
+  const results: Array<Awaited<ReturnType<typeof updateQuotationItemCommercials>>> = [];
+  for (const entry of entries) {
+    try {
+      results.push(await updateQuotationLineWithActor(actor, entry.input, { ...entry.options, deferRevalidate: true, skipTotalsRecompute: true }));
+    } catch {
+      results.push({ ok: false, message: "Could not save this quotation line. Please retry." });
+    }
+  }
+  if (results.some(result => result.ok && result.data?.commercialSynced)) revalidatePath("/campaigns");
+  return results;
 }
 
 export async function finalizeQuotationSave(

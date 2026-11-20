@@ -16,6 +16,7 @@ import { useEscapeClearSelection } from "@/lib/hooks/use-escape-clear-selection"
 
 import {
   useCallback,
+  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
@@ -188,6 +189,7 @@ function QuotationWorkspaceContent({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [activeSection, setActiveSection] = useState("quotation-creators");
   const [creatorSearch, setCreatorSearch] = useState("");
+  const deferredCreatorSearch = useDeferredValue(creatorSearch);
   const creatorSearchRef = useRef<HTMLInputElement>(null);
   useEscapeClearSelection(selectedIds.size > 0, () => setSelectedIds(new Set()));
   const [optimisticRemovedIds, setOptimisticRemovedIds] = useState<Set<string>>(
@@ -282,6 +284,13 @@ function QuotationWorkspaceContent({
     [visibleItems, drafts]
   );
 
+  const creatorSearchIndex = useMemo(() => new Map(visibleItems.map(item => [item.id,
+    [item.creator_name, item.handle, item.creator_profile_source?.displayName,
+      item.creator_profile_source?.handle,
+      ...(item.creator_profile_source?.platformAccounts ?? []).map(account => account.handle)]
+      .filter(Boolean).join("\n").toLocaleLowerCase()
+  ])), [visibleItems]);
+  const normalizedCreatorSearch = deferredCreatorSearch.trim().replace(/^@+/, "").toLocaleLowerCase();
   const filteredItems = useMemo(
     () =>
       filterItemsByClientSelection(
@@ -289,14 +298,9 @@ function QuotationWorkspaceContent({
         clientReview?.selectionState,
         clientReview ? clientSelectionFilter : "all"
       ).filter(item => {
-        const query = creatorSearch.trim().replace(/^@+/, "").toLocaleLowerCase();
-        if (!query) return true;
-        return [item.creator_name, item.handle, item.creator_profile_source?.displayName,
-          item.creator_profile_source?.handle,
-          ...(item.creator_profile_source?.platformAccounts ?? []).map(account => account.handle)]
-          .some(value => value?.toLocaleLowerCase().includes(query));
+        return !normalizedCreatorSearch || creatorSearchIndex.get(item.id)?.includes(normalizedCreatorSearch);
       }),
-    [visibleItems, clientReview, clientSelectionFilter, creatorSearch]
+    [visibleItems, clientReview, clientSelectionFilter, normalizedCreatorSearch, creatorSearchIndex]
   );
 
   const pendingItemIds = useMemo(() => {

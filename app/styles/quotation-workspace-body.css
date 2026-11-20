@@ -4,6 +4,18 @@
 .tq-redesign.quotation-editor-rd4 > .q-frozen-summary {position:sticky;top:var(--q-summary-top,0px);z-index:32;flex-shrink:0;background:var(--q-bg);}
 .q-route-loading {position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;min-height:100dvh;background:var(--background);}
 .q-route-loading .thinkway-page-loader-logo {animation:none!important;transform:none!important;}
+.q-saving-overlay {background:rgba(15,23,42,.18);backdrop-filter:none;z-index:180;}
+.q-saving-dialog {z-index:181;width:320px;max-width:calc(100vw - 32px);gap:20px;padding:28px;border-radius:20px;text-align:center;box-shadow:0 20px 80px #0f172a26;}
+.q-saving-mark {position:relative;display:grid;place-items:center;width:64px;height:64px;margin:auto;border-radius:18px;background:#eff5ff;color:#0755ed;}
+.q-saving-mark>svg {width:28px;height:28px;}
+.q-saving-mark>span {position:absolute;inset:-5px;border:2px solid #dce8ff;border-top-color:#0755ed;border-radius:23px;animation:q-save-spin 1.3s linear infinite;}
+.q-saving-dialog h2 {font-size:16px;font-weight:700;margin:0 0 8px;}
+.q-saving-dialog p {font-size:12px;line-height:1.6;color:#64748b;margin:0;}
+.q-saving-track {height:3px;border-radius:3px;background:#e8eef9;overflow:hidden;}
+.q-saving-track span {display:block;width:35%;height:100%;background:#0755ed;border-radius:inherit;animation:q-save-progress 1.4s ease-in-out infinite alternate;}
+@keyframes q-save-spin {to {transform:rotate(360deg);}}
+@keyframes q-save-progress {from {transform:translateX(-100%);}to {transform:translateX(285%);}}
+@media(prefers-reduced-motion:reduce) {.q-saving-mark>span,.q-saving-track span {animation:none;}}
 .q-draft-notice {position:fixed;inset-inline-start:50%;bottom:12px;transform:translateX(-50%);z-index:35;display:flex;align-items:center;gap:12px;max-width:calc(100vw - 28px);min-height:28px;margin:0;padding:4px 10px;border:1px solid #eadcc0;border-radius:7px;background:#fdf6ea;color:#8a5d12;font:11px/1.4 var(--font-geist-sans,system-ui);box-shadow:0 2px 8px #0e172914;}
 .q-draft-notice__text {white-space:nowrap;}
 .q-draft-notice__totals {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
