@@ -1,6 +1,8 @@
 /* Adapted from the supplied quotation prototype. Intentionally scoped to
    surfaces BELOW the blue header and quotation editor portals. Never change
    q-head, q-frozen-summary, WorkspaceScrollSummary, or sticky positioning here. */
+.q-route-loading {position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;min-height:100dvh;background:var(--background);}
+.q-route-loading .thinkway-page-loader-logo,.q-route-loading .login-v2-logo-mark {animation:none!important;transform:none!important;}
 .q-redesign-body {
   --q-ink: #0e1729; --q-ink2: #3a4561; --q-mut: #5c6b82;
   --q-bg: #f2f5fa; --q-soft: #f1f5fa; --q-hair: #e9eef6; --q-line: #dce3ee;
