@@ -2,22 +2,24 @@
 
 import { useLayoutEffect, useRef } from "react";
 
-/** Measure wrapping/translated headers instead of assuming a desktop height. */
+/** Scroll the title/navigation away while pinning financial figures and actions. */
 export function useQuotationStickyHeaders() {
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const root = ref.current;
     if (!root) return;
     const header = root.querySelector<HTMLElement>(".q-frozen-summary");
+    const financials = header?.querySelector<HTMLElement>(".q-fin");
     const tools = root.querySelector<HTMLElement>(".q-lines__h");
     if (!header) return;
     const measure = () => {
       const headerHeight = header.offsetHeight;
       const toolsHeight = tools?.offsetHeight ?? 0;
       const availableHeight = Math.min(root.clientHeight, window.innerHeight - Math.max(0, root.getBoundingClientRect().top));
-      // On short/mobile viewports let the upper summary scroll out, leaving
-      // room to work with rows. Every summary control remains reachable above.
-      const top = Math.max(-headerHeight, Math.min(0, availableHeight - headerHeight - toolsHeight - 240));
+      const titleHeight = financials ? financials.getBoundingClientRect().top - header.getBoundingClientRect().top : 0;
+      // Pin from the financial band, not the title. On short screens leave
+      // sufficient room for rows while keeping every control reachable above.
+      const top = Math.max(-headerHeight, Math.min(-titleHeight, availableHeight - headerHeight - toolsHeight - 240));
       root.style.setProperty("--q-summary-top", `${top}px`);
       root.style.setProperty("--q-summary-visible", `${headerHeight + top}px`);
       root.style.setProperty("--q-lines-tools-height", `${toolsHeight}px`);
