@@ -618,11 +618,16 @@ async function loadCampaignAssignmentHierarchy(
     }
   }
 
+  const publicationResult = await supabase.from("campaign_publications")
+    .select("id,campaign_line_id,platform,publication_type,content_url,status,assignment_deliverable_id,assignment_post_schedule_id")
+    .eq("campaign_header_id", campaignId);
+  if (publicationResult.error) loadWarnings.push("Publication verification is unavailable.");
   const result = sanitizeAssignmentHierarchy(
     {
       groups,
       currency_code: workspace.currency_code,
       billing_context: billingContext,
+      delivery_publications: publicationResult.data ?? [],
       load_error: loadWarnings.length > 0 ? loadWarnings.join(" · ") : null,
     },
     { campaignId }

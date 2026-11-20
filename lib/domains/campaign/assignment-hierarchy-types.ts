@@ -104,6 +104,7 @@ export type AssignmentHierarchyBillingContext = {
 };
 
 export type AssignmentHierarchy = {
+  delivery_publications?: import("@/lib/campaigns/publication-delivery-coverage").DeliveryPublication[];
   groups: AssignmentHierarchyGroup[];
   currency_code: string;
   billing_context?: AssignmentHierarchyBillingContext;

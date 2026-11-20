@@ -193,7 +193,7 @@ export function CampaignLinesTabInner({
       !line.influencer_id?.trim() && !line.campaign_influencer_id?.trim();
     return unassigned || line.assignment_status === "draft";
   }).length;
-  const delivery = assignmentDeliveryProgress(workspace.lines, assignmentHierarchy.groups);
+  const delivery = assignmentDeliveryProgress(workspace.lines, assignmentHierarchy.groups, assignmentHierarchy.delivery_publications);
   const { progressPercent, completionPercent } = delivery;
   const deliveryUnavailable = Boolean(assignmentHierarchy.load_error || assignmentHierarchy.skipped_line_ids?.length);
 
@@ -234,7 +234,7 @@ export function CampaignLinesTabInner({
           },
           {
             key: "completion",
-            label: "Verified complete",
+            label: "Delivery complete",
             value: deliveryUnavailable ? "Unavailable" : `${completionPercent}% · ${delivery.verified}/${delivery.total}`,
             tone: completionPercent >= 50 ? "pos" : "mut",
           },

@@ -422,6 +422,7 @@ export function sanitizeAssignmentHierarchy(
 
   return {
     groups,
+    delivery_publications: hierarchy.delivery_publications,
     currency_code: hierarchy.currency_code ?? "USD",
     billing_context: hierarchy.billing_context,
     load_error: hierarchy.load_error ?? null,
