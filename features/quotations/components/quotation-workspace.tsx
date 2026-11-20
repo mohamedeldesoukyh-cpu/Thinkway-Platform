@@ -878,8 +878,14 @@ function QuotationWorkspaceContent({
 
       </div>
       <section
-        className={cn("q-wrap q-main", discoverySelectionFlyoutContentClass(selectedIds.size > 0))}
+        className={cn("q-wrap q-main q-redesign-body", discoverySelectionFlyoutContentClass(selectedIds.size > 0))}
       >
+      <nav className="q-section-links" aria-label="Quotation sections">
+        {[["quotation-creators", "Creators & services"], ["quotation-document", "Document details"], ["quotation-notes", "Notes"], ["quotation-terms", "Terms & conditions"]].map(([id, label]) => (
+          <button key={id} type="button" onClick={() => document.getElementById(id)?.scrollIntoView({ block: "start", behavior: "instant" })}><QuotationText>{label}</QuotationText></button>
+        ))}
+      </nav>
+      <div id="quotation-creators" className="q-section-target">
       {visibleItems.length === 0 ? (
         <>
         {detail.canManage && detail.status !== "approved" && detail.status !== "archived" && !detail.is_archived && <OtherServiceButton scope="quotation" documentId={detail.id} currency={displayCurrency} onAdded={refreshQuotationLines} />}
@@ -978,23 +984,25 @@ function QuotationWorkspaceContent({
         </div>
       )}
 
-      <section className="sec q-document-details">
+      </div>
+      <section id="quotation-document" className="sec q-document-details q-section-target">
         <div className="cols2">
           <div>
             <div className="subh"><QuotationText>Document details</QuotationText></div>
             <div className="subp"><QuotationText>Version, ownership, and validity.</QuotationText></div>
             <fieldset disabled={!detail.canManage}><QuotationDocumentMetaPanel detail={detail} layout="flush" /></fieldset>
           </div>
-          <div className="vdiv" aria-hidden />
+        </div>
+      </section>
+      <section id="quotation-notes" className="sec q-notes-section q-section-target">
           <div>
             <div className="subh"><QuotationText>Quotation notes</QuotationText></div>
             <div className="subp"><QuotationText>Internal &amp; client-facing.</QuotationText></div>
             <HeaderNotes detail={detail} />
           </div>
-        </div>
       </section>
 
-      <section className="sec">
+      <section id="quotation-terms" className="sec q-section-target">
         <div className="sec-head">
           <div>
             <h2><QuotationText>Terms &amp; conditions</QuotationText></h2>

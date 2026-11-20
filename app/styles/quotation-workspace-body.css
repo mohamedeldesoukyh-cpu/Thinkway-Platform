@@ -1,0 +1,146 @@
+/* Adapted from the supplied quotation prototype. Intentionally scoped to
+   surfaces BELOW the blue header and quotation editor portals. Never change
+   q-head, q-frozen-summary, WorkspaceScrollSummary, or sticky positioning here. */
+.q-redesign-body {
+  --q-ink: #0e1729; --q-ink2: #3a4561; --q-mut: #5c6b82;
+  --q-bg: #f2f5fa; --q-soft: #f1f5fa; --q-hair: #e9eef6; --q-line: #dce3ee;
+  --q-ok: #0a7a55; --q-ok-b: #ecf6f2; --q-wrn: #8a5d12; --q-wrn-b: #fdf6ea;
+  --q-bad: #b4211e; --q-bad-b: #fcf3f2;
+  color: var(--q-ink); font-size: 12.5px; line-height: 1.5;
+}
+.tq-redesign .q-redesign-body.q-header-tools {
+  max-width: none; padding: 10px 14px; background: white;
+  border-bottom: 1px solid var(--q-line);
+}
+.tq-redesign .q-redesign-body .q-actions { gap: 8px; padding: 0; }
+.tq-redesign .q-redesign-body .q-save { font-size: 11.5px; }
+.tq-redesign .q-redesign-body :is(.tw-b,.q-b) {
+  min-height: 28px; padding: 0 10px; border-radius: 7px;
+  font-size: 11.5px; font-weight: 600; box-shadow: none;
+}
+.tq-redesign .q-redesign-body :is(.tw-b,.q-b):not(.pri):not(.q-b--pri):not([data-action-tone="success"]):not([data-action-tone="danger"]) {
+  border: 1px solid var(--q-line); color: var(--q-ink2); background: white;
+}
+.tq-redesign .q-redesign-body :is(.tw-b,.q-b):hover:not(:disabled) { border-color: #a9bedf; }
+.q-redesign-body.q-display-popover, .q-redesign-body.q-discovery-popover {
+  min-height: 0; width: min(380px,calc(100vw - 24px)); padding: 16px;
+  border: 1px solid var(--q-line); border-radius: 10px; background: white;
+}
+.q-redesign-body.q-display-popover h3 { font-size: 13px; font-weight: 700; margin: 0 0 12px; }
+.q-redesign-body.q-display-popover .q-toggles { display: grid; margin: 0; }
+.q-redesign-body.q-display-popover .q-toggles > div { display: grid; }
+.q-redesign-body.q-display-popover .q-toggles label { justify-content: space-between; border-radius: 7px; }
+.q-redesign-body.q-display-popover .q-help { margin-top: 8px; font-size: 11.5px; }
+.q-redesign-body.q-discovery-popover nav { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 0; border: 0; }
+.tq-redesign .q-redesign-body.q-main {
+  width: 100%; max-width: none; margin: 0; padding-inline: 14px;
+  background: var(--q-bg);
+}
+.q-redesign-body .q-section-links {
+  display: flex; flex-wrap: wrap; gap: 4px; padding: 10px 0;
+}
+.q-redesign-body .q-section-links button {
+  border: 0; border-radius: 7px; padding: 6px 12px; background: transparent;
+  color: var(--q-mut); font-size: 11.5px; font-weight: 600; cursor: pointer;
+}
+.q-redesign-body .q-section-links button:hover { background: #e3edff; color: #0b52e0; }
+.q-redesign-body .q-section-target { scroll-margin-top: calc(var(--q-summary-visible, 0px) + var(--q-lines-tools-height, 0px) + 16px); }
+.tq-redesign .q-redesign-body .q-lines-container > .tw-c { background: var(--q-bg); box-shadow: none; }
+.tq-redesign .q-redesign-body .q-lines__h { gap: 8px; padding: 10px 14px; }
+.tq-redesign .q-redesign-body .q-lines__h input[type="search"] {
+  width: 210px; height: 30px; padding: 4px 9px; border-radius: 7px; font-size: 12px;
+}
+.tq-redesign .q-redesign-body .q-lines__h .tw-ct { font-size: 11.5px; }
+.tq-redesign .q-redesign-body .q-lines__h .tw-cs { display: none; }
+.tq-redesign .q-redesign-body .q-lines__actions { width: auto; gap: 8px; }
+.tq-redesign .q-redesign-body .q-lines__h .q-commercial-trigger {
+  min-height: 28px; border-width: 1px; padding: 0 10px; box-shadow: none;
+}
+/* A single track definition keeps every creator row aligned with its header. */
+.q-redesign-body .q-grid { --quotation-body-columns: 20px minmax(262px,.9fr) 66px minmax(200px,2.5fr) 48px 112px 140px 88px 62px; }
+@media (min-width: 1051px) {
+  .tq-redesign .q-redesign-body .q-grid .q-row {
+    grid-template-columns: var(--quotation-body-columns); gap: 10px;
+    padding: 8px 14px; min-height: 46px;
+  }
+  .tq-redesign .q-redesign-body .q-grid .q-row.is-head { min-height: 32px; padding-block: 8px; background: white; margin: 0 10px; }
+}
+.tq-redesign .q-redesign-body .q-row.is-head > span { font-size: 10.5px; font-weight: 600; letter-spacing: .5px; }
+.tq-redesign .q-redesign-body .q-creator-service-group {
+  margin: 8px 10px; border: 1px solid var(--q-hair); border-radius: 10px;
+  background: white; overflow: hidden;
+}
+.tq-redesign .q-redesign-body .q-line-group { border: 0; }
+.tq-redesign .q-redesign-body .q-live-row { border-bottom: 1px solid var(--q-hair); }
+.tq-redesign .q-redesign-body .q-line-group:last-child .q-live-row { border-bottom: 0; }
+.tq-redesign .q-redesign-body .q-cell-creator .tw-avx { width: 30px !important; height: 30px !important; }
+.tq-redesign .q-redesign-body .q-cell-creator .nm { font-size: 13px; }
+.tq-redesign .q-redesign-body .q-cell-creator .hd { font-size: 11px; }
+.tq-redesign .q-redesign-body .q-creator-service-tools { gap: 5px; flex-wrap: nowrap; }
+.tq-redesign .q-redesign-body .q-creator-service-tools :is(.q-b,.q-favorite-button) {
+  height: 26px; min-height: 26px; padding: 0 6px; font-size: 11px;
+  border: 1px solid var(--q-line); background: white; color: var(--q-ink2);
+}
+.tq-redesign .q-redesign-body .q-desc {
+  font-size: 12px; line-height: 1.5; padding: 3px 0; margin: 0;
+  min-height: 24px; border-color: transparent; background: transparent;
+}
+.tq-redesign .q-redesign-body .q-dels { gap: 4px; margin-top: 4px; }
+.tq-redesign .q-redesign-body .q-del {
+  padding: 2px 6px; border: 0; border-radius: 5px; background: var(--q-soft);
+  color: var(--q-ink2); font-size: 10.5px; line-height: 1.5; white-space: normal;
+}
+.tq-redesign .q-redesign-body .q-price b { font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.tq-redesign .q-redesign-body .q-price u { font-size: 10.5px; }
+.tq-redesign .q-redesign-body .q-cell-status .q-p { padding: 2px 7px; font-size: 10.5px; white-space: normal; }
+.tq-redesign .q-redesign-body .q-cell-repeat input { height: 28px; }
+.tq-redesign .q-redesign-body .q-opt { font-size: 11px; border-radius: 6px; padding: 4px; background: var(--q-soft); color: var(--q-ink2); }
+.tq-redesign .q-redesign-body .q-grid-total { padding: 12px 24px; border-top: 1px solid var(--q-line); background: white; }
+.tq-redesign .q-redesign-body.q-main > .sec { margin-top: 16px; padding: 16px; border-radius: 13px; box-shadow: none; }
+.tq-redesign .q-redesign-body .q-document-details .cols2 { grid-template-columns: minmax(0,1fr); }
+.tq-redesign .q-redesign-body .q-document-details .dgrid { gap: 12px; }
+.tq-redesign .q-redesign-body :is(.subh,.sec-head h2) { font-size: 15px; }
+.tq-redesign .q-redesign-body .notes-ta { width: 100%; min-height: 100px; margin-top: 10px; padding: 10px; border: 1px solid var(--q-line); border-radius: 7px; }
+/* Portals get the same local tokens; the app and header inherit none of them. */
+.tq-redesign.q-redesign-body.q-service-sheet { width: min(560px,100vw); max-width: min(560px,100vw); background: var(--q-bg); }
+.q-redesign-body.q-service-sheet .q-favorite-card { border-inline-start: 1px solid var(--q-line); box-shadow: none; }
+.q-redesign-body.q-service-sheet .q-sec { box-shadow: none; border: 1px solid var(--q-hair); }
+.q-redesign-body.q-service-sheet .q-sec--priv { background: #fdfaf3; border-color: #eadcc0; }
+.q-redesign-body.q-service-sheet .q-kv { margin: 0; padding-block: 6px; }
+.q-redesign-body.q-service-sheet .q-favorites-footer { border-top: 1px solid var(--q-hair); padding-top: 12px; }
+.q-redesign-commercial.commercial-workspace-dialog { border-color: #dce3ee; font-size: 12px; }
+.q-redesign-commercial .cw-card-list { scrollbar-width: thin; scrollbar-color: #a6b8d4 transparent; }
+.q-redesign-commercial .quotation-creator-card { border: 1px solid #e9eef6; border-radius: 10px; box-shadow: none; }
+.q-redesign-commercial .cw-card-row { padding: 12px; gap: 12px; }
+.q-redesign-commercial .cw-field-label { font-size: 10.5px; color: #5c6b82; }
+.q-redesign-commercial :is(input,select,[role="combobox"]) { border-radius: 7px; font-size: 12px; }
+@media (min-width: 1051px) and (max-width: 1250px) {
+  .q-redesign-body .q-grid { --quotation-body-columns: 18px 252px 44px minmax(110px,1fr) 40px 86px 112px 65px 56px; }
+  .tq-redesign .q-redesign-body .q-grid .q-row { gap: 6px; padding-inline: 8px; }
+  .tq-redesign .q-redesign-body .q-row.is-head > span { font-size: 9.5px; }
+}
+@media (max-width: 1050px) {
+  .tq-redesign .q-redesign-body .q-row.is-head { display: none; }
+  .tq-redesign .q-redesign-body .q-row.q-live-row { display: grid; grid-template-columns: 20px minmax(0,1fr) auto; gap: 10px; padding: 12px; }
+  .tq-redesign .q-redesign-body .q-cell-select { grid-column: 1; grid-row: 1; }
+  .tq-redesign .q-redesign-body .q-cell-creator { grid-column: 2; grid-row: 1; }
+  .tq-redesign .q-redesign-body .q-cell-status { grid-column: 3; grid-row: 1; }
+  .tq-redesign .q-redesign-body .q-cell-service { grid-column: 1/-1; grid-row: 2; }
+  .tq-redesign .q-redesign-body .q-cell-platform { grid-column: 1/3; grid-row: 3; }
+  .tq-redesign .q-redesign-body .q-cell-price { grid-column: 3; grid-row: 3; }
+  .tq-redesign .q-redesign-body .q-cell-repeat { grid-column: 1/3; grid-row: 4; }
+  .tq-redesign .q-redesign-body .q-cell-option { grid-column: 3; grid-row: 4; }
+  .tq-redesign .q-redesign-body .q-cell-actions { grid-column: 1/-1; justify-content: flex-start; }
+  .tq-redesign .q-redesign-body .q-mobile-label { display: block; font-size: 10.5px; color: var(--q-mut); }
+  .tq-redesign .q-redesign-body .q-mobile-select { display: flex; align-items: center; gap: 8px; padding: 12px; }
+  .tq-redesign .q-redesign-body.q-main { padding-inline: 10px; }
+  .tq-redesign .q-redesign-body :is(.tw-b,.q-b),
+  .tq-redesign .q-redesign-body .q-creator-service-tools :is(.q-b,.q-favorite-button) { min-height: 44px; height: auto; }
+  .tq-redesign .q-redesign-body .q-creator-service-tools { flex-wrap: wrap; }
+  .q-redesign-body .q-section-links button { min-height: 44px; }
+  .tq-redesign .q-redesign-body .q-lines__actions { width: 100%; justify-content: flex-start; }
+  .tq-redesign .q-redesign-body .q-creator-service-group { margin-inline: 6px; }
+  .tq-redesign .q-redesign-body .q-cell-status { max-width: 80px; }
+  .tq-redesign .q-redesign-body :is(input,textarea,select) { font-size: 16px; }
+  .tq-redesign .q-redesign-body .q-cell-repeat input { min-height: 44px; }
+}

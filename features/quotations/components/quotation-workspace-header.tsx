@@ -8,6 +8,7 @@ import { QuotationText, QuotationLanguageSwitcher } from "./quotation-design-loc
 
 import { useEffect, useMemo, useOptimistic, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useRouter } from "next/navigation";
 import {
   ArchiveIcon,
@@ -284,7 +285,7 @@ export function QuotationWorkspaceHeader({
         </div>
         {metricsSlot}
       </div></header>
-      <div className="q-wrap q-header-tools">
+      <div className="q-wrap q-header-tools q-redesign-body">
         {detail.is_expired && <div className="q-banner q-banner--bad" role="status"><b>This quotation has expired.</b><span>Review its validity date in Document details.</span></div>}
         {saveStatus === "error" && <div className="q-banner q-banner--bad" role="alert"><span>Save failed. Your pending edits are still available on this page.</span><button type="button" className="q-b q-b--sm" disabled={savePending} onClick={onSave}><QuotationText>Retry save</QuotationText></button></div>}
         {showGpConflict && <div className="q-banner q-banner--wrn" role="status"><span><QuotationText>Commercial totals do not reconcile: total margin must equal GP before agency fees plus agency fees. Review Cost detail before submitting.</QuotationText></span></div>}
@@ -428,7 +429,10 @@ export function QuotationWorkspaceHeader({
                   ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
+              <Popover>
+                <PopoverTrigger asChild><button type="button" className="tw-b sm"><QuotationText>Display</QuotationText></button></PopoverTrigger>
+                <PopoverContent align="end" className="tq-redesign q-redesign-body q-display-popover">
+                  <h3><QuotationText>Client presentation</QuotationText></h3>
         <div className="q-toggles">
           <ClientWorkspaceDisplayToggles
                           showOriginalCurrency={showOriginalCurrency}
@@ -479,7 +483,13 @@ export function QuotationWorkspaceHeader({
                         />
           <span className="q-help">AF = agency fees. Client presentation settings apply to linked reviews and outputs.</span>
         </div>
-        <DiscoverySuiteJumpNav />
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild><button type="button" className="tw-b sm"><QuotationText>Discovery</QuotationText></button></PopoverTrigger>
+                <PopoverContent align="end" className="tq-redesign q-redesign-body q-discovery-popover"><DiscoverySuiteJumpNav /></PopoverContent>
+              </Popover>
+            </div>
       </div>
 
       <QuotationLifecycleSheet

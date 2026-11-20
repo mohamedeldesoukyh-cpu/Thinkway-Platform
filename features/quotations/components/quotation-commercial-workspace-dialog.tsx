@@ -508,7 +508,7 @@ export function QuotationCommercialWorkspaceDialog({
       <DialogContent
         showCloseButton
         data-shortcut-save-scope="quotation"
-        className="commercial-workspace-dialog flex h-[min(92vh,820px)] max-h-[min(92vh,820px)] min-h-0 w-[min(98vw,1280px)] max-w-[min(98vw,1280px)] flex-col gap-0 overflow-hidden rounded-xl border-[0.5px] p-0 sm:max-w-[min(98vw,1280px)]"
+        className="commercial-workspace-dialog q-redesign-commercial flex h-[min(92vh,820px)] max-h-[min(92vh,820px)] min-h-0 w-[min(98vw,1280px)] max-w-[min(98vw,1280px)] flex-col gap-0 overflow-hidden rounded-xl border-[0.5px] p-0 sm:max-w-[min(98vw,1280px)]"
         style={{ borderColor: CS.line, backgroundColor: "#fff", color: CS.dark }}
       >
         <div

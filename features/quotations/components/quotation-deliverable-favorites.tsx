@@ -86,7 +86,7 @@ export function QuotationFavoriteButtons({ itemIds, lines = [], description = ""
       onClick={() => favorite ? applySelectedFavorite(favorite) : showEditor()}><StarIcon size={12} />Favorite</button>
     <button type="button" className="q-favorite-button" disabled={disabled} onClick={showEditor}><ListPlusIcon size={12} />Deliverables</button>
     <Sheet open={open} onOpenChange={next => { if (!busy) setOpen(next); }}>
-      <SheetContent side="right" showCloseButton={false} className="tq-redesign q-service-sheet q-favorites-sheet">
+      <SheetContent side="right" showCloseButton={false} className="tq-redesign q-service-sheet q-redesign-body q-favorites-sheet">
         <header className="q-service-sheet__heading"><div><span className="q-service-eyebrow">Quotation services</span><SheetTitle>Favorite deliverables</SheetTitle><SheetDescription>Build reusable service packages. Apply a package to this quotation, then Save to keep your changes.</SheetDescription></div><SheetClose className="q-b q-b--sm">Close</SheetClose></header><div className="q-favorites-body">
         {store.error && <p role="alert" className="text-sm text-destructive">{store.error}</p>}
         {store.favorites.length > 0 && <section className="q-favorites-library"><h3>Saved packages <span>{store.favorites.length}</span></h3><p>Your first package is the one-click favorite.</p>
