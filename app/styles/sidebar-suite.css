@@ -358,7 +358,7 @@
 .tw-sb .sb-edge { display:block; }
 .tw-sb .sb__acct-b { color:var(--s-ink); }
 .tw-sb .sb__row[data-echo] { padding-inline-end:20px; }
-.tw-sb.sb-mobile { width:min(304px,86vw); max-width:none; gap:0; background:var(--s-surf); }
+.tw-sb.sb-mobile { width:min(304px,86vw); max-width:none; height:100dvh; overflow:hidden; overscroll-behavior:contain; gap:0; background:var(--s-surf); }
 .tw-sb.sb-mobile .sb__brand { padding-inline-end:42px; }
 @media(max-width:1023px) {
  .tw-sb .sb__row,.tw-sb .sb__pins .sb__row { min-height:44px; }
