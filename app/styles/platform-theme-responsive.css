@@ -91,6 +91,7 @@
   .tq-redesign.discovery-suite .q-redesign-body .q-cell-actions {gap:8px;flex-wrap:wrap;}
   .tq-redesign.discovery-suite .q-redesign-body .q-cell-actions .q-b {width:auto;min-width:44px;min-height:44px;padding:0 10px;}
   .tq-redesign.discovery-suite .q-redesign-body .q-cell-actions .q-mobile-action {display:inline-flex;}
+  .tq-redesign.discovery-suite .q-redesign-body .q-cell-actions .q-b--danger {color:var(--q-bad);border-color:var(--q-bad);}
   .tq-redesign.discovery-suite .q-redesign-body .q-cell-actions > :is(.qx-link,[data-slot=dropdown-menu-trigger]) {display:none;}
   /* Desktop summary + toolbars together must not pin most of a phone screen. */
   .tq-redesign.discovery-suite.quotation-editor-rd4 > .q-frozen-summary,
@@ -120,7 +121,7 @@
   .discovery-suite.tw-cp-root .tw-cp__l {padding-inline:16px;}
   .discovery-suite.tw-cp-root .tw-pubs {grid-template-columns:repeat(2,minmax(0,1fr));}
   .q-redesign-commercial.qx .qx-cw__sum {grid-template-columns:1fr;}
-  .q-redesign-commercial.qx .qx-zone {min-height:0;}
+  .commercial-workspace-dialog.q-redesign-commercial.qx .qx-zone {min-height:0;}
   .q-redesign-commercial.qx .q-cw-toolbar {flex-wrap:wrap;}
   .q-redesign-commercial.qx .cw-card-list {min-height:160px;}
 }
