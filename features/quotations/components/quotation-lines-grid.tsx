@@ -1,3 +1,4 @@
+import { QuotationServiceDescription } from "./quotation-service-description";
 import { moveQuotationService } from "@/lib/quotations/quotation-service-order";
 import { QuotationEnrichmentProgress } from "./quotation-enrichment-progress";
 import { quotationOptionLabel } from "@/lib/quotations/quotation-option-label";
@@ -389,7 +390,7 @@ function QuotationPackLineRow({
         <div className="q-cell-service" role="cell">
           <span className="q-mobile-label"><QuotationText>Service</QuotationText></span>
           <div className="q-dels">{lineFields.deliverableDrafts.flatMap(deliverableTypeLines).filter(line => line.type.trim()).map((line,index) => <span className={`q-del ${/boost/i.test(line.type) ? "q-del--bo" : /usage/i.test(line.type) ? "q-del--ur" : /event/i.test(line.type) ? "q-del--ev" : ""}`} key={`${line.type}:${index}`}>{formatTypeLinesSummary([line])}</span>)}</div>
-          <textarea rows={1} className="q-desc" value={lineFields.serviceDescription} readOnly={!canManage} placeholder="Click to add deliverables and cost" aria-label="Service description" onChange={(event) => { if (canManage) updateServiceDescription(event.target.value); }} />
+          <QuotationServiceDescription value={lineFields.serviceDescription} derived={formatTypeLinesSummary(lineFields.deliverableDrafts.flatMap(deliverableTypeLines))} readOnly={!canManage} onChange={updateServiceDescription} />
         </div>
         <div className="q-cell-repeat" role="cell">
           <span className="q-mobile-label">Repeat</span>
