@@ -174,8 +174,11 @@
 .tq-redesign .qx .card.q-section-target { margin-top: 16px; }
 .tq-redesign .qx .card__h h2 { font-size: 15px; }
 .tq-redesign .qx .q-history-heading { font-size: 13px; font-weight: 700; margin: 14px 0 6px; }
-.tq-redesign .qx .q-notes-section .card__h { display: block; }
-.tq-redesign .qx .q-notes-section .notes-ta { margin: 0; min-height: 92px; }
+.tq-redesign .qx .q-notes-section .card__h { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 10px 14px; min-height: 0; }
+.tq-redesign .qx .q-notes-section .card__h .subh { font-size: 13px; margin: 0; }
+.tq-redesign .qx .q-notes-section .card__h .subp { font-size: 11px; margin: 0; }
+.tq-redesign .qx .q-notes-section .card__b { padding: 10px 14px; }
+.tq-redesign .qx .q-notes-section .notes-ta { margin: 0; height: 76px; min-height: 76px; field-sizing: fixed; resize: vertical; overflow-y: auto; font-size: 12px; line-height: 1.5; }
 .tq-redesign .qx .q-review-wrap { padding: 0; max-width: none; }
 .tq-redesign .qx .q-review-wrap .q-card { border: 0; box-shadow: none; }
 .tq-redesign.qx.q-document-edit { min-height: 0; width: min(760px,calc(100vw - 24px)); max-width: 760px; max-height: 90dvh; overflow-y: auto; background: white; }

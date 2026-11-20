@@ -150,7 +150,7 @@ function QuotationWorkspaceBody({
 }
 
 function QuotationWorkspaceContent({
-  detail,
+  detail: incomingDetail,
   formOptions,
   promoteOptions,
   clientReview,
@@ -164,6 +164,10 @@ function QuotationWorkspaceContent({
   const { language } = useQuotationDesignLocale();
   const stickyHeadersRef = useQuotationStickyHeaders();
   const manualSave = useQuotationManualSave();
+  // Server Actions may deliver intermediate snapshots while several lines save.
+  // Retain the visible document until the complete save + refresh has finished.
+  const [detail, setDisplayedDetail] = useState(incomingDetail);
+  if (!manualSave.savePending && detail !== incomingDetail) setDisplayedDetail(incomingDetail);
   const [drafts, setDrafts] = useState(() => draftsFromItems(detail.items));
   const undoRevisionSeen = useRef(manualSave.undoRevision);
   useEffect(() => {
@@ -1128,7 +1132,8 @@ function HeaderNotes({ detail }: { detail: QuotationDetail }) {
         </div>
       ) : null}
       <Textarea
-        id="quotation-notes"
+        id="quotation-notes-input"
+        aria-label="Quotation notes"
         readOnly={!detail.canManage}
         rows={3}
         className="notes-ta"

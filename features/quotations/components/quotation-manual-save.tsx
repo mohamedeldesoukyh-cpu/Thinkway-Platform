@@ -9,11 +9,11 @@ import {
   useMemo,
   useRef,
   useState,
+  useTransition,
   type ReactNode,
 } from "react";
 import { useWorkspaceUndo } from "@/lib/productivity/workspace-undo";
 import { useRouter } from "next/navigation";
-import { startTransition } from "react";
 import { toast } from "sonner";
 import { QuotationSavingDialog } from "./quotation-saving-dialog";
 
@@ -140,6 +140,25 @@ type ProviderProps = {
 
 export function QuotationManualSaveProvider({ quotationId, items, children }: ProviderProps) {
   const router = useRouter();
+  const [refreshPending, startRefresh] = useTransition();
+  const refreshCompletion = useRef<{ started: boolean; resolve: () => void } | null>(null);
+  useEffect(() => {
+    const completion = refreshCompletion.current;
+    if (!completion) return;
+    if (refreshPending) completion.started = true;
+    else if (completion.started) {
+      refreshCompletion.current = null;
+      completion.resolve();
+    }
+  }, [refreshPending]);
+  useEffect(() => () => {
+    refreshCompletion.current?.resolve();
+    refreshCompletion.current = null;
+  }, []);
+  const refreshSavedQuotation = useCallback(() => new Promise<void>(resolve => {
+    refreshCompletion.current = { started: false, resolve };
+    startRefresh(() => router.refresh());
+  }), [router]);
   const history = useWorkspaceUndo();
   const [undoRevision, setUndoRevision] = useState(0);
   const { confirm } = useConfirmAction();
@@ -572,6 +591,9 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
         return false;
       }
 
+      // Keep pending values and the blocking saving state through the RSC refresh.
+      // Clearing them earlier exposes the old server snapshot between responses.
+      await refreshSavedQuotation();
       // Preserve changes made while this request was in flight.
       for (const [id, payload] of stagedEntries) {
         if (linePendingRef.current.get(id) === payload) linePendingRef.current.delete(id);
@@ -580,9 +602,6 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       if (clientBrandPendingRef.current === savedClientBrand) clientBrandPendingRef.current = null;
       syncPendingState();
       setSaveStatus(linePendingRef.current.size || metaPendingRef.current || clientBrandPendingRef.current ? "pending" : "saved");
-      startTransition(() => {
-        router.refresh();
-      });
       return true;
     } catch (error) {
       setSaveStatus("error");
@@ -592,7 +611,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       setSavePending(false);
       savePendingRef.current = false;
     }
-  }, [quotationId, router, confirmSave, syncPendingState, history]);
+  }, [quotationId, refreshSavedQuotation, confirmSave, syncPendingState, history]);
 
   const discardAll = useCallback(async () => {
     if (savePendingRef.current || !hasUnsavedRef.current) return;

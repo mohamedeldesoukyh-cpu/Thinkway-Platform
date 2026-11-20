@@ -1197,8 +1197,7 @@
   height: 40px !important;
 }
 
-.quotation-editor-rd4 .cols2 textarea,
-.quotation-editor-rd4 .notes-ta {
+.quotation-editor-rd4 .cols2 textarea {
   min-height: 250px !important;
   padding: 12px 14px !important;
   border-radius: 10px !important;
