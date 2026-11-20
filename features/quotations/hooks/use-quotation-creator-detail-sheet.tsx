@@ -112,10 +112,11 @@ export function useQuotationCreatorDetailSheet(options?: {
 
   const handleCreatorUpdated = useCallback(
     (next: UnifiedCreatorResult) => {
+      const previous = fetchedPoolRef.current.find(c => c.unified_id === next.unified_id);
       remember(next);
       // Refresh rows after metric/avatar changes, even with unchanged platform IDs.
       invalidateCreatorPlatformCaches(next);
-      onCreatorPlatformsChanged?.();
+      if (!previous || creatorPlatformSignature(previous) !== creatorPlatformSignature(next)) onCreatorPlatformsChanged?.();
       platformSignatureRef.current = creatorPlatformSignature(next);
     },
     [onCreatorPlatformsChanged, remember]
