@@ -33,6 +33,10 @@
 }
 .dark .discovery-suite .tw-cp__t button[aria-pressed=true] {background:var(--tw-lav);color:var(--tw-bi);}
 .dark .discovery-suite.tw-cp-root .tw-cp__h .tw-dr__x {background:var(--tw-surface);color:var(--tw-ink);}
+.dark .discovery-suite .tw-pchip.on {background:var(--tw-surface);color:var(--tw-bi);border-color:var(--tw-line);}
+.dark .discovery-suite .tw-cp__l :is(select,input:not([type=checkbox])) {background:var(--tw-surface);color:var(--tw-ink);border-color:var(--tw-line);}
+.dark .discovery-suite :is(.tw-dlg__w,.tw-dlg__h) {background:var(--tw-surface);color:var(--tw-ink);border-color:var(--tw-line);}
+.dark .discovery-suite .tw-dlg__h b {color:var(--tw-ink);}
 .dark :is(.qx,.cp-redesign) {
   --ink:#eef2f8;--ink2:#cbd5e1;--mut:#a6b4c8;--blue-i:#8bb8ff;
   --bg:#101620;--surf:#182231;--soft:#202d40;--soft2:#25344a;
