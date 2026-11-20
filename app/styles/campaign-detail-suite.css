@@ -101,7 +101,7 @@
 .campaign-detail-suite .tw-top .tw-b {
   margin-left: 0;
   width: auto;
-  background: #fff;
+  background: var(--tw-surface, #fff);
 }
 
 .campaign-detail-suite .tw-top .tw-b svg {
@@ -116,7 +116,7 @@
   gap: 6px;
   border: 0.8px solid #e3e8f2;
   border-radius: 9px;
-  background: #fff;
+  background: var(--tw-surface, #fff);
   color: var(--tw-ink2);
   font: 600 12.5px Geist, sans-serif;
   cursor: pointer;
@@ -140,7 +140,7 @@
 
 .campaign-detail-suite .tw-b.pri,
 .campaign-detail-suite .tw-mr .thinkway-campaign-btn-primary {
-  background: #fff !important;
+  background: var(--tw-surface, #fff) !important;
   border-color: rgba(0, 87, 255, 0.55) !important;
   color: var(--tw-bi) !important;
   font-weight: 700;
@@ -182,7 +182,7 @@
   isolation: isolate;
   overflow: hidden;
   border-radius: 14px;
-  background: #fff;
+  background: var(--tw-surface, #fff);
   box-shadow: var(--tw-ring);
   margin-bottom: 10px;
 }
@@ -281,7 +281,7 @@
 }
 
 .campaign-detail-suite .tw-mh .st.r {
-  background: #fff;
+  background: var(--tw-surface, #fff);
   color: var(--tw-bad);
 }
 
@@ -320,7 +320,7 @@
   padding: 0 11px;
   border: 0;
   border-radius: 8px;
-  background: #fff;
+  background: var(--tw-surface, #fff);
   color: var(--tw-bi);
   font: 700 11px Geist, sans-serif;
   cursor: pointer;
@@ -334,7 +334,7 @@
   gap: 6px;
   flex-wrap: wrap;
   padding: 9px 15px;
-  background: #fff;
+  background: var(--tw-surface, #fff);
 }
 
 .campaign-detail-suite .tw-mr a svg,
@@ -349,7 +349,7 @@
   /* Wider than the 104px mock — ISO money like "EGP 1,235,561" must not clip */
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0;
-  background: #fff;
+  background: var(--tw-surface, #fff);
   border-top: 1px solid var(--tw-hair);
 }
 
@@ -415,7 +415,7 @@
   padding: 3px !important;
   margin-bottom: 10px;
   border-radius: 12px;
-  background: #fff;
+  background: var(--tw-surface, #fff);
   box-shadow: var(--tw-ring);
   overflow: hidden;
   border: 0;
@@ -507,7 +507,7 @@
   margin-left: -4.5px;
   border-radius: 50%;
   border: 2px solid var(--tw-blue);
-  background: #fff;
+  background: var(--tw-surface, #fff);
   z-index: 2;
   box-sizing: border-box;
 }
@@ -593,7 +593,7 @@
 
 .campaign-detail-suite .tw-step2 .enterprise-tab[data-state="active"] .enterprise-tab-badge,
 .campaign-detail-suite .tw-step2 .enterprise-tab[aria-selected="true"] .enterprise-tab-badge {
-  background: #fff;
+  background: var(--tw-surface, #fff);
   color: var(--tw-bi);
 }
 
@@ -608,7 +608,7 @@
 .campaign-detail-suite .tw-jump a {
   padding: 4px 10px;
   border-radius: 999px;
-  background: #fff;
+  background: var(--tw-surface, #fff);
   border: 1px solid var(--tw-hair);
   font-size: 11px;
   font-weight: 500;
@@ -624,7 +624,7 @@
 }
 
 .campaign-detail-suite .tw-dc-expand {
-  background: #fff;
+  background: var(--tw-surface, #fff);
   border-top: 1px solid var(--tw-hair);
 }
 
@@ -653,7 +653,7 @@
   isolation: isolate;
   overflow: hidden;
   border-radius: 12px !important;
-  background: #fff !important;
+  background: var(--tw-surface, #fff) !important;
   box-shadow: var(--tw-ring) !important;
   border: 0 !important;
   /* Beat campaign-workspace padding so the gradient header is full-bleed */
@@ -721,7 +721,7 @@
   padding: 0 9px;
   font-size: 10.5px;
   border-radius: 7px;
-  background: #fff;
+  background: var(--tw-surface, #fff);
   border-color: #cfddf7;
   color: var(--tw-bi);
 }
@@ -732,7 +732,7 @@
 }
 
 .campaign-detail-suite .thinkway-aurora-ops-card-head .thinkway-aurora-pill {
-  background: #fff;
+  background: var(--tw-surface, #fff);
   color: var(--tw-bi);
   border: 0;
   box-shadow: 0 0 0 1px #cfddf7;
@@ -777,7 +777,7 @@
 }
 
 .campaign-detail-suite .thinkway-aurora-ops-card-body {
-  background: #fff;
+  background: var(--tw-surface, #fff);
   padding: 0 !important;
 }
 
@@ -830,7 +830,7 @@
 
 .campaign-detail-suite .thinkway-campaign-section-card,
 .campaign-detail-suite .thinkway-campaign-flat-section {
-  background: #fff;
+  background: var(--tw-surface, #fff);
   border-radius: 12px;
   box-shadow: var(--tw-ring);
   border: 0;
@@ -845,7 +845,7 @@
   flex-wrap: wrap;
   padding: 11px 14px;
   border-bottom: 1px solid var(--tw-line);
-  background: #fff;
+  background: var(--tw-surface, #fff);
 }
 
 .campaign-detail-suite .thinkway-aurora-sechead-tt {
@@ -855,7 +855,7 @@
 
 .campaign-detail-suite .thinkway-lc-details,
 .campaign-detail-suite .thinkway-aurora-disclose {
-  background: #fff;
+  background: var(--tw-surface, #fff);
   border-radius: 12px;
   box-shadow: var(--tw-ring);
   margin: 12px 0 11px;
@@ -948,7 +948,7 @@
   width: 158px;
   font-size: 12px;
   border-radius: 8px;
-  background: #fff;
+  background: var(--tw-surface, #fff);
 }
 
 .campaign-detail-suite .thinkway-campaign-tab-panel .thinkway-campaign-btn,
@@ -960,7 +960,7 @@
 }
 
 .campaign-detail-suite .thinkway-aurora-ws {
-  background: #fff;
+  background: var(--tw-surface, #fff);
   border-radius: 12px;
   box-shadow: var(--tw-ring);
   overflow: hidden;
@@ -987,7 +987,7 @@
   flex-wrap: wrap;
   padding: 11px 14px;
   border-bottom: 1px solid var(--tw-line);
-  background: #fff;
+  background: var(--tw-surface, #fff);
   margin: 0;
 }
 
@@ -1012,7 +1012,7 @@
   grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
   gap: 0;
   margin: 0;
-  background: #fff;
+  background: var(--tw-surface, #fff);
   border-top: 1px solid var(--tw-hair);
 }
 
@@ -1022,7 +1022,7 @@
   border: 0;
   border-right: 1px solid var(--tw-hair);
   border-radius: 0;
-  background: #fff;
+  background: var(--tw-surface, #fff);
   box-shadow: none;
 }
 
@@ -1123,7 +1123,7 @@
   padding: 0 10px !important;
   border: 0.8px solid #e3e8f2 !important;
   border-radius: 8px !important;
-  background: #fff !important;
+  background: var(--tw-surface, #fff) !important;
   color: var(--tw-ink2) !important;
   font: 600 11.5px var(--font-geist-sans), Geist, sans-serif !important;
   box-shadow: none !important;
@@ -1140,28 +1140,28 @@
 }
 
 .campaign-detail-suite .thinkway-campaign-btn-edit {
-  background: #fff !important;
+  background: var(--tw-surface, #fff) !important;
   border-color: #f0c4c4 !important;
   color: var(--tw-bad) !important;
   box-shadow: none !important;
 }
 
 .campaign-detail-suite .thinkway-campaign-btn-edit:hover:not(:disabled) {
-  background: #fff7f7 !important;
+  background: var(--tw-badb, #fff7f7) !important;
   border-color: var(--tw-bad) !important;
   color: var(--tw-bad) !important;
   filter: none !important;
 }
 
 .campaign-detail-suite .thinkway-campaign-btn-save {
-  background: #fff !important;
+  background: var(--tw-surface, #fff) !important;
   border-color: #bfe6d5 !important;
   color: var(--tw-ok) !important;
   box-shadow: none !important;
 }
 
 .campaign-detail-suite .thinkway-campaign-btn-save:hover:not(:disabled) {
-  background: #f4fbf8 !important;
+  background: var(--tw-okb, #f4fbf8) !important;
   border-color: var(--tw-ok) !important;
   color: var(--tw-ok) !important;
   filter: none !important;
@@ -1193,7 +1193,7 @@
 /* Parent creator lines: white surface + dark blue rail (no ops-status wash). */
 .campaign-detail-suite .thinkway-campaign-asgn-parent.tw-r,
 .campaign-detail-suite.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g.tw-r:not(.tw-ad):not(.tw-adh) {
-  background: #fff !important;
+  background: var(--tw-surface, #fff) !important;
 }
 
 .campaign-detail-suite .thinkway-campaign-asgn-parent.tw-r > *,
@@ -1204,18 +1204,18 @@
   font-size: 11.5px !important;
   font-weight: 400 !important;
   color: var(--tw-ink) !important;
-  background: #fff !important;
+  background: var(--tw-surface, #fff) !important;
 }
 
 .campaign-detail-suite .thinkway-campaign-asgn-parent.tw-r:hover,
 .campaign-detail-suite.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g.tw-r:not(.tw-ad):not(.tw-adh):hover {
-  background: #fbfcff !important;
+  background: var(--tw-soft, #fbfcff) !important;
 }
 
 .campaign-detail-suite .thinkway-campaign-asgn-parent.tw-r:hover > *,
 .campaign-detail-suite .thinkway-campaign-asgn-parent:hover .thinkway-campaign-asgn-td,
 .campaign-detail-suite.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g.tw-r:not(.tw-ad):not(.tw-adh):hover > * {
-  background: #fbfcff !important;
+  background: var(--tw-soft, #fbfcff) !important;
 }
 
 /* Nested deliverable header: intentional child header blue. */
@@ -1258,7 +1258,7 @@
 .campaign-detail-suite .thinkway-campaign-asgn-child.tw-r:hover > *,
 .campaign-detail-suite .tw-ad.tw-r:hover > *,
 .campaign-detail-suite.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-ad.tw-r:hover > * {
-  background: #fff !important;
+  background: var(--tw-surface, #fff) !important;
 }
 
 .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="creator"] .text-muted-foreground {
@@ -1352,7 +1352,7 @@
   align-items: center;
   padding: 11px 14px;
   border-top: 1px solid var(--tw-line);
-  background: #fff;
+  background: var(--tw-surface, #fff);
 }
 
 .campaign-detail-suite .thinkway-aurora-register-disclose {
@@ -1361,7 +1361,7 @@
 }
 
 .campaign-detail-suite .thinkway-aurora-ws-tools .thinkway-campaign-btn-primary {
-  background: #fff !important;
+  background: var(--tw-surface, #fff) !important;
   border-color: rgba(0, 87, 255, 0.55) !important;
   color: var(--tw-bi) !important;
   box-shadow: 0 0 0 3px rgba(0, 87, 255, 0.08);
@@ -1509,7 +1509,7 @@
 }
 
 .campaign-detail-suite .tw-selbar-btn.pri {
-  background: #fff !important;
+  background: var(--tw-surface, #fff) !important;
   border-color: #fff !important;
   color: var(--tw-bi) !important;
   box-shadow: none !important;
@@ -1522,7 +1522,7 @@
 }
 
 .campaign-detail-suite .platform-floating-bar-primary {
-  background: #fff !important;
+  background: var(--tw-surface, #fff) !important;
   border-color: #fff !important;
   color: var(--tw-bi) !important;
   box-shadow: none !important;
@@ -1629,7 +1629,7 @@
   max-height: calc(100vh - 44px);
   display: grid;
   grid-template-columns: 298px minmax(0, 1fr);
-  background: #fff;
+  background: var(--tw-surface, #fff);
   border-radius: 18px;
   overflow: hidden;
   box-shadow: 0 24px 64px -18px rgba(11, 15, 26, 0.5);
@@ -1795,7 +1795,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  background: #fff;
+  background: var(--tw-surface, #fff);
 }
 
 .campaign-detail-creator-modal .tw-cm__h {
@@ -1828,7 +1828,7 @@
 
 .campaign-detail-creator-modal .tw-cdt button[data-state="active"],
 .campaign-detail-creator-modal .tw-cdt [data-slot="tabs-trigger"][data-state="active"] {
-  background: #fff !important;
+  background: var(--tw-surface, #fff) !important;
   color: var(--tw-bi, #0b52e0) !important;
   box-shadow: 0 1px 2px rgba(11, 15, 26, 0.08) !important;
 }
@@ -2007,7 +2007,7 @@
   gap: 6px;
   border: 0.8px solid #e3e8f2;
   border-radius: 9px;
-  background: #fff;
+  background: var(--tw-surface, #fff);
   color: var(--tw-ink2, #41495a);
   font: 600 12.5px Geist, sans-serif;
   cursor: pointer;
@@ -2022,7 +2022,7 @@
 }
 
 .campaign-detail-creator-modal .tw-b.pri {
-  background: #fff;
+  background: var(--tw-surface, #fff);
   border-color: rgba(0, 87, 255, 0.55);
   color: var(--tw-bi, #0b52e0);
   font-weight: 700;
@@ -2046,7 +2046,7 @@
 /* Remaining tab interiors — same card / strip language as Overview + Assignments. */
 .campaign-detail-suite .thinkway-campaign-tab-panel .thinkway-campaign-section-card,
 .campaign-detail-suite .thinkway-campaign-tab-panel [data-slot="card"] {
-  background: #fff;
+  background: var(--tw-surface, #fff);
   border-radius: 12px;
   box-shadow: var(--tw-ring);
   border: 0;
@@ -2150,12 +2150,12 @@
 }
 
 .campaign-detail-suite .tw-r:hover {
-  background: #fbfcff;
+  background: var(--tw-soft, #fbfcff);
 }
 
 .campaign-detail-suite .tw-ft {
   padding: 11px 8px;
-  background: #f2f5fa;
+  background: var(--tw-soft, #f2f5fa);
   border-top: 2px solid var(--tw-line);
 }
 
@@ -2213,7 +2213,7 @@
   max-height: min(62vh, 560px);
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--tw-surface, #fff);
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(11, 15, 26, 0.3), 0 22px 56px -14px rgba(11, 15, 26, 0.42);
@@ -2271,7 +2271,7 @@
   padding: 9px 12px;
   border: 1px solid var(--tw-hair);
   border-radius: 10px;
-  background: #fff;
+  background: var(--tw-surface, #fff);
   cursor: pointer;
   text-align: left;
 }
@@ -2352,7 +2352,7 @@
   gap: 5px;
   padding: 5px 10px;
   border-radius: 999px;
-  background: #fff;
+  background: var(--tw-surface, #fff);
   border: 1px solid var(--tw-hair);
   font-size: 11px;
   color: var(--tw-ink2);

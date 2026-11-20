@@ -48,6 +48,7 @@
 .dark .q-saving-track {background:#2c3a4e;}
 .dark .q-draft-notice {background:#3c301b;color:#fcd34d;border-color:#705627;}
 .dark .tw-billing-v3 {
+  --bq-surface:#182231;
   --bq-ink:#eef2f8;--bq-ink2:#cbd5e1;--bq-mut:#a6b4c8;--bq-bi:#6ee7b7;
   --bq-bg:#101620;--bq-soft:#202d40;--bq-lav:#123b30;--bq-line:#3a4a60;--bq-hair:#2c3a4e;
   --bq-ok:#6ee7b7;--bq-okb:#123b30;--bq-wrn:#fcd34d;--bq-wrnb:#3c301b;--bq-bad:#fca5a5;--bq-badb:#43252c;
@@ -65,6 +66,7 @@
 .dark .tw-billing-v3 .bq-krow:hover {background:#202d40;}
 .dark .tw-billing-v3 .bq-chips button[aria-pressed=true] {background:var(--bq-lav);color:var(--bq-bi);}
 .dark .tw-billing-v3.billing-related :is(.billing-section-tabs > button,.tw-mast .billing-related-nav,.billing-related-nav > a,[data-sticky=operational-workspace-tabs],[role=tablist],[role=tab],.related-inner-panel,.related-summary-strip,.po-control,.po-details-pane) {background:#182231;color:var(--bq-ink2);border-color:var(--bq-line);}
+.dark :is(.q-redesign-body.q-display-popover,.q-redesign-body.q-discovery-popover) {background:#182231;color:var(--q-ink);}
 
 @media (max-width:1023px) {
   /* Desktop summary + toolbars together must not pin most of a phone screen. */

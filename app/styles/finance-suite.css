@@ -66,7 +66,7 @@
 .finance-suite .tw-hd h1{font-size:19px;font-weight:600;letter-spacing:-.35px;overflow-wrap:anywhere;word-break:break-word}
 .finance-suite .tw-hd p{font-size:12px;color:var(--tw-mut);margin-top:2px;max-width:min(640px,100%);overflow-wrap:anywhere;word-break:break-word}
 .finance-suite .tw-sp{flex:1 1 auto}
-.finance-suite .tw-b{height:32px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;border:.8px solid #E3E8F2;border-radius:9px;background:#fff;color:var(--tw-ink2);font:600 12.5px 'Geist',sans-serif;cursor:pointer;white-space:nowrap;transition:border-color .15s var(--tw-ez),color .15s}
+.finance-suite .tw-b{height:32px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;border:.8px solid #E3E8F2;border-radius:9px;background:var(--tw-surface, #fff);color:var(--tw-ink2);font:600 12.5px 'Geist',sans-serif;cursor:pointer;white-space:nowrap;transition:border-color .15s var(--tw-ez),color .15s}
 .finance-suite .tw-b:hover{border-color:rgba(0,87,255,.35);color:var(--tw-bi)}
 .finance-suite .tw-b:focus-visible{outline:2px solid var(--tw-blue);outline-offset:2px}
 .finance-suite .tw-b.pri{border-color:rgba(0,87,255,.55);color:var(--tw-bi);font-weight:700;font-size:12px;box-shadow:0 0 0 3px rgba(0,87,255,.08),0 2px 14px -3px rgba(0,87,255,.4)}
@@ -74,9 +74,9 @@
 .finance-suite .tw-b[disabled]{opacity:.42;cursor:not-allowed;box-shadow:none}
 .finance-suite .tw-seg{display:inline-flex;padding:2px;background:var(--tw-soft);border:1px solid var(--tw-hair);border-radius:9px}
 .finance-suite .tw-seg button{padding:5px 11px;border:0;border-radius:7px;cursor:pointer;font:600 11.5px 'Geist',sans-serif;background:none;color:var(--tw-mut)}
-.finance-suite .tw-seg button[aria-pressed="true"]{background:#fff;color:var(--tw-bi);box-shadow:0 1px 2px rgba(11,15,26,.08)}
+.finance-suite .tw-seg button[aria-pressed="true"]{background:var(--tw-surface, #fff);color:var(--tw-bi);box-shadow:0 1px 2px rgba(11,15,26,.08)}
 .finance-suite .tw-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:10px;margin-bottom:13px}
-.finance-suite .tw-k{padding:13px 15px;background:#fff;border-radius:11px;box-shadow:var(--tw-ring)}
+.finance-suite .tw-k{padding:13px 15px;background:var(--tw-surface, #fff);border-radius:11px;box-shadow:var(--tw-ring)}
 .finance-suite .tw-k i{display:block;font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.62px;text-transform:uppercase;color:var(--tw-mut);overflow-wrap:anywhere;word-break:break-word}
 .finance-suite .tw-k b{display:block;margin:6px 0 2px;font:600 22px 'Geist',sans-serif;letter-spacing:-.7px;line-height:1.15;overflow-wrap:anywhere;word-break:break-word}
 .finance-suite .tw-k u{display:block;text-decoration:none;font-size:10.5px;color:var(--tw-mut);overflow-wrap:anywhere;word-break:break-word}
@@ -85,7 +85,7 @@
 .finance-suite .tw-k.bad u{color:var(--tw-bad)}
 .finance-suite .tw-k.ok b{color:var(--tw-ok)}
 .finance-suite .tw-k.warn{box-shadow:0 0 0 1px #F0D6A4,0 8px 24px rgba(138,93,18,.07)}
-.finance-suite .tw-c{background:#fff;border-radius:12px;box-shadow:var(--tw-ring);overflow:hidden;margin-bottom:14px}
+.finance-suite .tw-c{background:var(--tw-surface, #fff);border-radius:12px;box-shadow:var(--tw-ring);overflow:hidden;margin-bottom:14px}
 .finance-suite .tw-ch{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;padding:12px 15px;border-bottom:1px solid var(--tw-line)}
 .finance-suite .tw-ct{font-size:13px;font-weight:600;min-width:0;overflow-wrap:anywhere;word-break:break-word}
 .finance-suite .tw-cs{font-size:11px;color:var(--tw-mut);min-width:0;flex:1 1 12rem;overflow-wrap:anywhere;word-break:break-word}
@@ -95,11 +95,11 @@
 .finance-suite .tw-hr{position:sticky;top:0;z-index:3;background:var(--tw-soft);border-bottom:1px solid var(--tw-line);padding:9px 8px}
 .finance-suite .tw-hr > *{font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--tw-mut);overflow-wrap:anywhere;word-break:break-word}
 .finance-suite .tw-r{padding:11px 8px;border-bottom:1px solid var(--tw-hair)}
-.finance-suite .tw-r:hover{background:#FBFCFF}
-.finance-suite .tw-r.bad{background:#FFF8F8;box-shadow:inset 3px 0 0 var(--tw-bad)}
-.finance-suite .tw-r.wrn{background:#FFFCF5;box-shadow:inset 3px 0 0 #E0A93C}
+.finance-suite .tw-r:hover{background:var(--tw-soft, #FBFCFF)}
+.finance-suite .tw-r.bad{background:var(--tw-badb, #FFF8F8);box-shadow:inset 3px 0 0 var(--tw-bad)}
+.finance-suite .tw-r.wrn{background:var(--tw-wrnb, #FFFCF5);box-shadow:inset 3px 0 0 #E0A93C}
 .finance-suite .tw-r.sub{background:var(--tw-soft);padding:9px 8px;border-bottom:1px solid #E6EAF1}
-.finance-suite .tw-ft{padding:11px 8px;background:#F2F5FA;border-top:2px solid var(--tw-line)}
+.finance-suite .tw-ft{padding:11px 8px;background:var(--tw-soft, #F2F5FA);border-top:2px solid var(--tw-line)}
 .finance-suite .tw-ft > *{font-size:11px;font-weight:600}
 .finance-suite .tw-gp{padding:8px 14px;background:#EDF1F7;border-bottom:1px solid var(--tw-hair);font:600 12px 'Geist',sans-serif}
 .finance-suite .tw-gp em{font-style:normal;font-family:'Geist Mono',monospace;font-weight:500;font-size:10.5px;color:var(--tw-mut);margin-left:8px}
@@ -129,7 +129,7 @@
 .finance-suite .tw-bar i.r{background:var(--tw-bad)}
 .finance-suite .tw-bar i.y{background:#E0A93C}
 .finance-suite .tw-ck{width:15px;height:15px;accent-color:var(--tw-blue);cursor:pointer}
-.finance-suite .tw-in{width:100%;height:30px;padding:0 9px;border:1px solid var(--tw-line);border-radius:8px;background:#fff;font:500 12.5px 'Geist',sans-serif;color:var(--tw-ink)}
+.finance-suite .tw-in{width:100%;height:30px;padding:0 9px;border:1px solid var(--tw-line);border-radius:8px;background:var(--tw-surface, #fff);font:500 12.5px 'Geist',sans-serif;color:var(--tw-ink)}
 .finance-suite .tw-in:focus{outline:none;border-color:var(--tw-blue);box-shadow:0 0 0 3px rgba(0,87,255,.12)}
 .finance-suite .tw-lbl{display:block;font-size:10px;font-weight:700;letter-spacing:.55px;text-transform:uppercase;color:var(--tw-mut);margin-bottom:5px}
 .finance-suite .tw-pad{padding:14px 15px}
@@ -226,7 +226,7 @@
 /* ---------- live tables → mock header/row metrics ---------- */
 .finance-suite .thinkway-campaign-section-card,
 .finance-suite [data-slot="card"]:not(.tw-tile):not(.fs-tile) {
-  background: #fff;
+  background: var(--tw-surface, #fff);
   border-radius: 12px;
   box-shadow: var(--tw-ring);
   overflow: hidden;
@@ -302,7 +302,7 @@
 
 .finance-suite .thinkway-campaign-op-table-row:hover,
 .finance-suite tbody [data-slot="table-row"]:hover {
-  background: #fbfcff;
+  background: var(--tw-soft, #fbfcff);
 }
 
 .finance-suite:not(:has([data-overview-redesign])) .thinkway-campaign-op-table-cell,
@@ -321,7 +321,7 @@
 .finance-suite:not(:has([data-overview-redesign])) tfoot td,
 .finance-suite:not(:has([data-overview-redesign])) tfoot [data-slot="table-cell"] {
   padding: 11px 8px !important;
-  background: #f2f5fa;
+  background: var(--tw-soft, #f2f5fa);
   border-top: 2px solid var(--tw-line);
   font-size: 11px;
   font-weight: 600;
@@ -335,7 +335,7 @@
   gap: 6px;
   border: 0.8px solid #e3e8f2;
   border-radius: 9px;
-  background: #fff;
+  background: var(--tw-surface, #fff);
   color: var(--tw-ink2);
   font-size: 12.5px;
   font-weight: 600;
@@ -353,7 +353,7 @@
 .finance-suite:not(:has([data-overview-redesign])) main [data-slot="button"]:hover {
   border-color: rgba(0, 87, 255, 0.35);
   color: var(--tw-bi);
-  background: #fff;
+  background: var(--tw-surface, #fff);
 }
 
 .finance-suite:not(:has([data-overview-redesign])) main [data-slot="button"][data-variant="default"] {
@@ -374,7 +374,7 @@
   padding: 0 10px;
   border: 0.8px solid #e3e8f2;
   border-radius: 8px;
-  background: #fff;
+  background: var(--tw-surface, #fff);
   color: var(--tw-ink2);
   font-size: 11.5px;
   font-weight: 600;
@@ -383,7 +383,7 @@
 .finance-suite button.group\/table-tool:hover {
   border-color: rgba(0, 87, 255, 0.35);
   color: var(--tw-bi);
-  background: #fff;
+  background: var(--tw-surface, #fff);
 }
 
 .finance-suite button.group\/table-tool svg {
@@ -407,7 +407,7 @@
   padding: 0 9px;
   border: 1px solid var(--tw-line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--tw-surface, #fff);
   font-size: 12.5px;
   font-weight: 500;
   box-shadow: none;
@@ -459,12 +459,12 @@
 .finance-suite .tw-bar { margin-top: 5px; }
 .finance-suite .thinkway-campaign-op-table-row.fs-row-bad,
 .finance-suite [data-slot="table-row"].fs-row-bad {
-  background: #fff8f8;
+  background: var(--tw-badb, #fff8f8);
   box-shadow: inset 3px 0 0 var(--tw-bad);
 }
 .finance-suite .thinkway-campaign-op-table-row.fs-row-warn,
 .finance-suite [data-slot="table-row"].fs-row-warn {
-  background: #fffcf5;
+  background: var(--tw-wrnb, #fffcf5);
   box-shadow: inset 3px 0 0 #e0a93c;
 }
 
