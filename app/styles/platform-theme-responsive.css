@@ -74,6 +74,7 @@
 .dark :is(.q-redesign-body.q-display-popover,.q-redesign-body.q-discovery-popover) {background:#182231;color:var(--q-ink);}
 
 @media (max-width:1023px) {
+  .wr-responsive-table td {white-space:normal;overflow-wrap:anywhere;}
   /* Desktop summary + toolbars together must not pin most of a phone screen. */
   .tq-redesign.discovery-suite.quotation-editor-rd4 > .q-frozen-summary,
   .tq-redesign .q-redesign-body.q-header-tools,
