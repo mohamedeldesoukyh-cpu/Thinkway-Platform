@@ -9,7 +9,7 @@ BEGIN
  INSERT INTO clients(id,document_number,name,currency) VALUES(customer,'QA-AC-STAGE4-'||customer,'QA accounting invoice rollback '||customer,'EGP');
  INSERT INTO invoices(id,document_number,client_id,issue_date,currency,subtotal,tax_amount,total,revenue_before_vat,revenue_vat_amount,revenue_after_vat,amounts_finalized_at)
  VALUES(inv,'QA-INV-'||inv,customer,'2026-01-15','EGP',100.05,14.01,114.06,100.05,14.01,114.06,now()),
- (bad,'QA-INV-'||bad,customer,'2026-01-15','USD',100,0,100,100,0,100,now()),
+ (bad,'QA-INV-'||bad,customer,'2026-01-15','XXX',100,0,100,100,0,100,now()),
  (zero_vat,'QA-INV-'||zero_vat,customer,'2026-01-15','EGP',100,0,100,100,0,100,now());
  PERFORM set_config('request.jwt.claim.sub',actor::text,true);
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal2')::text,true);
@@ -22,7 +22,7 @@ BEGIN
  {"code":"400000","name":"Revenue","parent":null,"type":"Revenue","normal":"Credit","kind":"Group"},
  {"code":"411001","name":"Campaign revenue","parent":"400000","type":"Revenue","normal":"Credit","kind":"Posting"}]');
  blocked:=false;BEGIN PERFORM tw_accounting_submit_invoice(bad,c);EXCEPTION WHEN OTHERS THEN blocked:=true;END;
- IF NOT blocked THEN RAISE EXCEPTION 'Foreign currency submitted without FX'; END IF;
+ IF NOT blocked THEN RAISE EXCEPTION 'Missing FX accepted'; END IF;
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal1')::text,true);
  blocked:=false;BEGIN PERFORM tw_accounting_submit_invoice(inv,c);EXCEPTION WHEN insufficient_privilege THEN blocked:=true;END;
  IF NOT blocked THEN RAISE EXCEPTION 'Submission without MFA accepted'; END IF;
