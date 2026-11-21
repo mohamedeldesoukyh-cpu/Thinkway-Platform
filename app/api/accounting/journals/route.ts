@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { accountingContext } from '@/features/accounting/setup-server';
 import { isoDate,journalSchema,journalActionSchema,reversalSchema,periodSchema } from '@/features/accounting/journal-validation';
 import { assertCsrfRequest } from '@/lib/security/csrf';
-const header='id,company_id,entry_date,reference,memo,status,voucher_number,version,reversal_of,reversal_reason,source_invoice_id,created_at,posted_at';
+const header='id,company_id,entry_date,reference,memo,status,voucher_number,version,reversal_of,reversal_reason,source_invoice_id,transaction_currency,exchange_rate,exchange_rate_date,unpost_reason,created_at,posted_at';
 const reply=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
 const message=(e:unknown)=>e instanceof z.ZodError?e.issues[0]?.message:e instanceof Error?e.message:'Accounting request failed';
 export async function GET(request:Request){
@@ -14,11 +14,11 @@ export async function GET(request:Request){
    const id=z.string().uuid().parse(q.get('id'));
    const [j,l,r]=await Promise.all([
     db.from('tw_accounting_journals').select(header).eq('id',id).eq('company_id',company).single(),
-    db.from('tw_accounting_journal_lines').select('account_code,account_name,description,debit,credit,client_code').eq('journal_id',id).eq('company_id',company).order('line_number'),
+    db.from('tw_accounting_journal_lines').select('account_code,account_name,description,debit,credit,client_code,foreign_debit,foreign_credit').eq('journal_id',id).eq('company_id',company).order('line_number'),
     db.from('tw_accounting_journals').select(header).eq('reversal_of',id).eq('company_id',company).maybeSingle(),
    ]);
    if(j.error||l.error||r.error)return reply({error:'Journal could not be loaded'},404);
-   return reply({journal:j.data,lines:(l.data??[]).map(x=>({account:x.account_code,name:x.account_name,description:x.description,debit:String(x.debit),credit:String(x.credit)})),reversal:r.data});
+   return reply({journal:j.data,lines:(l.data??[]).map(x=>({account:x.account_code,name:x.account_name,description:x.description,debit:String(x.debit),credit:String(x.credit),foreignDebit:x.foreign_debit==null?null:String(x.foreign_debit),foreignCredit:x.foreign_credit==null?null:String(x.foreign_credit)})),reversal:r.data});
   }
   if(mode==='periods'){
    const years=await db.from('tw_accounting_years').select('id').eq('company_id',company);if(years.error)throw new Error(years.error.message);
@@ -31,7 +31,7 @@ export async function GET(request:Request){
   if(mode==='ledger') {const account=z.string().regex(/^\d{6}$/).parse(q.get('account'));const r=await db.rpc('tw_accounting_ledger',{p_company:company,p_account:account,p_from:from,p_to:to,p_offset:page*100});if(r.error)throw new Error(r.error.message);return reply(r.data);}
   if(mode!=='journals')return reply({error:'Unknown view'},400);
   let query=db.from('tw_accounting_journals').select(header,{count:'exact'}).eq('company_id',company).gte('entry_date',from).lte('entry_date',to).order('entry_date',{ascending:false}).order('created_at',{ascending:false}).order('id').range(page*50,page*50+49);
-  const status=q.get('status');if(status&&status!=='all')query=query.eq('status',z.enum(['draft','posted','cancelled']).parse(status));
+  const status=q.get('status');if(status&&status!=='all')query=query.eq('status',z.enum(['draft','posted','cancelled','pending']).parse(status));
   const r=await query;if(r.error)throw new Error(r.error.message);return reply({journals:r.data,count:r.count});
  }catch(e){return reply({error:message(e)},400);}
 }

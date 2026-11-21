@@ -126,6 +126,7 @@ type InvoiceWorkspaceViewProps = {
 
 export function InvoiceWorkspaceView({ invoice, returnTo = "/finance/invoices" }: InvoiceWorkspaceViewProps) {
   const router = useRouter();
+  const [accountingCorrection,setAccountingCorrection]=useState(false);
   const [tab, setTab] = useState<InvoiceDetailTab>("lines");
   const campaignNo = invoice.campaign
     ? formatDocumentNumberForDisplay(invoice.campaign.document_number)
@@ -177,10 +178,10 @@ export function InvoiceWorkspaceView({ invoice, returnTo = "/finance/invoices" }
             Send to client
           </a>
         </div>
-        <InvoiceRegenerationPanel invoice={invoice} />
+        <InvoiceRegenerationPanel invoice={invoice} accountingCorrection={accountingCorrection} />
       </div>
 
-      <InvoiceAccountingBridge invoiceId={invoice.id} />
+      <InvoiceAccountingBridge invoiceId={invoice.id} onCorrectionChange={setAccountingCorrection} />
       <InvoiceWorkspaceKpiStrip invoice={invoice} />
 
       <div className="tw-c">

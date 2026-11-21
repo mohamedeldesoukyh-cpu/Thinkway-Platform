@@ -5,11 +5,15 @@ import { isoDate } from '@/features/accounting/journal-validation';
 import { assertCsrfRequest } from '@/lib/security/csrf';
 const reply=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
 const message=(e:unknown)=>e instanceof z.ZodError?e.issues[0]?.message:e instanceof Error?e.message:'Invoice request failed';
-const requestSchema=z.object({invoice:z.string().uuid(),company:z.string().uuid(),version:z.number().int().positive(),date:isoDate,receivable:z.string().regex(/^\d{6}$/),revenue:z.string().regex(/^\d{6}$/),vat:z.string().regex(/^\d{6}$/).nullable()});
+const requestSchema=z.object({invoice:z.string().uuid(),company:z.string().uuid(),version:z.number().int().positive(),date:isoDate,receivable:z.string().regex(/^\d{6}$/),revenue:z.string().regex(/^\d{6}$/),vat:z.string().regex(/^\d{6}$/).nullable(),rate:z.string().regex(/^\d+(\.\d{1,8})?$/)});
 export async function GET(request:Request){
  try{
   const {db}=await accountingContext();const q=new URL(request.url).searchParams;
   const company=z.string().uuid().parse(q.get('company'));const page=z.coerce.number().int().min(0).max(100000).parse(q.get('page')??0);
+  if(q.get('mode')==='fx'){
+   const invoice=z.string().uuid().parse(q.get('invoice'));
+   const r=await db.rpc('tw_accounting_invoice_fx',{p_invoice:invoice,p_company:company});if(r.error)throw new Error(r.error.message);return reply(r.data);
+  }
   const result=await db.from('tw_accounting_invoice_submissions').select('invoice_id,company_id,client_code,client_name,source,status,version,journal_id,submitted_at',{count:'exact'}).eq('company_id',company).neq('status','withdrawn').order('submitted_at',{ascending:false}).order('invoice_id').range(page*50,page*50+49);
   if(result.error)throw new Error(result.error.message);
   const ids=(result.data??[]).map(s=>s.journal_id).filter(Boolean);
@@ -28,7 +32,10 @@ export async function POST(request:Request){
   const body=await request.json();let result;
   if(body.operation==='post'){
    const v=requestSchema.parse(body.value);
-   result=await db.rpc('tw_accounting_post_invoice',{p_invoice:v.invoice,p_company:v.company,p_version:v.version,p_date:v.date,p_receivable:v.receivable,p_revenue:v.revenue,p_vat:v.vat});
+   result=await db.rpc('tw_accounting_post_invoice',{p_invoice:v.invoice,p_company:v.company,p_version:v.version,p_date:v.date,p_receivable:v.receivable,p_revenue:v.revenue,p_vat:v.vat,p_expected_rate:v.rate});
+  }else if(body.operation==='unpost'){
+   const v=z.object({invoice:z.string().uuid(),company:z.string().uuid(),version:z.number().int().positive(),reason:z.string().trim().min(3).max(500)}).parse(body.value);
+   result=await db.rpc('tw_accounting_unpost_invoice',{p_invoice:v.invoice,p_company:v.company,p_version:v.version,p_reason:v.reason});
   }else if(body.operation==='withdraw'){
    const v=z.object({invoice:z.string().uuid(),version:z.number().int().positive()}).parse(body.value);
    result=await db.rpc('tw_accounting_withdraw_invoice',{p_invoice:v.invoice,p_version:v.version});
