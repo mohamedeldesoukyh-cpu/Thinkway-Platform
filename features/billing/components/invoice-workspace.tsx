@@ -181,7 +181,7 @@ export function InvoiceWorkspaceView({ invoice, returnTo = "/finance/invoices" }
         <InvoiceRegenerationPanel invoice={invoice} accountingCorrection={accountingCorrection} />
       </div>
 
-      <InvoiceAccountingBridge invoiceId={invoice.id} onCorrectionChange={setAccountingCorrection} />
+      <InvoiceAccountingBridge invoiceId={invoice.id} readyForSubmission={invoice.regeneration_status==='active'} onCorrectionChange={setAccountingCorrection} />
       <InvoiceWorkspaceKpiStrip invoice={invoice} />
 
       <div className="tw-c">
@@ -256,8 +256,9 @@ function InvoiceLinesTab({
         </div>
       </div>
       <div className="tw-note">
-        Issued invoice lines and amounts are protected. Invoice remaining work with
-        a new number. Use a credit/debit note for a correction.
+        To correct an invoice posted to Accounting, unpost its journal, un-generate
+        the invoice, correct the campaign lines, then regenerate and submit it again.
+        The invoice and journal numbers are retained. Additional work requires a new invoice.
       </div>
     </>
   );
