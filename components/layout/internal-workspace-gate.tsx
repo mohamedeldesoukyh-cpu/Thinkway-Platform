@@ -6,6 +6,8 @@ import {
 } from "@/lib/security/workspace-actor";
 import { portalHomePath } from "@/lib/security/workspace-auth";
 import { createSupabaseServerClient, getRequestAuth } from "@/lib/supabase/server";
+import { loadModuleAccess, moduleHome } from "@/lib/auth/module-access";
+import { ModuleAccessProvider } from "@/components/layout/module-access-provider";
 
 /**
  * Hard edge for the internal dashboard shell: portal actors must never render
@@ -24,7 +26,10 @@ export async function InternalWorkspaceGate({
     if (isPortalActor(actor.kind)) {
       redirect(portalHomePath(actor.kind));
     }
+    const access = await loadModuleAccess(supabase);
+    if (!access.media) redirect(moduleHome(access));
+    return <ModuleAccessProvider value={access}>{children}</ModuleAccessProvider>;
   }
 
-  return children;
+  redirect("/login");
 }

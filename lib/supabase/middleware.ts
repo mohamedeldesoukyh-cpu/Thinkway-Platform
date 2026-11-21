@@ -23,6 +23,7 @@ import {
 import { classifyApiPath } from "@/lib/security/workspace-classify";
 import { supabaseAnonKey, supabaseUrl } from "@/lib/supabase/env";
 import type { Database } from "@/types/database";
+import { loadModuleAccess, isAccountingPath, moduleHome } from "@/lib/auth/module-access";
 
 function copyResponseCookies(from: NextResponse, to: NextResponse) {
   from.cookies.getAll().forEach((cookie) => {
@@ -116,6 +117,15 @@ export async function updateSession(request: NextRequest) {
 
   // Refresh cookies only — never redirect Server Action POSTs.
   if (serverAction) {
+    if (user && !publicPath) {
+      const actor = await resolveWorkspaceActor(supabase,user.id);
+      if (!isPortalActor(actor.kind)) {
+        try {
+          const access = await loadModuleAccess(supabase);
+          if (!access.media) return NextResponse.json({error:"TW Media access required for this action"},{status:403});
+        } catch { return NextResponse.json({error:"Module access unavailable"},{status:503}); }
+      }
+    }
     return supabaseResponse;
   }
 
@@ -164,6 +174,20 @@ export async function updateSession(request: NextRequest) {
   if (user && !publicPath) {
     const actor = await resolveWorkspaceActor(supabase, user.id);
     const decision = authorizeWorkspacePath(pathname, actor.kind);
+
+    if (!isPortalActor(actor.kind) && pathname !== "/modules" && pathname !== "/api/modules" && !isCronPath(pathname)) {
+      try {
+        const access = await loadModuleAccess(supabase);
+        const allowed = isAccountingPath(pathname) ? access.accounting : access.media;
+        if (!allowed) {
+          const denied = isApiPath(pathname)
+            ? NextResponse.json({error:"This module is not assigned to your user"},{status:403})
+            : NextResponse.redirect(new URL(moduleHome(access),request.url));
+          copyResponseCookies(supabaseResponse,denied);
+          return denied;
+        }
+      } catch { return NextResponse.json({error:"Module access could not be verified"},{status:503}); }
+    }
 
     if (!decision.allowed) {
       if (isApiPath(pathname)) {
