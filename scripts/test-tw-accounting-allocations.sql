@@ -35,6 +35,7 @@ BEGIN
  IF vendor IS NULL THEN RAISE EXCEPTION 'Dev vendor directory unavailable'; END IF;
  val:=jsonb_build_object('company',c,'kind','receipt','party',customer,'currency','USD','date','2026-02-01','amount','30','cash','111001','control','121001','advance','221001','gain','712001','loss','722001','parent',NULL,'advanceRow',true,'method','bank_transfer','reference','QA multi allocation','lines',jsonb_build_array(jsonb_build_object('id',inv,'amount','20')));
  quote:=tw_accounting_settlement_quote(val);saved:=val;j:=tw_accounting_settlement_post(rv,val,quote);
+ IF NOT EXISTS(SELECT 1 FROM tw_accounting_journal_lines WHERE journal_id=j AND description LIKE 'Invoice QA-INV-%') THEN RAISE EXCEPTION 'JV line lost invoice reference';END IF;
  IF tw_accounting_settlement_post(rv,val,quote)<>j THEN RAISE EXCEPTION 'Voucher retry duplicated'; END IF;
  IF (SELECT amount_paid FROM invoices WHERE id=inv)<>20 OR (SELECT count(*) FROM tw_accounting_journal_lines WHERE journal_id=j)<>4 THEN RAISE EXCEPTION 'Receipt/advance journal incorrect'; END IF;
  IF NOT EXISTS(SELECT 1 FROM payments p JOIN tw_accounting_settlement_payments m ON m.payment_id=p.id WHERE m.settlement_id=rv AND m.is_advance AND p.amount=10 AND p.invoice_id IS NULL) THEN RAISE EXCEPTION 'Advance missing from Media'; END IF;
