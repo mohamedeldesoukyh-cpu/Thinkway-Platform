@@ -31,6 +31,11 @@ jobs:
       - name: Shared Discovery control styles
         run: node scripts/check-discovery-shared-controls.mjs
 
+      - name: Runtime stylesheet coverage
+        run: |
+          node --test scripts/ui-source-graph.test.cjs
+          node scripts/check-retired-styles.cjs
+
       - name: Service layer tests
         run: npm run test:services
 

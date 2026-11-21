@@ -3,7 +3,6 @@
    scroll away: a frozen desktop masthead can fill an entire iPhone viewport. */
 @media (max-width: 1023px) {
   .discovery-suite .tw-frozen[data-discovery-frozen],
-  .quotation-editor-rd4.discovery-suite > .quotation-frozen-header,
   .campaign-detail-suite.thinkway-campaign-workspace .tw-frozen {
     position: static;
     flex-shrink: 0;
@@ -83,7 +82,6 @@
   .discovery-selection-flyout__bar { scrollbar-width: thin; }
   .discovery-selection-flyout__bar button,
   .discovery-suite .tw-b,
-  .discovery-suite .tw-x,
   .campaign-detail-suite.thinkway-campaign-workspace .tw-selbar-btn { min-height: 44px; }
 }
 
@@ -178,8 +176,7 @@ html[data-companion-window="1"] .mobile-app-navigation { display: none; }
   }
 }
 @media (pointer: coarse) {
-  [data-slot="button"], [data-slot="dialog-close"], [data-slot="sheet-close"], [role="tab"],
-  .tw-li, .tw-grp, .discovery-top-nav-tabs a, .cw .tab, .cw .signout, .tw-review .btn { min-height: 44px; }
+  [data-slot="button"], [data-slot="dialog-close"], [data-slot="sheet-close"], [role="tab"], .discovery-top-nav-tabs a, .cw .tab, .cw .signout, .tw-review .btn { min-height: 44px; }
   [data-slot="button"]:has(> svg:only-child), [data-slot="dialog-close"], [data-slot="sheet-close"] { min-width: 44px; }
   :is(.finance-suite, .client-detail-suite, .vendor-detail-suite, .vendors-list-suite, .campaigns-list-suite, .campaign-detail-suite, .discovery-suite) .tw-b {
     min-height: 44px;

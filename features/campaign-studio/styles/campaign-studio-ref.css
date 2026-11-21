@@ -2121,8 +2121,7 @@
   .campaign-studio-ref .cs-risk-grid,
   .campaign-studio-ref .cs-exec-cols,
   .campaign-studio-ref .cs-two-col-list,
-  .campaign-studio-ref .cs-status-meta-grid,
-  .campaign-studio-ref .cs-pair-grid {
+  .campaign-studio-ref .cs-status-meta-grid {
     grid-template-columns: 1fr;
   }
 
@@ -3368,8 +3367,7 @@
     gap: 7px;
   }
 
-  .campaign-studio-ref .cs-hmk,
-  .campaign-studio-ref .cs-hwd,
+  
   .campaign-studio-ref .cs-hdv {
     display: none;
   }
@@ -3568,8 +3566,7 @@
 }
 .campaign-studio-ref .cs-planning-callout strong { font-weight: 700; }
 
-.campaign-studio-ref .cs-strategy-grid,
-.campaign-studio-ref .cs-package-meta {
+.campaign-studio-ref .cs-strategy-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 10px;

@@ -9,9 +9,7 @@
 .thinkway-dropdown-surface[data-slot="popover-content"],
 [data-slot="dropdown-menu-content"],
 [data-slot="dropdown-menu-sub-content"],
-[data-slot="select-content"],
-.discovery-dialog-select-content[data-slot="select-content"],
-.discovery-checkbox-popover[data-slot="popover-content"] {
+[data-slot="select-content"] {
   overflow: hidden;
   border: 1px solid rgba(0, 87, 255, 0.2) !important;
   border-radius: 16px !important;
@@ -49,8 +47,7 @@
   background: #e2e8f0;
 }
 
-.thinkway-dropdown-surface__list,
-.discovery-checkbox-popover__list {
+.thinkway-dropdown-surface__list {
   max-height: 16rem;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -58,19 +55,16 @@
   scrollbar-width: thin;
 }
 
-.thinkway-dropdown-surface__list::-webkit-scrollbar,
-.discovery-checkbox-popover__list::-webkit-scrollbar {
+.thinkway-dropdown-surface__list::-webkit-scrollbar {
   width: 4px;
 }
 
-.thinkway-dropdown-surface__list::-webkit-scrollbar-thumb,
-.discovery-checkbox-popover__list::-webkit-scrollbar-thumb {
+.thinkway-dropdown-surface__list::-webkit-scrollbar-thumb {
   border-radius: 4px;
   background: #e2e8f0;
 }
 
-.thinkway-dropdown-item,
-.discovery-dialog-list-item {
+.thinkway-dropdown-item {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -86,9 +80,7 @@
 [data-slot="select-item"],
 [data-slot="dropdown-menu-checkbox-item"],
 [data-slot="dropdown-menu-radio-item"],
-[data-slot="dropdown-menu-sub-trigger"],
-.discovery-dialog-list-item,
-.discovery-dialog-select-item[data-slot="select-item"] {
+[data-slot="dropdown-menu-sub-trigger"] {
   min-height: 2rem;
   border: 1px solid transparent;
   border-radius: 10px !important;
@@ -123,22 +115,17 @@
 [data-slot="dropdown-menu-radio-item"][data-highlighted],
 [data-slot="dropdown-menu-sub-trigger"]:focus,
 [data-slot="dropdown-menu-sub-trigger"][data-highlighted],
-[data-slot="dropdown-menu-sub-trigger"][data-state="open"],
-.discovery-dialog-list-item:hover,
-.discovery-dialog-select-item[data-slot="select-item"]:focus,
-.discovery-dialog-select-item[data-slot="select-item"][data-highlighted] {
+[data-slot="dropdown-menu-sub-trigger"][data-state="open"] {
   background: rgba(0, 87, 255, 0.08) !important;
   color: #0057ff !important;
 }
 
-.thinkway-dropdown-item--selected,
-.discovery-dialog-list-item--selected {
+.thinkway-dropdown-item--selected {
   border-color: rgba(0, 87, 255, 0.18) !important;
   background: rgba(0, 87, 255, 0.07) !important;
 }
 
-.thinkway-dropdown-item--selected:hover,
-.discovery-dialog-list-item--selected:hover {
+.thinkway-dropdown-item--selected:hover {
   background: rgba(0, 87, 255, 0.09) !important;
 }
 
@@ -160,8 +147,7 @@
   color: #0057ff !important;
 }
 
-.thinkway-dropdown-checkbox[data-slot="checkbox"],
-.discovery-dialog-checkbox[data-slot="checkbox"] {
+.thinkway-dropdown-checkbox[data-slot="checkbox"] {
   width: 16px;
   height: 16px;
   border: 1px solid rgba(0, 87, 255, 0.22) !important;
@@ -171,9 +157,7 @@
 }
 
 .thinkway-dropdown-checkbox[data-slot="checkbox"][data-state="checked"],
-.thinkway-dropdown-checkbox[data-slot="checkbox"][data-state="indeterminate"],
-.discovery-dialog-checkbox[data-slot="checkbox"][data-state="checked"],
-.discovery-dialog-checkbox[data-slot="checkbox"][data-state="indeterminate"] {
+.thinkway-dropdown-checkbox[data-slot="checkbox"][data-state="indeterminate"] {
   border-color: #0057ff !important;
   background: #0057ff !important;
   color: #fff !important;
@@ -202,9 +186,7 @@
 .dark .thinkway-dropdown-surface[data-slot="popover-content"],
 .dark [data-slot="dropdown-menu-content"],
 .dark [data-slot="dropdown-menu-sub-content"],
-.dark [data-slot="select-content"],
-.dark .discovery-dialog-select-content[data-slot="select-content"],
-.dark .discovery-checkbox-popover[data-slot="popover-content"] {
+.dark [data-slot="select-content"] {
   border-color: rgba(0, 87, 255, 0.28) !important;
   background: var(--card) !important;
   box-shadow:
@@ -212,22 +194,18 @@
     0 2px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
-.dark .thinkway-dropdown-surface__list,
-.dark .discovery-checkbox-popover__list {
+.dark .thinkway-dropdown-surface__list {
   scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
 }
 
-.dark .thinkway-dropdown-surface__list::-webkit-scrollbar-thumb,
-.dark .discovery-checkbox-popover__list::-webkit-scrollbar-thumb {
+.dark .thinkway-dropdown-surface__list::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.16);
 }
 
 .dark .thinkway-dropdown-item[data-slot="dropdown-menu-item"],
 .dark .thinkway-dropdown-item[data-slot="select-item"],
 .dark [data-slot="dropdown-menu-item"],
-.dark [data-slot="select-item"],
-.dark .discovery-dialog-list-item,
-.dark .discovery-dialog-select-item[data-slot="select-item"] {
+.dark [data-slot="select-item"] {
   color: var(--foreground) !important;
 }
 

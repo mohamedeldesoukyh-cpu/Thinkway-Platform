@@ -1,4 +1,3 @@
-"use client";
 import { useEffect } from "react";
 import { isShortcutVisible } from "@/lib/productivity/shortcut-targets";
 /** Dialogs and menus consume Escape before the page's selection does. */

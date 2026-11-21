@@ -469,8 +469,7 @@
 }
 
 /* Shown copy wraps instead of clipping */
-.finance-suite .truncate,
-.finance-suite .text-ellipsis {
+.finance-suite .truncate {
   overflow: visible !important;
   text-overflow: clip !important;
   white-space: normal !important;
@@ -502,18 +501,8 @@
 .finance-suite .tw-st b,
 .finance-suite .tw-lbl,
 .finance-suite .tw-gp,
-.finance-suite .tw-grp,
-.finance-suite .fs-grp,
-.finance-suite .fs-ct,
-.finance-suite .fs-cs,
-.finance-suite .fs-empty b,
-.finance-suite .fs-empty p,
-.finance-suite .fs-id,
 .finance-suite .fs-nm,
-.finance-suite .fs-t,
 .finance-suite .fs-br,
-.finance-suite .fs-s,
-.finance-suite .fs-v,
 .finance-suite .thinkway-campaign-section-head h2,
 .finance-suite .thinkway-campaign-section-head h3,
 .finance-suite .thinkway-campaign-section-head p,

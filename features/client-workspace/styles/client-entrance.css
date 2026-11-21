@@ -56,26 +56,14 @@
  translate:-72% -46%}
 .tw-entry .tw-bg__orb svg{width:100%;height:100%;display:block;overflow:visible}
 .tw-entry .tw-ring{fill:none;stroke:rgba(255,255,255,.08);stroke-width:1}
-.tw-entry .tw-ring--lit{stroke:rgba(115,165,255,.3)}
-.tw-entry .tw-ring--blue{stroke:rgba(0,85,255,.55);stroke-dasharray:3 7;stroke-linecap:round}
 
 /* the two travelling bodies — the mark's own circles, in orbit */
-.tw-entry .tw-orbiter{transform-box:fill-box;transform-origin:center;
- animation:tw-spin linear infinite}
 @keyframes tw-spin{to{rotate:360deg}}
-.tw-entry .tw-orbiter--a{animation-duration:38s}
-.tw-entry .tw-orbiter--b{animation-duration:26s;animation-direction:reverse}
-.tw-entry .tw-orbiter--c{animation-duration:58s}
 .tw-entry .tw-body--white{fill:#fff}
 .tw-entry .tw-body--blue{fill:var(--e-blue)}
 .tw-entry .tw-body--glow{filter:blur(9px);opacity:.75}
 
 /* soft volumetric blooms */
-.tw-entry .tw-bg__bloom{position:absolute;border-radius:50%;filter:blur(72px);opacity:.5}
-.tw-entry .tw-bg__bloom--1{width:46vmax;height:46vmax;inset-block-start:-14vmax;
- inset-inline-start:-10vmax;background:radial-gradient(circle,rgba(0,85,255,.52),transparent 68%)}
-.tw-entry .tw-bg__bloom--2{width:34vmax;height:34vmax;inset-block-end:-12vmax;
- inset-inline-end:-8vmax;background:radial-gradient(circle,rgba(115,165,255,.3),transparent 68%)}
 
 /* grain — flat, cheap, no image file */
 .tw-entry .tw-bg__grain{position:absolute;inset:-50%;opacity:.055;mix-blend-mode:overlay;
@@ -198,8 +186,6 @@
 .tw-entry .tw-card__t[lang="ar"]{direction:rtl;unicode-bidi:isolate;letter-spacing:0;line-height:1.4}
 .tw-entry .tw-card__for{margin:11px 0 0;font:500 12.5px var(--e-sans);color:var(--e-mut)}
 
-.tw-entry .tw-card__hr{height:1px;background:var(--e-line);margin:18px 0}
-
 /* ONE status line — statusLabel and actionRequired are deduped before render */
 .tw-entry .tw-st{display:flex;gap:11px;align-items:flex-start}
 .tw-entry .tw-st__dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:4px;
@@ -277,8 +263,6 @@
 .tw-entry .tw-flag{display:flex;align-items:center;gap:9px;padding:9px 13px;border-radius:11px;
  margin-bottom:16px;font:500 12px/1.5 var(--e-sans);border:1px solid}
 .tw-entry .tw-flag--wrn{background:var(--e-wrn-b);border-color:rgba(255,196,107,.3);color:var(--e-wrn)}
-.tw-entry .tw-flag--info{background:rgba(115,165,255,.12);border-color:rgba(115,165,255,.3);
- color:var(--e-hi)}
 .tw-entry .tw-flag b{font-weight:700}
 
 /* ==================================================================
@@ -322,9 +306,6 @@
 
 /* paused when the tab is hidden */
 .tw-entry[data-hidden="1"] *{animation-play-state:paused!important}
-
-.tw-entry .tw-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
- clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
 
 /* ==================================================================
@@ -465,10 +446,6 @@
 .tw-entry[data-rm="1"] .tw-orb3d{transform:rotateX(68deg)!important}
 
 /* ---- the lockup inside the card (restored after the header experiment) ---- */
-.tw-entry .tw-card__lock{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
-.tw-entry .tw-card__lock .tw-mark{width:26px;height:26px}
-.tw-entry .tw-card__lock .tw-word{font-size:14px}
-.tw-entry .tw-card__lock .tw-lock__sep{height:18px}
 /* the partner plate hugs its logo; it must never stretch across the card */
 /* ---- collapsible demo panel, so it never covers the composition ---- */
 

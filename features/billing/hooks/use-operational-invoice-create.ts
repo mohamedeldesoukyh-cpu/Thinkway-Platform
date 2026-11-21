@@ -1,4 +1,3 @@
-"use client";
 
 import { originalBillingRows } from "@/lib/billing/billing-currency";
 import { startTransition, useActionState, useEffect, useLayoutEffect, useRef, useState } from "react";

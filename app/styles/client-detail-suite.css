@@ -174,13 +174,13 @@
    ============================================================ */
 /* step 1 " headline */
 /* step 2 " panel stat */
-.client-detail-suite .tw-band b,.client-detail-suite .tw-mini b,.client-detail-suite .tw-ms2 b,.client-detail-suite .tw-cdh__m b,.client-detail-suite .tw-cm__st b,.client-detail-suite .tw-cw__g b,.client-detail-suite .tw-calcp__f b,.client-detail-suite .tw-dr__s b,.client-detail-suite .tw-cin .tw-in{font-size:14px;letter-spacing:-.35px}
+.client-detail-suite .tw-ms2 b,.client-detail-suite .tw-cm__st b,.client-detail-suite .tw-calcp__f b,.client-detail-suite .tw-cin .tw-in{font-size:14px;letter-spacing:-.35px}
 /* step 3 " row value */
 .client-detail-suite .tw-ms2 b.s{font-size:12.5px}
 /* step 4 " micro */
-.client-detail-suite .tw-d,.client-detail-suite .tw-delta,.client-detail-suite .tw-id,.client-detail-suite .tw-fe b,.client-detail-suite .tw-kid,.client-detail-suite .tw-cc,.client-detail-suite .tw-sub2,.client-detail-suite .tw-s{font-size:11.5px}
+.client-detail-suite .tw-d,.client-detail-suite .tw-delta,.client-detail-suite .tw-id,.client-detail-suite .tw-cc,.client-detail-suite .tw-s{font-size:11.5px}
 /* mono everywhere a number lives, so digits align column to column */
-.client-detail-suite .tw-v,.client-detail-suite .tw-kv b.m,.client-detail-suite .tw-dl b.m,.client-detail-suite .tw-ms2 b,.client-detail-suite .tw-mini b,.client-detail-suite .tw-cdh__m b,.client-detail-suite .tw-cm__st b,.client-detail-suite .tw-cw__g b,.client-detail-suite .tw-calcp__f b,.client-detail-suite .tw-dr__s b,.client-detail-suite .tw-selbar .sum b,.client-detail-suite .tw-cwin,.client-detail-suite .tw-ed,.client-detail-suite .tw-po b,.client-detail-suite .tw-cw__hl b,.client-detail-suite .tw-oc__r b,.client-detail-suite .tw-dc2__r b,.client-detail-suite .tw-st b,.client-detail-suite .tw-soc b,.client-detail-suite .tw-k b,.client-detail-suite .tw-mx b,.client-detail-suite .tw-band b,.client-detail-suite .tw-agtot b{
+.client-detail-suite .tw-v,.client-detail-suite .tw-dl b.m,.client-detail-suite .tw-ms2 b,.client-detail-suite .tw-cm__st b,.client-detail-suite .tw-calcp__f b,.client-detail-suite .tw-selbar .sum b,.client-detail-suite .tw-cwin,.client-detail-suite .tw-ed,.client-detail-suite .tw-po b,.client-detail-suite .tw-st b,.client-detail-suite .tw-soc b,.client-detail-suite .tw-k b,.client-detail-suite .tw-mx b{
  font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 /* dates are never mono-bold " they are metadata, not figures */
 .client-detail-suite .tw-d{font-family:'Geist Mono',ui-monospace,monospace;font-weight:500;color:var(--tw-ink2);
@@ -286,10 +286,7 @@
 .client-detail-suite [data-slot="tabs-content"],
 .client-detail-suite [role="tabpanel"]{margin-top:0 !important;outline:none}
 .client-detail-suite .platform-v6-entity-breadcrumb,
-.client-detail-suite .platform-v6-entity-nav-bar,
-.client-detail-suite .platform-v6-page-header,
-.client-detail-suite .platform-v6-kpi-strip,
-.client-detail-suite .platform-v6-kpi-strip--executive{display:none !important}
+.client-detail-suite .platform-v6-page-header{display:none !important}
 .client-detail-suite .thinkway-campaign-section-card,
 .client-detail-suite .thinkway-campaign-info-card{
   background:#fff;border-radius:12px;box-shadow:var(--tw-ring);

@@ -1,4 +1,3 @@
-"use client";
 
 import { useIsOperationalColumnVisible } from "@/components/tables/operational-table-column-context";
 
