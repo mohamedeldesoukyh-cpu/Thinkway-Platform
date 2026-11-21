@@ -3,6 +3,16 @@
  * Spec: docs/architecture/discovery-specs/
  */
 
+.discovery-suite{
+ --tw-blue:#0057FF;--tw-b2:#1A6FFF;--tw-bi:#0B52E0;--tw-bdk:#0040CC;--tw-navy:#060810;
+ --tw-ink:#0B0F1A;--tw-ink2:#41495A;--tw-mut:#64748B;--tw-line:#E2E8F0;--tw-hair:#EDF0F5;
+ --tw-bg:#FAFBFC;--tw-soft:#F6F8FB;--tw-lav:#EFF4FF;
+ --tw-ok:#0A7A55;--tw-okb:#E9F7F1;--tw-wrn:#8A5D12;--tw-wrnb:#FFF6E8;
+ --tw-bad:#C82121;--tw-badb:#FEF2F2;--tw-vio:#5B3FD1;--tw-viob:#F1EDFE;
+ --tw-grad:linear-gradient(145deg,#0040CC 0%,#0057FF 40%,#1A6FFF 70%,#0048DD 100%);
+ --tw-ring:0 0 0 1px rgba(0,87,255,.05),0 8px 24px rgba(0,87,255,.06);
+ --tw-ez:cubic-bezier(.23,1,.32,1)}
+
 .discovery-suite {
   color: var(--tw-ink);
   background: var(--tw-bg);
@@ -118,11 +128,15 @@
 /* two tones only: brand blue by default, navy for neutral/secondary */
 /* alert state is a thin rail, not a different hue */
 /* masthead ring sits behind text, never over it */
+  .discovery-suite .tw-mast::after{left:auto;right:34%;top:-96px;width:196px;height:196px;border-width:30px}
+  .discovery-suite .tw-mh h1,.discovery-suite .tw-mh .id,.discovery-suite .tw-mh .sub,.discovery-suite .tw-mh .st{position:relative;z-index:1}
 /* ============ lighter cards, wider, frozen header ============ */
 /* wider: 3 across instead of 5 */
 /* light headers â€” tint + ink text, brand blue only as accent */
 /* roomier rows now the cards are wider */
 /* masthead: lighter too, keeps brand but stops shouting */
+  .discovery-suite .tw-mast::before{background:linear-gradient(107deg,#0B3DBF 0%,#0F55E8 34%,#3D82FF 62%,#8FB6FF 100%)}
+  .discovery-suite .tw-mast::after{border-color:rgba(255,255,255,.13)}
 /* ---- freeze everything above the tabs ---- */
 /* compact once scrolled: drop the action row and the blocker detail line */
 @media(prefers-reduced-motion:reduce){.tw-frozen *{transition:none}}
@@ -182,9 +196,17 @@
      11.5px micro           (dates, deltas, chips, footnotes)
    ============================================================ */
 /* step 1 â€” headline */
+  .discovery-suite .tw-k b,.discovery-suite .tw-mx b,.discovery-suite .tw-st b,.discovery-suite .tw-soc b{font-size:20px;letter-spacing:-.6px}
 /* step 2 â€” panel stat */
+  .discovery-suite .tw-band b,.discovery-suite .tw-mini b,.discovery-suite .tw-ms2 b,.discovery-suite .tw-cdh__m b,.discovery-suite .tw-cm__st b,.discovery-suite .tw-cw__g b,.discovery-suite .tw-calcp__f b,
+  .discovery-suite .tw-dr__s b,.discovery-suite .tw-cin .tw-in{font-size:14px;letter-spacing:-.35px}
 /* step 3 â€” row value */
+  .discovery-suite .tw-v,.discovery-suite .tw-kv b,.discovery-suite .tw-dc2__r b,.discovery-suite .tw-oc__r b,.discovery-suite .tw-po b,.discovery-suite .tw-str b,.discovery-suite .tw-cw__hl b,.discovery-suite .tw-dl b,
+  .discovery-suite .tw-calc b,.discovery-suite .tw-selbar .sum b,.discovery-suite .tw-cwin,.discovery-suite .tw-in,.discovery-suite .tw-ed,.discovery-suite .tw-adf > *,.discovery-suite .tw-ft > *,.discovery-suite .tw-agtot b{font-size:12.5px}
+  .discovery-suite .tw-ms2 b.s{font-size:12.5px}
 /* step 4 â€” micro */
+  .discovery-suite .tw-d,.discovery-suite .tw-delta,.discovery-suite .tw-id,.discovery-suite .tw-fe b,.discovery-suite .tw-kid,.discovery-suite .tw-cc,.discovery-suite .tw-sub2,.discovery-suite .tw-s{font-size:11.5px}
+  .discovery-suite .tw-cc{font-size:9.5px}
 /* mono everywhere a number lives, so digits align column to column */
   .discovery-suite .tw-v,.discovery-suite .tw-kv b.m,.discovery-suite .tw-dl b.m,.discovery-suite .tw-ms2 b,.discovery-suite .tw-mini b,.discovery-suite .tw-cdh__m b,.discovery-suite .tw-cm__st b,.discovery-suite .tw-cw__g b,
   .discovery-suite .tw-calcp__f b,.discovery-suite .tw-dr__s b,.discovery-suite .tw-selbar .sum b,.discovery-suite .tw-cwin,.discovery-suite .tw-ed,.discovery-suite .tw-po b,.discovery-suite .tw-cw__hl b,
@@ -242,6 +264,7 @@
   .discovery-suite .tw-out .r b{font:600 12.5px var(--font-geist-mono), 'Geist Mono',monospace}
 
 /* frozen masthead â€” identical behaviour to the campaign workspace */
+  .discovery-suite .tw-mh h1,.discovery-suite .tw-mh .id,.discovery-suite .tw-mh .sub,.discovery-suite .tw-mh .st{position:relative;z-index:1}
 
 /* Shared search, dialog, drop-zone and filter rules are supplied by discovery.css.
  * Keep local overrides and animation declarations here: their cascade order matters. */
@@ -253,6 +276,8 @@
  stroke-linecap:round}
 
 /* client-link switch â€” was used in markup without its rules, so it rendered invisible */
+  .discovery-suite .tw-sw{width:32px;height:18px;border-radius:999px;background:var(--tw-line);position:relative;
+ flex:0 0 auto;cursor:pointer;border:0;padding:0;transition:background .18s var(--tw-ez)}
   .discovery-suite .tw-sw::after{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
  background:#fff;transition:transform .18s var(--tw-ez);box-shadow:0 1px 3px rgba(11,15,26,.28)}
 
@@ -294,6 +319,8 @@
 /* import drop zone */
 
 /* intelligence loading state on the profile score */
+  .discovery-suite .tw-spin{width:52px;height:52px;flex:0 0 auto;border-radius:50%;
+ border:5px solid rgba(255,255,255,.25);border-top-color:#fff;animation:tw-spin 1s linear infinite}
 @keyframes tw-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.tw-spin{animation-duration:2.4s}}
 
@@ -333,9 +360,3 @@
 .tw-category-editor__pending { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
 .tw-category-editor__pending small { flex-basis:100%; }
 .tw-category-editor__pending button { border:1px solid #dce4f5; border-radius:8px; padding:9px 14px; background:#fff; color:#153a7a; font:inherit; }
-
-/* Keep the established motion rules explicit in the legacy sheet. */
-.discovery-suite .tw-sw{width:32px;height:18px;border-radius:999px;background:var(--tw-line);position:relative;
- flex:0 0 auto;cursor:pointer;border:0;padding:0;transition:background .18s var(--tw-ez)}
-.discovery-suite .tw-spin{width:52px;height:52px;flex:0 0 auto;border-radius:50%;
- border:5px solid rgba(255,255,255,.25);border-top-color:#fff;animation:tw-spin 1s linear infinite}
