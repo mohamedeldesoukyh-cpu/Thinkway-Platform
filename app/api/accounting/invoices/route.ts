@@ -14,7 +14,7 @@ export async function GET(request:Request){
    const invoice=z.string().uuid().parse(q.get('invoice'));
    const r=await db.rpc('tw_accounting_invoice_fx',{p_invoice:invoice,p_company:company});if(r.error)throw new Error(r.error.message);return reply(r.data);
   }
-  const result=await db.from('tw_accounting_invoice_submissions').select('invoice_id,company_id,client_code,client_name,source,status,version,journal_id,submitted_at',{count:'exact'}).eq('company_id',company).neq('status','withdrawn').order('submitted_at',{ascending:false}).order('invoice_id').range(page*50,page*50+49);
+  const result=await db.from('tw_accounting_invoice_submissions').select('invoice_id,company_id,client_id,client_code,client_name,source,status,version,journal_id,submitted_at',{count:'exact'}).eq('company_id',company).neq('status','withdrawn').order('submitted_at',{ascending:false}).order('invoice_id').range(page*50,page*50+49);
   if(result.error)throw new Error(result.error.message);
   const ids=(result.data??[]).map(s=>s.journal_id).filter(Boolean);
   const [journals,reversals]=ids.length?await Promise.all([

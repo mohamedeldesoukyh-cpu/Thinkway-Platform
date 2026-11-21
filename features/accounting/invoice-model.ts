@@ -1,5 +1,5 @@
 import { cents,decimal } from './journal-model';
-export type InvoiceSubmission={invoice_id:string;company_id:string;client_code:string;client_name:string;source:{number:string;date:string;currency:string;net:string;vat:string;total:string};status:'submitted'|'posted'|'pending';version:number;journal_id:string|null;voucher:string|null;reversal:string|null};
+export type InvoiceSubmission={invoice_id:string;company_id:string;client_id?:string;client_code:string;client_name:string;source:{number:string;date:string;currency:string;net:string;vat:string;total:string};status:'submitted'|'posted'|'pending';version:number;journal_id:string|null;voucher:string|null;reversal:string|null};
 export type InvoiceFx={currency:string;base:string;rate:string;date:string};
 export function convertInvoiceAmount(amount:string,rate:string):string {
  if(!/^\d+(\.\d{1,8})?$/.test(rate))throw new Error('Invalid exchange rate');
