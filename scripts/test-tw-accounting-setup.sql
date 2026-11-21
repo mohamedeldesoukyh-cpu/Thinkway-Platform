@@ -1,7 +1,7 @@
 -- Development only: all fixture writes and permission changes are rolled back.
 BEGIN;
 DO $$
-DECLARE actor uuid; viewer uuid; c uuid; c2 uuid; y uuid; n integer; blocked boolean;
+DECLARE actor uuid; viewer uuid; portal uuid; c uuid; y uuid; n integer; blocked boolean;
 BEGIN
  SELECT p.id INTO actor FROM profiles p JOIN roles r ON r.id=p.role_id WHERE r.slug='super_admin' AND p.is_active LIMIT 1;
  SELECT p.id INTO viewer FROM profiles p JOIN roles r ON r.id=p.role_id WHERE r.slug='viewer' AND p.is_active
@@ -65,6 +65,18 @@ BEGIN
  IF NOT blocked THEN RAISE EXCEPTION 'AAL1 manager can write'; END IF;
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',viewer,'role','authenticated','aal','aal2')::text,true);
  PERFORM tw_accounting_add_year(c,'2028-01-01');
+ RESET ROLE;
+ SELECT p.id INTO portal FROM profiles p JOIN roles r ON r.id=p.role_id WHERE r.slug='client_user' AND p.is_active LIMIT 1;
+ IF portal IS NOT NULL THEN
+  PERFORM set_config('request.jwt.claim.sub',portal::text,true);
+  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',portal,'role','authenticated','aal','aal2')::text,true);
+  SET LOCAL ROLE authenticated;
+  IF (tw_module_access()->>'media')::boolean OR (tw_module_access()->>'accounting')::boolean THEN RAISE EXCEPTION 'Portal role received internal modules'; END IF;
+  PERFORM set_config('request.jwt.claim.sub',actor::text,true);
+  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal2')::text,true);
+  blocked:=false; BEGIN INSERT INTO tw_module_assignments(profile_id,media,accounting_role) VALUES(portal,true,'manage'); EXCEPTION WHEN OTHERS THEN blocked:=true; END;
+  IF NOT blocked THEN RAISE EXCEPTION 'Portal role assignment accepted'; END IF;
+ END IF;
  RAISE NOTICE 'PASS: fiscal dates, 12 periods, hierarchy, immutable codes/currency, concurrency versions, audit, reader/manager access, Media isolation, MFA and calendar RPC boundary';
 END $$;
 ROLLBACK;

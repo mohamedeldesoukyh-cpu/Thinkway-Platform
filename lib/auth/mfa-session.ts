@@ -1,6 +1,7 @@
 import "server-only";
 
-import { roleRequiresMfa } from "@/lib/auth/mfa-policy";
+import { accessRequiresMfa } from "@/lib/auth/mfa-policy";
+import { loadModuleAccess } from "@/lib/auth/module-access";
 import { sanitizeNextPath } from "@/lib/auth/routes";
 import { createSupabaseServerClient, getRequestAuth } from "@/lib/supabase/server";
 
@@ -8,7 +9,7 @@ import { createSupabaseServerClient, getRequestAuth } from "@/lib/supabase/serve
 export async function resolvePostLoginMfaPath(nextPath: string): Promise<string | null> {
   const supabase = await createSupabaseServerClient();
   const { roleSlug } = await getRequestAuth();
-  if (!roleRequiresMfa(roleSlug)) return null;
+  if (!accessRequiresMfa(roleSlug,await loadModuleAccess(supabase))) return null;
 
   const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (aal?.currentLevel === "aal2") return null;

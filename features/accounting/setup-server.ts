@@ -52,7 +52,7 @@ export async function loadAccountingSetup(companyId?: string): Promise<Accountin
       const assignment = m.data?.find(a => a.profile_id === r.id);
       const locked = ["admin","super_admin"].includes(role);
       return { id:r.id, full_name:r.full_name, email:r.email, role, media: locked || (assignment?.media ?? true), accounting_role: locked ? "manage" : assignment?.accounting_role ?? (role === "finance" ? "manage" : "none"), version: assignment?.version ?? null, locked };
-    });
+    }).filter(u => !["client_user","influencer"].includes(u.role));
   }
   return { access, companies, company, accounts, years, periods, users };
 }
