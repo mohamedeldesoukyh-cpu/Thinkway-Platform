@@ -1307,7 +1307,8 @@
       "features/accounting/settlement-desk.tsx",
       "features/accounting/cost-invoice-desk.tsx",
       "features/accounting/auxiliaries.tsx",
-      "features/accounting/account-moves.tsx"
+      "features/accounting/account-moves.tsx",
+      "features/accounting/allocation-controls.tsx"
     ]
   },
   {
