@@ -67,6 +67,7 @@ export const NAV_SECTIONS: NavSection[] = [
     group: "Finance",
     subgroup: "Billing & documents",
     items: [
+      { href: "/accounting", label: "TW Accounting", icon: "post" },
       { href: "/billing", label: "Billing", icon: "bill" },
       { href: "/finance/po-tracker", label: "PO tracker", icon: "po" },
       { href: "/finance/invoices", label: "Invoices", icon: "doc" },
