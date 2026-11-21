@@ -2,9 +2,10 @@
 import { useEffect,useState } from 'react';
 import { Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle } from '@/components/ui/dialog';
 import type { AccountingSetup } from './setup-types';
+import { AuxiliaryFields } from './auxiliaries';
 import { invoicePreview,localInvoicePreview,type InvoiceFx,type InvoiceSubmission } from './invoice-model';
 export function InvoiceDesk({setup,onBusyChange}:{setup:AccountingSetup;onBusyChange:(busy:boolean)=>void}){
- const company=setup.company!;
+ const company=setup.company!;const [auxiliaries,setAuxiliaries]=useState<Record<string,string>>({});
  const [rows,setRows]=useState<InvoiceSubmission[]>([]),[count,setCount]=useState(0),[page,setPage]=useState(0),[epoch,setEpoch]=useState(0);
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [selected,setSelected]=useState<InvoiceSubmission|null>(null),[date,setDate]=useState(''),[receivable,setReceivable]=useState('121001'),[revenue,setRevenue]=useState(''),[vat,setVat]=useState('231001'),[confirmed,setConfirmed]=useState(false);
@@ -17,10 +18,10 @@ export function InvoiceDesk({setup,onBusyChange}:{setup:AccountingSetup;onBusyCh
  },[company.id,page,epoch]);
  function refresh(){setLoading(true);setError('');setEpoch(n=>n+1);}
  function changePage(next:number){setLoading(true);setError('');setPage(next);}
- function review(row:InvoiceSubmission){setSelected(row);setReason('');setFx(null);setDate(row.source.date);setRevenue('');setConfirmed(false);setError('');setNotice('');}
+ function review(row:InvoiceSubmission){setSelected(row);setAuxiliaries({});setReason('');setFx(null);setDate(row.source.date);setRevenue('');setConfirmed(false);setError('');setNotice('');}
  async function write(operation:'post'|'withdraw'|'unpost'){
   if(!selected)return;setBusy(true);onBusyChange(true);setError('');
-  try{const value=operation==='post'?{invoice:selected.invoice_id,company:company.id,version:selected.version,date,receivable,revenue,vat:vat||null,rate:fx?.rate}:{invoice:selected.invoice_id,company:company.id,version:selected.version,reason};
+  try{const value=operation==='post'?{auxiliaries,invoice:selected.invoice_id,company:company.id,version:selected.version,date,receivable,revenue,vat:vat||null,rate:fx?.rate}:{invoice:selected.invoice_id,company:company.id,version:selected.version,reason};
    const r=await fetch('/api/accounting/invoices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation,value})});const data=await r.json();if(!r.ok)throw new Error(data.error);
    setSelected(null);refresh();setNotice(operation==='unpost'?'Journal is Pending and excluded from balances. Correct the invoice in Media, submit it again, then repost using the same voucher number.':operation==='post'?'Invoice posted. Its voucher is available in Journal vouchers, General ledger and Trial balance.':'Submission withdrawn. It can be reviewed and submitted again from Media.');
   }catch(e){setError(e instanceof Error?e.message:'Could not complete request');}finally{setBusy(false);onBusyChange(false);}
@@ -43,6 +44,7 @@ export function InvoiceDesk({setup,onBusyChange}:{setup:AccountingSetup;onBusyCh
  <label className="tw-ac-span">Revenue account<select required value={revenue} onChange={e=>{setRevenue(e.target.value);setConfirmed(false);}}><option value="">Choose the invoice revenue account</option>{options('revenue')}</select></label>
  {Number(selected.source.vat)>0&&<label className="tw-ac-span">Output VAT account<select required value={vat} onChange={e=>{setVat(e.target.value);setConfirmed(false);}}><option value="">Select account</option>{options('vat')}</select></label>}
  <div className="tw-ac-span tw-ac-journal-table-scroll"><table className="tw-ac-journal-table"><thead><tr><th>Account</th><th>Debit ({selected.source.currency})</th><th>Credit ({selected.source.currency})</th><th>Debit ({company.base_currency})</th><th>Credit ({company.base_currency})</th></tr></thead><tbody>{preview.map((line,i)=><tr key={i}><td>{accounts.find(a=>a.code===line.account)?.name??'Select account'}{i===0&&<small>{selected.client_code} · {selected.client_name}</small>}</td><td>{line.debit}</td><td>{line.credit}</td><td>{localPreview[i]?.debit??'—'}</td><td>{localPreview[i]?.credit??'—'}</td></tr>)}</tbody></table></div>
+ <AuxiliaryFields company={company.id} accounts={setup.accounts} codes={[revenue,vat]} value={auxiliaries} onChange={value=>{setAuxiliaries(value);setConfirmed(false);}}/>
  <p className="tw-ac-span">Local revenue and VAT are rounded separately; the local receivable is their sum.</p>
  <label className="tw-ac-check tw-ac-span"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/> I reviewed the company, date, accounts, exchange rate and both currency amounts.</label>
  <div className="tw-ac-form-actions"><button type="button" className="tw-ac-button" onClick={()=>void write('withdraw')}>Withdraw submission</button><button className="tw-ac-button tw-ac-primary" disabled={!confirmed||!!previewError||!fx}>{busy?'Posting…':'Post invoice'}</button></div>

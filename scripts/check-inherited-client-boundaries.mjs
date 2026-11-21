@@ -18,10 +18,13 @@ const files = execFileSync("git", ["ls-files"], { encoding: "utf8" }).trim().spl
     && !file.includes(".test.") && fs.existsSync(file));
 const failures = [];
 const imported = new Set();
+const parents = new Map();
+const clientEntries = new Set();
 for (const file of files) {
   const source = ts.createSourceFile(file, fs.readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true);
   const client = source.statements.some((statement) => ts.isExpressionStatement(statement)
     && ts.isStringLiteral(statement.expression) && statement.expression.text === "use client");
+  if (client) clientEntries.add(file);
   function visit(node) {
     let specifier;
     if (ts.isImportDeclaration(node)) {
@@ -39,16 +42,26 @@ for (const file of files) {
       const child = resolved && targets.get(normalize(resolved.resolvedFileName));
       if (child) {
         imported.add(child);
-        if (!client) failures.push(`${file} imports ${child} without a client boundary`);
+        if (!parents.has(child)) parents.set(child, new Set());
+        parents.get(child).add(file);
+        if (!client && !targets.has(normalize(file))) failures.push(`${file} imports ${child} without a client boundary`);
       }
     }
     ts.forEachChild(node, visit);
   }
   visit(source);
 }
+function reachesClient(file, seen = new Set()) {
+  if (clientEntries.has(file)) return true;
+  if (seen.has(file)) return false;
+  const next = new Set(seen).add(file);
+  const importers = [...(parents.get(file) ?? [])];
+  return importers.length > 0 && importers.every(parent => reachesClient(parent, next));
+}
 for (const file of targets.values()) {
   if (!fs.existsSync(file)) failures.push(`Remove missing file from boundary manifest: ${file}`);
   else if (!imported.has(file)) failures.push(`Review unused boundary manifest entry: ${file}`);
+  else if (!reachesClient(file)) failures.push(`No verified client entry for inherited component: ${file}`);
 }
 if (failures.length) {
   console.error(failures.join("\n"));

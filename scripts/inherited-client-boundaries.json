@@ -1268,6 +1268,71 @@
   {
     "file": "features/accounting/receipt-desk.tsx",
     "parents": [
+      "features/accounting/settlement-desk.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/settlement-desk.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/statement-desk.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/cost-invoice-desk.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/allocation-controls.tsx",
+    "parents": [
+      "features/accounting/settlement-desk.tsx",
+      "features/accounting/cost-invoice-desk.tsx",
+      "features/accounting/statement-desk.tsx",
+      "features/accounting/journal-desk.tsx",
+      "features/accounting/auxiliaries.tsx",
+      "features/accounting/account-moves.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/code-lookup.tsx",
+    "parents": [
+      "features/accounting/journal-desk.tsx",
+      "features/accounting/settlement-desk.tsx",
+      "features/accounting/cost-invoice-desk.tsx",
+      "features/accounting/auxiliaries.tsx",
+      "features/accounting/account-moves.tsx",
+      "features/accounting/allocation-controls.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/voucher-preview.tsx",
+    "parents": [
+      "features/accounting/journal-desk.tsx",
+      "features/accounting/settlement-desk.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/auxiliaries.tsx",
+    "parents": [
+      "features/accounting/console.tsx",
+      "features/accounting/journal-desk.tsx",
+      "features/accounting/account-moves.tsx",
+      "features/accounting/settlement-desk.tsx",
+      "features/accounting/cost-invoice-desk.tsx",
+      "features/accounting/invoice-desk.tsx",
+      "features/accounting/statement-desk.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/account-moves.tsx",
+    "parents": [
       "features/accounting/console.tsx"
     ]
   }
