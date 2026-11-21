@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { mfaRedirectPath, roleRequiresMfa } from "./mfa-policy";
+import { accessRequiresMfa, mfaRedirectPath, roleRequiresMfa } from "./mfa-policy";
+
+test("assigned accounting managers require MFA regardless of Media role",()=>{
+  assert.equal(accessRequiresMfa("viewer",{manage:true}),true);
+  assert.equal(accessRequiresMfa("operations",{manage:true}),true);
+  assert.equal(accessRequiresMfa("viewer",{manage:false}),false);
+  assert.equal(accessRequiresMfa("admin",{manage:false}),true);
+});
 
 test("roleRequiresMfa covers privileged roles only", () => {
   assert.equal(roleRequiresMfa("super_admin"), true);
