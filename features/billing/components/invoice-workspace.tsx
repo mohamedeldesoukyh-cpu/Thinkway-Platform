@@ -11,6 +11,7 @@ import {
 } from "@/components/finance/suite";
 import { InvoiceWorkspaceKpiStrip } from "@/features/billing/components/invoice-workspace-kpi-strip";
 import { InvoiceRegenerationPanel } from "@/features/billing/components/invoice-regeneration-panel";
+import { InvoiceAccountingBridge } from "./invoice-accounting-bridge";
 import { InvoiceViewMenu } from "@/features/billing/components/invoice-view-menu";
 import {
   decideFinancialApprovalAction,
@@ -179,6 +180,7 @@ export function InvoiceWorkspaceView({ invoice, returnTo = "/finance/invoices" }
         <InvoiceRegenerationPanel invoice={invoice} />
       </div>
 
+      <InvoiceAccountingBridge invoiceId={invoice.id} />
       <InvoiceWorkspaceKpiStrip invoice={invoice} />
 
       <div className="tw-c">
