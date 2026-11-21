@@ -32,3 +32,5 @@ Database integration: use the development-only psql runner with
 
 Journal entry, posting, ledger balances, closing, foreign-currency rates and
 Media invoice/collection synchronization are subsequent stages, not active features.
+
+Dev browser verification passed: company creation, account creation, Arabic name persistence, account editing/deactivation followed by reload, fiscal calendar and dual-module chooser. The isolated browser test company was removed; only Thinkway remains. Portal role users are also excluded without a membership link, covered by rollback SQL tests.
