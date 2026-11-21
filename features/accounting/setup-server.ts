@@ -33,7 +33,7 @@ export async function loadAccountingSetup(companyId?: string): Promise<Accountin
     accounts = (a.data ?? []).map(row => ({ code: row.code, name: row.name, nameAr: row.name_ar, parent: row.parent_code, type: row.account_type, normal: row.normal_balance, kind: row.kind, subledger: row.subledger ?? undefined, active: row.active, version: row.version }));
     years = (y.data ?? []) as FiscalYear[];
     if (years.length) {
-      const result = await db.from("tw_accounting_periods").select("id,year_id,period_number,start_date,end_date").in("year_id",years.map(y => y.id)).order("start_date");
+      const result = await db.from("tw_accounting_periods").select("id,year_id,period_number,start_date,end_date,is_closed,lock_reason,version").in("year_id",years.map(y => y.id)).order("start_date");
       if (result.error) throw new Error("Could not load fiscal periods.");
       periods = (result.data ?? []) as FiscalPeriod[];
     }
