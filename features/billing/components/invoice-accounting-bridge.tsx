@@ -1,0 +1,16 @@
+// Inherits InvoiceWorkspace's client boundary.
+import { useEffect,useState } from 'react';
+type Bridge={companies:{id:string;name:string;currency:string}[];canSubmit:boolean;submission:null|{company:string;companyName:string;status:string;version:number;voucher:string|null;reversal:string|null}};
+export function InvoiceAccountingBridge({invoiceId}:{invoiceId:string}){
+ const [data,setData]=useState<Bridge|null>(null),[company,setCompany]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[epoch,setEpoch]=useState(0);
+ useEffect(()=>{const controller=new AbortController();void fetch(`/api/invoices/accounting?invoice=${invoiceId}`,{cache:'no-store',signal:controller.signal}).then(async r=>{const value=await r.json();if(!r.ok)throw new Error(value.error);if(!controller.signal.aborted){setData(value);setCompany(value.submission?.company??(value.companies.length===1?value.companies[0].id:''));setError('');}}).catch(e=>{if(!controller.signal.aborted)setError(e.message);});return()=>controller.abort();},[invoiceId,epoch]);
+ async function write(operation:'submit'|'withdraw'){
+  if(operation==='submit'&&!window.confirm('Submit this invoice to the selected accounting company? Posting will be reviewed separately in TW Accounting.'))return;
+  if(operation==='withdraw'&&!window.confirm('Withdraw this unposted accounting submission?'))return;
+  setBusy(true);setError('');try{const r=await fetch('/api/invoices/accounting',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation,value:{invoice:invoiceId,company,version:data?.submission?.version}})});const value=await r.json();if(!r.ok)throw new Error(value.error);setEpoch(n=>n+1);}catch(e){setError(e instanceof Error?e.message:'Accounting request failed');}finally{setBusy(false);}
+ }
+ const submission=data?.submission;const available=!submission||submission.status==='withdrawn';
+ return <div className="tw-c"><div className="tw-ch"><strong>TW Accounting</strong>{data?<>
+ {available?<><span className="tw-cs">Not posted to Accounting</span>{data.canSubmit&&<><label>Company <select aria-label="Destination accounting company" value={company} onChange={e=>setCompany(e.target.value)} disabled={busy}><option value="">Select company</option>{data.companies.map(c=><option key={c.id} value={c.id}>{c.name} · {c.currency}</option>)}</select></label><button className="tw-b sm" disabled={!company||busy} onClick={()=>void write('submit')}>Submit to Accounting</button></>}</>:<><span className="tw-cs">{submission.companyName} · {submission.status==='submitted'?'Awaiting posting':submission.status==='reversed'?'Reversed':'Posted'} {submission.voucher??''}{submission.reversal&&` · Reversal ${submission.reversal}`}</span>{submission.status==='submitted'&&data.canSubmit&&<button className="tw-b sm" disabled={busy} onClick={()=>void write('withdraw')}>Withdraw submission</button>}</>}
+ </>:<span>{error?'Accounting status unavailable':'Loading accounting status…'}</span>}<button className="tw-b sm" disabled={busy} onClick={()=>setEpoch(n=>n+1)}>Refresh accounting status</button></div>{error&&<p role="alert">{error}</p>}</div>;
+}

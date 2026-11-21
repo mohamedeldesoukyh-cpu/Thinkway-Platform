@@ -1252,5 +1252,17 @@
       "components/ui/popover.tsx",
       "components/ui/select.tsx"
     ]
+  },
+  {
+    "file": "features/accounting/invoice-desk.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
+  },
+  {
+    "file": "features/billing/components/invoice-accounting-bridge.tsx",
+    "parents": [
+      "features/billing/components/invoice-workspace.tsx"
+    ]
   }
 ]

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { accountingContext } from '@/features/accounting/setup-server';
 import { isoDate,journalSchema,journalActionSchema,reversalSchema,periodSchema } from '@/features/accounting/journal-validation';
 import { assertCsrfRequest } from '@/lib/security/csrf';
-const header='id,company_id,entry_date,reference,memo,status,voucher_number,version,reversal_of,reversal_reason,created_at,posted_at';
+const header='id,company_id,entry_date,reference,memo,status,voucher_number,version,reversal_of,reversal_reason,source_invoice_id,created_at,posted_at';
 const reply=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
 const message=(e:unknown)=>e instanceof z.ZodError?e.issues[0]?.message:e instanceof Error?e.message:'Accounting request failed';
 export async function GET(request:Request){
@@ -14,7 +14,7 @@ export async function GET(request:Request){
    const id=z.string().uuid().parse(q.get('id'));
    const [j,l,r]=await Promise.all([
     db.from('tw_accounting_journals').select(header).eq('id',id).eq('company_id',company).single(),
-    db.from('tw_accounting_journal_lines').select('account_code,account_name,description,debit,credit').eq('journal_id',id).eq('company_id',company).order('line_number'),
+    db.from('tw_accounting_journal_lines').select('account_code,account_name,description,debit,credit,client_code').eq('journal_id',id).eq('company_id',company).order('line_number'),
     db.from('tw_accounting_journals').select(header).eq('reversal_of',id).eq('company_id',company).maybeSingle(),
    ]);
    if(j.error||l.error||r.error)return reply({error:'Journal could not be loaded'},404);
