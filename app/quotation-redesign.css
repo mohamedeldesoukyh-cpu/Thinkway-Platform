@@ -63,11 +63,7 @@
 }
 
 /* —— Buttons (mock .btn) —— */
-.quotation-editor-rd4 .btn,
-.quotation-editor-rd4 [data-slot="button"].q-btn,
-.quotation-editor-rd4 .q-wtop-acts > button,
-.quotation-editor-rd4 .q-wtop-acts > a,
-.quotation-editor-rd4 .q-wtop-acts > div > button {
+.quotation-editor-rd4 .btn {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -87,62 +83,20 @@
     border-color 0.14s;
 }
 
-.quotation-editor-rd4 .btn.sm,
-.quotation-editor-rd4 .q-sec-tools button,
-.quotation-editor-rd4 .q-sec-tools a {
+.quotation-editor-rd4 .btn.sm {
   height: 32px;
   padding: 0 12px;
   font-size: 12.5px;
   border-radius: 9px;
 }
 
-.quotation-editor-rd4 .btn-primary,
-.quotation-editor-rd4 .q-sec-tools .btn-primary,
-.quotation-editor-rd4 .q-sec-tools a.bg-\[var\(--q-blue\#0057ff\)\],
-.quotation-editor-rd4 .q-sec-tools a[class*="bg-[var(--q-blue"] {
+.quotation-editor-rd4 .btn-primary {
   background: var(--blue) !important;
   border-color: var(--blue) !important;
   color: #fff !important;
   box-shadow:
     0 1px 2px rgba(0, 87, 255, 0.35),
     0 6px 16px -6px rgba(0, 87, 255, 0.5) !important;
-}
-
-.quotation-editor-rd4 .ibtn {
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9px;
-  border: 1px solid var(--line-2);
-  background: var(--white);
-  color: var(--text-2);
-}
-
-.quotation-editor-rd4 .ibtn:hover {
-  background: var(--hover);
-  border-color: #d2d9e8;
-  color: var(--text);
-}
-
-.quotation-editor-rd4 .ibtn.mini {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  border-color: transparent;
-  background: transparent;
-}
-
-.quotation-editor-rd4 .ibtn.mini:hover {
-  background: var(--surface-2);
-  border-color: transparent;
-}
-
-.quotation-editor-rd4 .ibtn.mini svg {
-  width: 14px;
-  height: 14px;
 }
 
 .quotation-editor-rd4 .spill {
@@ -226,13 +180,6 @@
 
 /* Pin the outer header to the quotation scrollport. The shared masthead stays
    static inside it so its short wrapper cannot constrain sticky positioning. */
-.quotation-editor-rd4 > .quotation-frozen-header {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  background: var(--tw-bg, #fafbfc);
-  box-shadow: 0 8px 12px -12px rgba(15, 23, 42, 0.35);
-}
 
 /* The outer header owns freezing; avoid a second sticky surface inside it. */
 .quotation-editor-rd4 .tw-frozen.tw-frozen--static {
@@ -247,7 +194,7 @@
 
 /* Quotation body bands — document flow only. The editor root scrolls
    (shortlist single-scrollport). Never flex:1 / min-height:0 here. */
-.quotation-editor-rd4 .quotation-body,
+
 .quotation-editor-rd4 .scroll {
   flex: none;
   flex-grow: 0;
@@ -432,8 +379,7 @@
   margin-bottom: 10px;
 }
 
-.quotation-editor-rd4 .sec.flush > .sec-head,
-.quotation-editor-rd4 .sec.flush > .ctools {
+.quotation-editor-rd4 .sec.flush > .sec-head {
   padding: 0 var(--gut);
 }
 
@@ -505,31 +451,6 @@
 }
 
 /* —— Creators toolbar —— */
-.quotation-editor-rd4 .ctools {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
-  border: none !important;
-  padding: 0 var(--gut) !important;
-  background: transparent !important;
-}
-
-.quotation-editor-rd4 .selpill,
-.quotation-editor-rd4 .ctools [data-slot="select-trigger"] {
-  display: inline-flex !important;
-  align-items: center;
-  gap: 8px;
-  height: 36px !important;
-  padding: 0 12px !important;
-  border: 1px solid var(--line-2) !important;
-  border-radius: 10px !important;
-  background: var(--white) !important;
-  font-size: 12.5px !important;
-  font-weight: 600 !important;
-  color: var(--text-2) !important;
-  box-shadow: none !important;
-}
 
 /* —— Creator list (mock flex layout) —— */
 .quotation-editor-rd4 .creators-list {
@@ -678,16 +599,6 @@
   border-bottom: none;
 }
 
-.quotation-editor-rd4 .creators-list .oline {
-  display: flex;
-  align-items: flex-start;
-  width: 100%;
-  max-width: none;
-  padding: 11px var(--gut, 32px);
-  background: var(--surface);
-  border-top: 1px solid rgba(15, 23, 42, 0.06);
-}
-
 .quotation-editor-rd4 .creators-list .price-cell {
   display: flex;
   flex-direction: column;
@@ -741,83 +652,6 @@
 }
 
 /* —— Creator table (legacy) —— */
-.quotation-editor-rd4 .creators-table {
-  width: 100%;
-  border-top: none !important;
-  overflow-x: auto;
-}
-
-.quotation-editor-rd4 .creators-table table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  table-layout: fixed;
-}
-
-.quotation-editor-rd4 .creators-table tbody tr,
-.quotation-editor-rd4 .creators-table tbody tr:nth-child(even),
-.quotation-editor-rd4 .creators-table tbody tr:hover,
-.quotation-editor-rd4 .creators-table tbody tr[data-state="selected"] {
-  background: transparent !important;
-  border-color: var(--line) !important;
-}
-
-.quotation-editor-rd4 .creators-table tbody tr.oline {
-  background: transparent !important;
-}
-
-.quotation-editor-rd4 .creators-table tbody.cgroup {
-  border-bottom: 1px solid var(--line);
-}
-
-.quotation-editor-rd4 .creators-table [data-slot="table-header"],
-.quotation-editor-rd4 .creators-table [data-slot="table-body"],
-.quotation-editor-rd4 .creators-table [data-slot="table-footer"] {
-  background: transparent !important;
-}
-
-.quotation-editor-rd4 .creators-table [data-slot="table-row"] {
-  border-bottom: none !important;
-  transition: none !important;
-}
-
-.quotation-editor-rd4 .creators-table [data-slot="table-row"]:hover {
-  background: transparent !important;
-}
-
-.quotation-editor-rd4 .creators-table thead {
-  background: var(--white) !important;
-  backdrop-filter: none !important;
-}
-
-.quotation-editor-rd4 .creators-table thead tr {
-  border-bottom: 1px solid var(--line) !important;
-  background: var(--white) !important;
-}
-
-.quotation-editor-rd4 .creators-table thead th {
-  height: auto !important;
-  padding: 9px 8px 10px !important;
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.05em !important;
-  text-transform: uppercase !important;
-  color: var(--text-4) !important;
-  background: var(--white) !important;
-  border: none !important;
-}
-
-.quotation-editor-rd4 .creators-table thead th:first-child {
-  padding-left: var(--gut) !important;
-}
-
-.quotation-editor-rd4 .creators-table thead th:last-child {
-  padding-right: var(--gut) !important;
-}
-
-.quotation-editor-rd4 .creators-table tbody {
-  border-bottom: 1px solid var(--line);
-}
 
 /* Clip the photo itself — wrap stays overflow:visible for flag/star badges. */
 
@@ -847,13 +681,6 @@
   line-height: 1.2;
 }
 
-.quotation-editor-rd4 .cg-cats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 5px;
-}
-
 .quotation-editor-rd4 .plat-ic {
   width: 26px;
   height: 26px;
@@ -865,128 +692,17 @@
   border: 1px solid var(--line-2);
 }
 
-.quotation-editor-rd4 .cg-head [class*="text-muted"],
+
 .quotation-editor-rd4 .cg-handle {
   font-size: 11.5px !important;
   color: var(--text-4) !important;
   margin-top: 1px;
 }
 
-.quotation-editor-rd4 .cg-cats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 5px;
-}
-
-.quotation-editor-rd4 .cg-cats > * {
-  display: inline-flex !important;
-  align-items: center;
-  padding: 2px 8px !important;
-  border-radius: 6px !important;
-  background: var(--surface) !important;
-  border: 1px solid var(--line) !important;
-  font-size: 10.5px !important;
-  font-weight: 500 !important;
-  color: var(--text-2) !important;
-}
-
-.quotation-editor-rd4 .oline td,
-.quotation-editor-rd4 .creators-table tr.oline [data-slot="table-cell"] {
-  padding: 8px 8px !important;
-  background: var(--surface) !important;
-  border-top: 1px solid var(--line) !important;
-  border-bottom: none !important;
-  vertical-align: middle !important;
-  white-space: nowrap !important;
-  line-height: 1.2;
-}
-
-.quotation-editor-rd4 .oline td.price-cell {
-  text-align: right !important;
-  white-space: nowrap !important;
-}
-
-.quotation-editor-rd4 .oline .price-cell .price-gp-sub {
-  display: none !important;
-}
-
-.quotation-editor-rd4 .oline .price-cell > div {
-  gap: 1px !important;
-  padding: 0 !important;
-}
-
-.quotation-editor-rd4 .oline .price-cell .text-sm {
-  font-size: 12.5px !important;
-  line-height: 1.2 !important;
-}
-
-.quotation-editor-rd4 .oline .type-sel,
-.quotation-editor-rd4 .oline .type-sel-trigger,
-.quotation-editor-rd4 .oline .type-sel-trigger.type-sel {
-  height: 34px !important;
-  min-height: 34px !important;
-  max-height: 34px !important;
-  border: 1px solid var(--line-2) !important;
-  border-radius: 8px !important;
-  background: var(--white) !important;
-  font-size: 12.5px !important;
-  box-shadow: none !important;
-}
-
-.quotation-editor-rd4 .oline [data-slot="checkbox"] {
-  width: 16px !important;
-  height: 16px !important;
-}
-
-.quotation-editor-rd4 .oline .plat-ic,
-.quotation-editor-rd4 .oline .co-plat [data-slot="button"],
-.quotation-editor-rd4 .oline .co-plat .size-\[26px\] {
-  width: 26px !important;
-  height: 26px !important;
-  min-height: 26px !important;
-}
-
 /* Multi-type rows: keep overlapping platform badges stacked (do not expand the cell). */
 
-.quotation-editor-rd4 .oline td:first-child {
-  padding-left: var(--gut) !important;
-}
 
-.quotation-editor-rd4 .oline td:last-child {
-  padding-right: var(--gut) !important;
-}
-
-.quotation-editor-rd4 .oline:hover td {
-  background: var(--surface) !important;
-}
-
-.quotation-editor-rd4 .oline input,
-.quotation-editor-rd4 .oline [data-slot="select-trigger"] {
-  height: 34px !important;
-  padding: 0 11px !important;
-  border: 1px solid var(--line-2) !important;
-  border-radius: 8px !important;
-  background: var(--white) !important;
-  font-size: 12.5px !important;
-  color: var(--text) !important;
-  box-shadow: none !important;
-}
-
-.quotation-editor-rd4 .tierbadge,
-.quotation-editor-rd4 .oline [class*="tier"] {
-  display: inline-flex !important;
-  align-items: center;
-  height: 20px !important;
-  padding: 0 9px !important;
-  border-radius: 20px !important;
-  font-size: 10.5px !important;
-  font-weight: 700 !important;
-}
-
-.quotation-editor-rd4 .oline button[class*="text-[var(--blue-text"],
-.quotation-editor-rd4 .price-cell a,
-.quotation-editor-rd4 .oline a {
+.quotation-editor-rd4 .price-cell a {
   font-size: 11px !important;
   font-weight: 600 !important;
   color: var(--blue-text) !important;
@@ -1032,18 +748,6 @@
 }
 
 /* —— Docs + notes —— */
-.quotation-editor-rd4 .sec .cols2 {
-  padding: 0;
-  border-bottom: none;
-  background: transparent;
-}
-
-.quotation-editor-rd4 .cols2 {
-  display: grid;
-  grid-template-columns: 1.1fr 1px 1fr;
-  gap: 28px;
-  align-items: start;
-}
 
 .quotation-editor-rd4 .dgrid {
   display: grid;
@@ -1132,24 +836,6 @@
   color: var(--text-4);
 }
 
-.quotation-editor-rd4 .cols2 .thinkway-campaign-section-card,
-.quotation-editor-rd4 .cols2 .thinkway-campaign-info-card {
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  border-radius: 0 !important;
-  padding: 0 !important;
-}
-
-.quotation-editor-rd4 .cols2 .thinkway-campaign-section-head {
-  display: none !important;
-}
-
-.quotation-editor-rd4 .vdiv {
-  background: var(--line);
-  align-self: stretch;
-}
-
 .quotation-editor-rd4 .subh {
   font-size: 12.5px;
   font-weight: 800;
@@ -1161,46 +847,6 @@
   font-size: 11.5px;
   color: var(--text-3);
   margin-bottom: 14px;
-}
-
-.quotation-editor-rd4 .cols2 .thinkway-campaign-form-grid,
-.quotation-editor-rd4 .cols2 [class*="grid"] {
-  gap: 14px !important;
-}
-
-.quotation-editor-rd4 .cols2 .thinkway-campaign-field-label,
-.quotation-editor-rd4 .cols2 .dlbl {
-  display: block;
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.05em !important;
-  text-transform: uppercase !important;
-  color: var(--text-4) !important;
-  margin-bottom: 6px !important;
-}
-
-.quotation-editor-rd4 .cols2 input,
-.quotation-editor-rd4 .cols2 [data-slot="select-trigger"],
-.quotation-editor-rd4 .cols2 .thinkway-dropdown-trigger,
-.quotation-editor-rd4 .cols2 textarea {
-  border: 1px solid var(--line-2) !important;
-  border-radius: 9px !important;
-  background: var(--white) !important;
-  font-size: 13px !important;
-  color: var(--text) !important;
-  box-shadow: none !important;
-}
-
-.quotation-editor-rd4 .cols2 input,
-.quotation-editor-rd4 .cols2 [data-slot="select-trigger"],
-.quotation-editor-rd4 .cols2 .thinkway-dropdown-trigger {
-  height: 40px !important;
-}
-
-.quotation-editor-rd4 .cols2 textarea {
-  min-height: 250px !important;
-  padding: 12px 14px !important;
-  border-radius: 10px !important;
 }
 
 /* —— Terms —— */
@@ -1261,13 +907,8 @@
     --gut: 20px;
   }
 
-  .quotation-editor-rd4 .field-row,
-  .quotation-editor-rd4 .cols2 {
+  .quotation-editor-rd4 .field-row {
     grid-template-columns: 1fr;
-  }
-
-  .quotation-editor-rd4 .vdiv {
-    display: none;
   }
 }
 
@@ -1370,13 +1011,6 @@
   color: var(--text-4, #9aa3b5);
   margin-top: 1px;
   line-height: 1.2;
-}
-
-.commercial-workspace-dialog .cg-cats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 5px;
 }
 
 /*

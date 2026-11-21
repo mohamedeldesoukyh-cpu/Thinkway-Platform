@@ -85,10 +85,6 @@
 .workspace-redesign [data-workspace-section="collapsible"] > button { padding: 11px 14px; gap: 8px; align-items: start; }
 .workspace-redesign [data-workspace-section="collapsible"] > button h3 { font-size: 12px; }
 .workspace-redesign [data-workspace-section="collapsible"] > button p { white-space: normal; overflow-wrap: anywhere; font-size: 10.5px; }
-.workspace-redesign .campaign-detail-suite .thinkway-aurora-tl-row { padding: 11px 0; border-bottom: 1px solid #e7ecf4; background: #fff; align-items: start; }
-.workspace-redesign .campaign-detail-suite .thinkway-aurora-tl-ic { width: 28px; height: 28px; border-radius: 50%; background: #eff4ff; color: #0b52e0; }
-.workspace-redesign .campaign-detail-suite .thinkway-aurora-tl-t1 { font-size: 12px; }
-.workspace-redesign .campaign-detail-suite .thinkway-aurora-tl-t2 { font-size: 11px; white-space: normal; }
 .workspace-redesign .assignment-commercial-pane { margin: 0 !important; border: 0 !important; border-top: 1px solid #d8e0ee !important; border-radius: 0 !important; box-shadow: 0 -14px 34px -18px rgb(17 24 39 / 42%); }
 .workspace-redesign .assignment-commercial-pane .acp-resizer { background: #fff; height: 8px; }
 .workspace-redesign .assignment-commercial-pane .acp-heading { display: flex !important; gap: 12px; flex-wrap: wrap; padding: 10px 14px !important; background: #fff !important; }
@@ -104,9 +100,6 @@
 .workspace-redesign .assignment-commercial-pane .acp-section h3 { margin: 0 0 11px; padding: 0 0 9px; border: 0; border-bottom: 1px solid rgb(17 24 39 / 8%); background: transparent; color: #111827; font-size: 12px; font-weight: 700; }
 .workspace-redesign .assignment-commercial-pane .acp-fields { grid-template-columns: repeat(auto-fit,minmax(132px,1fr)); gap: 10px; }
 .workspace-redesign .assignment-commercial-pane .acp-total > span { font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
-.workspace-redesign .assignment-commercial-pane .acp-section-total { margin-top: 11px; padding-top: 10px; border-top: 1px solid rgb(17 24 39 / 10%); display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
-.workspace-redesign .assignment-commercial-pane .acp-section-total > span { color: #64748b; font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; }
-.workspace-redesign .assignment-commercial-pane .acp-section-total > strong { font: 700 15px var(--font-geist-mono),Consolas,monospace; overflow-wrap: anywhere; }
 .workspace-redesign .assignment-commercial-pane .acp-footer { padding: 10px 14px; font-size: 10.5px; }
 @media(max-width:1100px) { .workspace-redesign .wr-io-sections,.workspace-redesign .wr-io-edit-sections { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media(max-width:860px) { .workspace-redesign .wr-io-sections,.workspace-redesign .wr-io-edit-sections { grid-template-columns: minmax(0,1fr); } .workspace-redesign .assignment-commercial-pane .acp-sections { grid-template-columns: minmax(0,1fr); } .workspace-redesign .wr-body-kpi { flex-basis: 45%; } .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent { margin-bottom: 10px !important; border: 1px solid #e7ecf4 !important; border-radius: 10px !important; } }

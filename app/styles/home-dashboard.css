@@ -433,48 +433,6 @@
 }
 
 /* mini bar chart — scoped under .tw-bars so Discovery .tw-bar meters stay */
-.home-dashboard-suite .tw-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  height: 74px;
-  margin-top: 10px;
-}
-.home-dashboard-suite .tw-bars .tw-bar {
-  flex: 1;
-  border-radius: 4px 4px 1px 1px;
-  background: var(--tw-grad);
-  position: relative;
-  transform-origin: bottom;
-  animation: home-dash-grow 0.66s var(--tw-ez) both;
-  min-height: 3px;
-}
-.home-dashboard-suite .tw-bars .tw-bar.v {
-  background: linear-gradient(180deg, #7b5ce0, #5b3fd1);
-}
-.home-dashboard-suite .tw-bars .tw-bar.g {
-  background: linear-gradient(180deg, #2fbf8f, #0a7a55);
-}
-.home-dashboard-suite .tw-bars .tw-bar.y {
-  background: linear-gradient(180deg, #e8a93f, #b4780a);
-}
-.home-dashboard-suite .tw-bars .tw-bar.c {
-  background: linear-gradient(180deg, #3fc2e8, #0a6e8a);
-}
-.home-dashboard-suite .tw-bars .tw-bar:hover::after {
-  content: attr(data-v);
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 6px);
-  transform: translateX(-50%);
-  background: var(--tw-navy);
-  color: #fff;
-  padding: 3px 7px;
-  border-radius: 6px;
-  font: 600 10px "Geist Mono", monospace;
-  white-space: nowrap;
-  z-index: 8;
-}
 @keyframes home-dash-grow {
   from {
     transform: scaleY(0);
@@ -482,13 +440,6 @@
   to {
     transform: scaleY(1);
   }
-}
-.home-dashboard-suite .tw-ax {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 6px;
-  font: 500 9.5px "Geist Mono", monospace;
-  color: var(--tw-mut);
 }
 
 /* progress ring */
@@ -575,11 +526,6 @@
 
 .home-dashboard-suite .tw-av.k1 {
   background: linear-gradient(150deg, #0057ff, #1a6fff);
-}
-.home-dashboard-suite .tw-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 11px;
 }
 
 /* MIX badge — not the frozen metrics-grid .tw-mx */
@@ -731,9 +677,6 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
-  .home-dashboard-suite .tw-bars .tw-bar {
-    transform: scaleY(1);
-  }
   .home-dashboard-suite .tw-ring .fg {
     stroke-dashoffset: var(--off);
   }
@@ -784,10 +727,8 @@
 .home-dashboard-suite .tw-big { font-size: clamp(20px, 1.65vw, 28px); font-variant-numeric: tabular-nums; }
 .home-dashboard-suite .tw-jn b { font-size: 18px; line-height: 1.5; font-variant-numeric: tabular-nums; }
 .home-dashboard-suite .tw-jn u { font-size: 12px; line-height: 1.5; color: var(--tw-ink2); }
-.home-dashboard-suite .tw-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 700px) {
   .home-dashboard-suite .tw-ms2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .home-dashboard-suite .tw-tiles { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 420px) {
   .home-dashboard-suite .tw-ms2 { grid-template-columns: minmax(0, 1fr); }

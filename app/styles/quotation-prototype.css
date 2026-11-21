@@ -57,8 +57,6 @@
 }
 .qx *{box-sizing:border-box}
 .qx :focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:5px}
-.qx .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);
-  white-space:nowrap}
 .qx .sp{flex:1 1 auto}
 .qx [dir=rtl] .mono,.qx .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;
   font-weight:700;letter-spacing:-.2px;white-space:nowrap}
@@ -76,12 +74,6 @@
 
 /* the band: internal half is darker, client half lighter — as it is today */
 /* reserve a common label height only where the cells sit side by side */
-@media (min-width:1101px){ }
-
-@media (max-width:1100px){
-}
-@media (max-width:760px){
-}
 
 /* ==========================================================================
    SHELL + ACTION BAR
@@ -89,28 +81,13 @@
 /* Full width. The quotation grid is the point of this page and a 1680px
    cap left large empty margins on a 1920 screen while the service column
    was still cramped. */
-.qx-main{max-width:none;margin:0;padding:0 14px 56px}
 
 /* One action bar replaces three stacked bands. Display toggles and
    discovery navigation moved into popovers on the same row. */
-.qx-bar{z-index:30;background:var(--surf);
-  border-bottom:1px solid var(--line);box-shadow:var(--e1)}
-.qx-bar__in{max-width:none;margin:0;padding:10px 14px;
-  display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
-.qx-bar__st{display:inline-flex;align-items:center;gap:6px;font:600 var(--fs-sm) var(--sans);
-  padding-inline-end:4px}
-.qx-bar__st i{width:7px;height:7px;border-radius:50%;flex:0 0 auto;background:var(--ok)}
-.qx-bar__st--dirty{color:var(--wrn)} .qx-bar__st--dirty i{background:var(--wrn)}
-.qx-bar__st--saving{color:var(--blue-i)} .qx-bar__st--saving i{background:var(--blue)}
-.qx-bar__st--error{color:var(--bad)} .qx-bar__st--error i{background:var(--bad)}
-.qx-div{width:1px;height:18px;background:var(--line);flex:0 0 auto;
-  margin-inline:2px}
 
 /* ---- section navigation: predictable place for every section ---- */
 .qx-sec-nav{z-index:29;background:var(--bg);
   border-bottom:1px solid var(--hair)}
-.qx-sec-nav__in{max-width:none;margin:0;padding:8px 14px;display:flex;gap:3px;
-  overflow-x:auto;scrollbar-width:thin}
 .qx-sec-nav button{border:0;background:none;border-radius:999px;padding:0 13px;
   min-height:31px;cursor:pointer;font:600 var(--fs-sm) var(--sans);color:var(--mut);
   white-space:nowrap;position:relative}
@@ -130,15 +107,10 @@
 .qx .b:disabled{opacity:.42;cursor:not-allowed}
 .qx .b--pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .qx .b--pri:hover:not(:disabled){background:var(--blue-i);border-color:var(--blue-i)}
-.qx .b--save{background:var(--ok);border-color:var(--ok);color:#fff}
-.qx .b--save:hover:not(:disabled){background:#086446;border-color:#086446}
-.qx .b--danger{border-color:var(--bad-br);background:var(--surf);color:var(--bad)}
-.qx .b--danger:hover:not(:disabled){background:var(--bad-b);border-color:var(--bad)}
-.qx .b--warn{border-color:var(--wrn-br);background:var(--wrn-b);color:var(--wrn)}
 /* kept as aliases so call sites need not change; both are neutral now */
-.qx .b--fav,.qx .b--fin{border-color:var(--line);background:var(--surf);
+.qx .b--fin{border-color:var(--line);background:var(--surf);
   color:var(--ink2)}
-.qx .b--fav:hover:not(:disabled),.qx .b--fin:hover:not(:disabled){
+.qx .b--fin:hover:not(:disabled){
   border-color:#A9BEDF;background:var(--soft)}
 .qx .b--ghost{border-color:transparent;background:transparent}
 .qx .b--ghost:hover:not(:disabled){background:var(--soft2)}
@@ -162,8 +134,6 @@
 .qx .in--num{text-align:end;font-family:var(--mono);font-weight:700;
   font-variant-numeric:tabular-nums}
 .qx .in--xs{min-height:25px;font-size:var(--fs-sm);padding:2px 6px}
-.qx .lab{display:block;font:600 var(--fs-sm) var(--sans);color:var(--mut);
-  margin-bottom:3px}
 
 /* ---- chips ---- */
 .qx .chip{display:inline-flex;align-items:center;gap:4px;border-radius:5px;
@@ -189,7 +159,6 @@
    resolve against THAT box instead of the viewport. The column header was
    parking --stick pixels down inside the card — i.e. in the middle of the
    table, on top of the rows. The creators section must not clip. */
-.qx .card--flow{overflow:visible}
 .qx .card__h{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;
   padding:10px 14px;border-bottom:1px solid var(--hair);background:var(--surf)}
 .qx .card__h h2{margin:0;font:700 var(--fs-lg) var(--sans);letter-spacing:-.25px}
@@ -211,14 +180,6 @@
 /* ==========================================================================
    TABLE TOOLBAR + GRID
    ========================================================================== */
-.qx-tools{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;
-  padding:13px 16px;border-bottom:1px solid var(--hair)}
-.qx-tools__count{font:600 var(--fs-sm) var(--sans);color:var(--ink)}
-.qx-tools__count em{font-style:normal;color:var(--mut);font-weight:500}
-.qx-srch{position:relative;flex:0 1 230px;min-width:150px}
-.qx-srch .in{padding-inline-start:28px;min-height:var(--ctl)}
-.qx-srch svg{position:absolute;inset-block-start:50%;inset-inline-start:8px;
-  transform:translateY(-50%);color:var(--mut);pointer-events:none}
 
 /* one track list for the header and every row — they cannot drift */
 /* The creator track is sized so the compact action row — Add service ·
@@ -227,85 +188,25 @@
 /* 22px grip + the eight columns. SERVICE takes the slack because it now
    carries the description sentence as well as the chips — which is what
    fills the width on the original page. */
-.qx-grid{--cols:20px 28px minmax(262px,0.8fr) 66px minmax(340px,3fr)
-  52px 128px 142px 88px 60px}
-.qx-head,.qx-row{display:grid;grid-template-columns:var(--cols);gap:0 12px;
-  padding:0 14px;align-items:center}
-.qx-head{margin:0 10px}
-.qx-head{min-height:32px;background:var(--surf);
-  border-bottom:1px solid var(--line);z-index:20}
-.qx-head span{font:600 var(--fs-micro) var(--sans);letter-spacing:.7px;
-  text-transform:uppercase;color:var(--mut)}
-.qx-head .num,.qx-row .num{text-align:end}
-.qx-head .ctr,.qx-row .ctr{text-align:center;justify-self:center}
 
 /* Each creator is a block of its own. With the subtotal row gone, groups
    ran into each other and a creator's second line looked like it belonged
    to the creator above. A gap of page colour separates them; lines WITHIN
    a creator keep a hairline, so the grouping is unambiguous. */
-.qx-group{border:1px solid var(--hair);border-radius:var(--r);
-  background:var(--surf);overflow:hidden;margin:0 10px 8px}
-.qx-group:first-of-type{margin-top:8px}
-.qx-row{min-height:46px;background:var(--surf);border-top:1px solid var(--hair)}
-.qx-group>.qx-row:first-of-type{border-top:0}
-.qx-row:hover{background:#FAFCFE}
-.qx-row.sel{background:var(--lav)}
-.qx-row.dirty{box-shadow:inset 3px 0 0 var(--wrn)}
-.qx-row.warn-row{background:#FFFCF5}
-.qx-row input[type=checkbox]{width:15px;height:15px;accent-color:var(--blue);
-  cursor:pointer;margin:0}
 
-/* ---- creator identity: shown once per group ---- */
-.qx-id{display:flex;gap:9px;min-width:0;padding:5px 0}
-.qx-av{width:30px;height:30px;border-radius:50%;flex:0 0 auto;position:relative;
-  overflow:hidden}
-.qx-av span{position:absolute;inset:0;display:flex;align-items:center;
-  justify-content:center;font:700 12px var(--sans);color:#fff}
-.qx-id__t{min-width:0;display:block}   /* a flex child inside an INLINE
+/* ---- creator identity: shown once per group ---- */   /* a flex child inside an INLINE
   parent loses its gap in layout — the row actions ran together because of
   this, not because the rule was missing */
-.qx-id__t button{border:0;background:none;padding:0;cursor:pointer;text-align:start;
-  font:650 var(--fs-md)/1.25 var(--sans);color:var(--ink);letter-spacing:-.15px;
-  overflow-wrap:anywhere;font-weight:700}
-.qx-id__t button:hover{color:var(--blue-i);text-decoration:underline;
-  text-underline-offset:2px}
-.qx-id__t span{display:block;font:500 var(--fs-sm) var(--sans);color:var(--mut);
-  overflow-wrap:anywhere}
 /* tiers sit on the handle's line — they were costing every creator a
    whole extra row */
-.qx-tiers{display:inline-flex;gap:9px;flex-wrap:wrap;margin:0 0 0 8px;
-  font:500 var(--fs-sm) var(--sans);color:var(--mut);vertical-align:baseline}
-.qx-tiers .chip{background:none;padding:0;gap:4px;font-weight:500;
-  color:var(--mut)}
 
 /* THE compact action row: Add service · Favorite · Deliverables, together,
    directly beneath creator identity. ~26px tall, 11px text. */
-.qx-acts{display:flex;gap:14px;flex-wrap:nowrap;margin-top:8px;
-  align-items:center}
-.qx-acts--line{margin-top:0}
 
 /* ---- service cell ---- */
-.qx-svc{min-width:0;padding:5px 0}
-.qx-svc__chips{display:flex;gap:5px;flex-wrap:wrap}
-.qx-svc__pkg{display:inline-flex;align-items:center;gap:4px;font:700 var(--fs-micro)
-  var(--sans);color:var(--ind);background:var(--ind-b);border:1px solid var(--ind-br);
-  border-radius:5px;padding:2px 7px}
-.qx-svc__empty{font:500 var(--fs-sm) var(--sans);color:var(--mut);font-style:italic}
-.qx-plats{display:inline-flex;gap:4px;align-items:center}
 /* the mark itself, in the platform's colour — no chip, no plate, no shadow */
-.qx-plat{display:inline-flex;align-items:center;justify-content:center;
-  flex:0 0 auto}
-.qx-plat svg{display:block}
 
 /* ---- price cell: one strong number, breakdown beneath ---- */
-.qx-price b{display:block;font:800 var(--fs-md) var(--mono);
-  font-variant-numeric:tabular-nums;letter-spacing:-.3px}
-.qx-price u{display:block;text-decoration:none;font:500 var(--fs-micro) var(--sans);
-  color:var(--mut);margin-top:1px}
-.qx-price button{border:0;background:none;padding:0;margin-top:2px;cursor:pointer;
-  font:600 var(--fs-micro) var(--sans);color:var(--blue-i)}
-.qx-price button:hover{text-decoration:underline;text-underline-offset:2px}
-.qx-price--none b{color:var(--mut);font-weight:700}
 
 /* ---- status cell: persistence only, never lifecycle ---- */
 .qx-stat{display:inline-flex;align-items:center;gap:5px;font:600 var(--fs-micro)
@@ -318,15 +219,6 @@
 /* ==========================================================================
    SELECTION BAR / TOTALS FOOTER
    ========================================================================== */
-.qx-selbar{bottom:0;z-index:25;display:flex;align-items:center;
-  gap:var(--s3);flex-wrap:wrap;padding:9px 14px;background:var(--ink);color:#fff;
-  border-radius:0 0 var(--r-l) var(--r-l)}
-.qx-selbar b{font:800 var(--fs-md) var(--mono);font-variant-numeric:tabular-nums}
-.qx-selbar u{display:block;text-decoration:none;font:600 var(--fs-micro) var(--sans);
-  color:rgba(255,255,255,.65)}
-.qx-selbar .b{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.22);
-  color:#fff}
-.qx-selbar .b:hover:not(:disabled){background:rgba(255,255,255,.2)}
 
 .qx-foot{display:flex;align-items:center;gap:var(--s5);flex-wrap:wrap;padding:11px 14px;
   background:var(--surf);border-top:1px solid var(--line)}
@@ -338,15 +230,6 @@
 /* ==========================================================================
    SHEETS + DIALOGS — same card language, one scrolling body
    ========================================================================== */
-.qx-scrim{position:fixed;inset:0;background:rgba(14,23,41,.42);z-index:50;
-  display:flex}
-.qx-scrim--end{justify-content:flex-end}
-.qx-scrim--mid{align-items:center;justify-content:center;padding:22px}
-.qx-sheet{width:min(460px,100%);height:100%;background:var(--surf);display:flex;
-  flex-direction:column;box-shadow:var(--e3)}
-.qx-dialog{width:min(1180px,100%);max-height:calc(100vh - 44px);background:var(--surf);
-  border-radius:var(--r-l);display:flex;flex-direction:column;box-shadow:var(--e3);
-  overflow:hidden}
 .qx-sh__h{padding:12px 15px;border-bottom:1px solid var(--hair);display:flex;
   align-items:flex-start;gap:10px;flex:0 0 auto}
 .qx-sh__h h3{margin:0;font:800 var(--fs-xl) var(--sans);letter-spacing:-.4px}
@@ -363,11 +246,6 @@
 .qx-sh__b::-webkit-scrollbar-track{background:transparent}
 .qx-sh__f{flex:0 0 auto;padding:11px 15px;border-top:1px solid var(--hair);
   display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--surf)}
-.qx-x{width:30px;height:30px;border-radius:50%;border:1px solid var(--hair);
-  background:var(--surf);color:var(--ink2);cursor:pointer;display:flex;
-  align-items:center;justify-content:center;flex:0 0 auto;position:relative}
-.qx-x::after{content:"";position:absolute;inset:-7px;min-height:44px;min-width:44px}
-.qx-x:hover{background:var(--soft2)}
 
 /* panel inside a sheet */
 .qx-panel{background:var(--surf);border:1px solid var(--hair);border-radius:var(--r);
@@ -387,8 +265,6 @@
 .qx-qty__l{flex:1 1 auto;min-width:0;font:500 var(--fs) var(--sans)}
 .qx-qty .in{width:56px;min-height:26px;text-align:center;padding:2px 4px;
   font-family:var(--mono);font-weight:700}
-.qx-qty__per{display:flex;align-items:center;gap:5px;font:500 var(--fs-sm) var(--sans);
-  color:var(--mut)}
 
 /* multiselect */
 .qx-ms{border:1px solid var(--line);border-radius:var(--r-s);background:var(--surf);
@@ -451,18 +327,6 @@
 /* ==========================================================================
    LOWER SECTIONS
    ========================================================================== */
-.qx-acc{border:1px solid var(--hair);border-radius:var(--r);overflow:hidden;
-  background:var(--surf)}
-.qx-acc__i{border-top:1px solid var(--hair)}
-.qx-acc__i:first-child{border-top:0}
-.qx-acc__t{width:100%;display:flex;align-items:center;gap:9px;padding:9px 12px;
-  border:0;background:none;cursor:pointer;text-align:start;
-  font:700 var(--fs) var(--sans);color:var(--ink)}
-.qx-acc__t:hover{background:var(--soft)}
-.qx-acc__t svg{transition:transform .18s var(--ez);color:var(--mut)}
-.qx-acc__i.open .qx-acc__t svg{transform:rotate(180deg)}
-.qx-acc__b{padding:0 12px 12px;font:500 var(--fs) /1.6 var(--sans);color:var(--ink2);
-  max-width:92ch}
 .qx-timeline{display:flex;flex-direction:column;gap:0}
 .qx-timeline__i{display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--hair);
   font:500 var(--fs-sm) var(--sans)}
@@ -473,73 +337,32 @@
 
 .qx-note{display:flex;gap:8px;align-items:flex-start;padding:9px 11px;
   border-radius:var(--r-s);font:500 var(--fs-sm)/1.5 var(--sans)}
-.qx-note--info{background:var(--lav);border:1px solid var(--lav2);color:var(--ink2)}
 .qx-note--wrn{background:var(--wrn-b);border:1px solid var(--wrn-br);color:var(--wrn)}
-.qx-note--bad{background:var(--bad-b);border:1px solid var(--bad-br);color:var(--bad)}
-.qx-note--ok{background:var(--ok-b);border:1px solid var(--ok-br);color:var(--ok)}
-
-.qx-empty{padding:34px 16px;text-align:center}
-.qx-empty b{display:block;font:700 var(--fs-md) var(--sans);margin-bottom:3px}
-.qx-empty p{margin:0 0 10px;font:500 var(--fs) var(--sans);color:var(--mut);
-  max-width:52ch;margin-inline:auto}
-.qx-sk{background:linear-gradient(90deg,var(--soft2),var(--soft),var(--soft2));
-  background-size:200% 100%;animation:qxsk 1.2s linear infinite;border-radius:5px;
-  height:11px}
 @keyframes qxsk{to{background-position:-200% 0}}
 @keyframes qxspin{to{transform:rotate(360deg)}}
-
-.qx-toast{position:fixed;inset-block-end:20px;inset-inline:0;margin:0 auto;
-  width:max-content;max-width:calc(100% - 36px);background:var(--ink);color:#fff;
-  border-radius:999px;padding:9px 16px;font:600 var(--fs) var(--sans);
-  box-shadow:var(--e3);z-index:70}
 
 /* ==========================================================================
    RESPONSIVE — 1920 / 1440 / 1280 / 768 / 390, and RTL
    ========================================================================== */
-@media (max-width:1460px){
-  .qx-grid{--cols:22px 30px minmax(300px,0.9fr) 68px minmax(260px,2.2fr) 54px 128px 142px 92px 60px}
-}
 @media (max-width:1280px){
-  .qx-grid{--cols:22px 30px minmax(300px,0.9fr) 64px minmax(230px,2fr) 50px 118px 134px 86px 56px}
   .qx-cwrow,.qx-cwhead{grid-template-columns:26px minmax(130px,1fr) 112px 92px 92px 78px 92px 82px 104px}
 }
 /* tablet: the grid scrolls horizontally rather than losing columns */
 @media (max-width:1024px){
-  .qx-tablewrap{overflow-x:auto;scrollbar-width:thin}
-  .qx-tablewrap>*{min-width:1280px}
   .qx-cw__sum{grid-template-columns:1fr}
-  .qx-dialog{width:100%;max-height:100vh;border-radius:0}
-  .qx-scrim--mid{padding:0}
 }
 /* mobile: an alternate row layout — no horizontal page overflow */
 @media (max-width:760px){
-  .qx-main{padding:0 10px 72px}
-  .qx-bar__in,.qx-sec-nav__in{padding-inline:10px}
-  .qx-head{display:none}
-  .qx-tablewrap{overflow:visible}
-  .qx-tablewrap>*{min-width:0}
-  .qx-row{grid-template-columns:24px minmax(0,1fr);row-gap:8px;padding:11px 12px;
-    align-items:start}
-  .qx-row>.qx-svc,.qx-row>.qx-plats-cell,.qx-row>.num,.qx-row>.qx-stat-cell,
-  .qx-row>.qx-acts-cell,.qx-row>.qx-rep,.qx-row>.qx-optcell{grid-column:2}
-  .qx-row .num{text-align:start}
-  .qx-row .num::before,.qx-row [data-l]::before{content:attr(data-l);display:block;
-    font:600 var(--fs-micro) var(--sans);color:var(--mut);text-transform:none;
-    letter-spacing:0}
-  .qx-acts{flex-wrap:wrap}
-  .qx-tiers{max-width:none}
-  .qx-sheet{width:100%}
   /* 16px stops iOS zooming the page on focus; 44px targets on touch */
   .qx .in,.qx .sel,.qx .ta{font-size:16px;min-height:42px}
   .qx .b{min-height:40px}
   .qx .b--xs{min-height:32px;font-size:var(--fs-sm)}
-  .qx-selbar{padding-bottom:calc(9px + env(safe-area-inset-bottom,0px))}
 }
 @media (prefers-reduced-motion:reduce){
   .qx *{transition:none!important;animation:none!important}
 }
 @media print{
-  .qx-bar,.qx-sec-nav,.qx-selbar,.qx-tools{display:none}
+  .qx-sec-nav{display:none}
   .qx{background:#fff}
 }
 
@@ -561,7 +384,6 @@
 .qx .qx-link:hover:not(:disabled){color:var(--blue-i);
   text-decoration-color:currentColor}
 .qx .qx-link:disabled{opacity:.42;cursor:not-allowed;text-decoration:none}
-.qx .qx-link--primary{color:var(--blue-i)}
 .qx .qx-link--danger{color:var(--bad)}
 
 /* ==========================================================================
@@ -574,25 +396,16 @@
 
    The header itself is unchanged — only its position is.
    ========================================================================== */
-.qx-stick--on{z-index:40;
-  box-shadow:0 6px 18px -14px rgba(14,23,41,.45)}
 /* the bar and nav no longer stick on their own — the block does it */
-.qx-stick--on .qx-bar,.qx-stick--on .qx-sec-nav{position:static;box-shadow:none}
 /* default: the table header pins to the top of its own scroller. Only when
    the header block is actually sticky does it offset beneath it. */
-.qx-head{}
 
 /* With the whole header pinned, the table header would be the fourth sticky
    layer. It is not: it scrolls with the table and the block above it is the
    only pinned chrome. */
-.qx-stick--on ~ .qx-main .qx-head{}
 
 @media (max-width:760px){
   /* a tall pinned header costs too much of a short viewport */
-  .qx-stick--on{position:static}
-  .qx-stick--on .qx-bar{z-index:30;
-    box-shadow:var(--e1)}
-  .qx-head{}
 }
 
 
@@ -603,20 +416,13 @@
    between them separates the actions without reintroducing three borders
    and three fills.
    ========================================================================== */
-.qx-acts{display:flex;column-gap:14px;row-gap:5px;margin-top:4px}
 /* separation must not depend on `gap` alone: a margin guarantees it even
    where the flex context is unusual */
-.qx .qx-acts .qx-link:not(:last-child){margin-inline-end:0}
-.qx .qx-acts{align-items:center}
 /* A real element, not a pseudo-element on a sibling: the CSS gap was being
    lost in this flex context and the hairline landed on the previous word.
    An element in the markup cannot collapse. */
-.qx .qx-sep{display:inline-block;flex:0 0 auto;width:1px;height:11px;
-  background:var(--line);margin-inline:9px}
 
 /* a touch more refinement on the money column */
-.qx-price b{letter-spacing:-.4px}
-.qx-price u{color:var(--mut);opacity:.95}
 .qx-foot b{letter-spacing:-.5px}
 
 /* generated, read-only text that must wrap — not a disabled input, which
@@ -634,15 +440,10 @@
    else moves into the existing overflow menu, which already holds the
    occasional actions. Nothing is removed — only relocated by width.
    ========================================================================== */
-.qx-only-narrow{display:none}
 @media (max-width:760px){
   /* !important because the wrapper carries an inline `display:contents`
      so it does not become a flex item on desktop — an inline style would
      otherwise win over this rule and the cluster would never hide. */
-  .qx-bar__wide{display:none!important}
-  .qx-only-narrow{display:flex}
-  .qx-bar__in{gap:6px;padding:8px 10px}
-  .qx-bar__st{width:100%;order:9}
 }
 
 /* ==========================================================================
@@ -656,7 +457,6 @@
    ========================================================================== */
 /* keep the isolated runs on the correct edge of their cell */
 [dir=rtl] .qx .num{text-align:start}
-[dir=rtl] .qx .qx-price b,[dir=rtl] .qx .qx-price u{text-align:start}
 
 /* In RTL the select's own arrow sits on the inline-start edge and clipped
    the label ("Option 1/3" → "tion 1/3"). Reserve room on both edges so the
@@ -672,8 +472,6 @@
   text-decoration:underline;text-decoration-style:dotted;
   text-decoration-color:var(--hairline);text-underline-offset:3px}
 .qx .qx-svc__desc:disabled{cursor:default}
-.qx .qx-svc__add{margin-top:5px;font-weight:500;color:var(--mut)}
-.qx .qx-svc__add:hover{color:var(--blue-i)}
 .qx .qx-svc__descin{margin-top:5px;max-width:62ch}
 
 /* ---- drag handle and drop feedback ---- */
@@ -681,12 +479,10 @@
   display:flex;align-items:center;justify-content:center;height:100%;
   position:relative}
 .qx .qx-grip::after{content:"";position:absolute;inset:-4px -6px;min-height:44px}
-.qx-row:hover .qx-grip,.qx .qx-grip:focus-visible{color:var(--hairline)}
+.qx .qx-grip:focus-visible{color:var(--hairline)}
 .qx .qx-grip:hover{color:var(--mut)}
 .qx .qx-grip:active{cursor:grabbing}
 .qx .qx-grip:disabled{cursor:default;color:transparent}
-.qx-row.dragging{opacity:.42}
-.qx-row.dropover{box-shadow:inset 0 2px 0 var(--blue)}
 
 /* ---- the group footer: creator name only, no total ---- */
 .qx-groupfoot{display:flex;align-items:baseline;gap:8px;padding:5px 14px;
@@ -708,8 +504,4 @@
 .qx .qx-costgrid>div{min-width:0}
 
 /* the row's dead space is clickable — say so */
-.qx-row{cursor:pointer}
-.qx-row button,.qx-row input,.qx-row select,.qx-row label,.qx-row a{cursor:auto}
-.qx-row .qx-link,.qx-row .qx-svc__desc,.qx-row button:not(:disabled){cursor:pointer}
-.qx-row .in,.qx-row .qx-svc__descin{cursor:text}
 .qx .qx-grip{cursor:grab}

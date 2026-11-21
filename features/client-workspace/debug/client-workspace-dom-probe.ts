@@ -1,4 +1,3 @@
-"use client";
 
 /**
  * TEMPORARY Client Workspace DOM/lifecycle probe.

@@ -198,18 +198,15 @@
 /* step 1 â€” headline */
 .vendor-detail-suite .tw-k b,.tw-mx b,.tw-st b,.tw-soc b{font-size:20px;letter-spacing:-.6px}
 /* step 2 â€” panel stat */
-.vendor-detail-suite .tw-band b,.tw-mini b,.tw-ms2 b,.tw-cdh__m b,.tw-cm__st b,.tw-cw__g b,.tw-calcp__f b,
-.vendor-detail-suite .tw-dr__s b,.tw-cin .tw-in{font-size:14px;letter-spacing:-.35px}
+.tw-ms2 b,.tw-cm__st b,.tw-calcp__f b,.tw-cin .tw-in{font-size:14px;letter-spacing:-.35px}
 /* step 3 â€” row value */
-.vendor-detail-suite .tw-v,.tw-kv b,.tw-dc2__r b,.tw-oc__r b,.tw-po b,.tw-str b,.tw-cw__hl b,.tw-dl b,
-.vendor-detail-suite .tw-calc b,.tw-selbar .sum b,.tw-cwin,.tw-in,.tw-ed,.tw-adf > *,.tw-ft > *,.tw-agtot b{font-size:12.5px}
+.vendor-detail-suite .tw-v,.tw-po b,.tw-dl b,.tw-selbar .sum b,.tw-cwin,.tw-in,.tw-ed,.tw-adf > *,.tw-ft > *{font-size:12.5px}
 .vendor-detail-suite .tw-ms2 b.s{font-size:12.5px}
 /* step 4 â€” micro */
-.vendor-detail-suite .tw-d,.tw-delta,.tw-id,.tw-fe b,.tw-kid,.tw-cc,.tw-sub2,.tw-s{font-size:11.5px}
+.vendor-detail-suite .tw-d,.tw-delta,.tw-id,.tw-cc,.tw-s{font-size:11.5px}
 /* mono everywhere a number lives, so digits align column to column */
-.vendor-detail-suite .tw-v,.tw-kv b.m,.tw-dl b.m,.tw-ms2 b,.tw-mini b,.tw-cdh__m b,.tw-cm__st b,.tw-cw__g b,
-.vendor-detail-suite .tw-calcp__f b,.tw-dr__s b,.tw-selbar .sum b,.tw-cwin,.tw-ed,.tw-po b,.tw-cw__hl b,
-.vendor-detail-suite .tw-oc__r b,.tw-dc2__r b,.tw-st b,.tw-soc b,.tw-k b,.tw-mx b,.tw-band b,.tw-agtot b{
+.vendor-detail-suite .tw-v,.tw-dl b.m,.tw-ms2 b,.tw-cm__st b,
+.vendor-detail-suite .tw-calcp__f b,.tw-selbar .sum b,.tw-cwin,.tw-ed,.tw-po b,.tw-st b,.tw-soc b,.tw-k b,.tw-mx b{
  font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 /* dates are never mono-bold â€” they are metadata, not figures */
 
@@ -395,9 +392,7 @@
 }
 
 /* Kill any leftover platform-v6 / enterprise tab chrome inside the suite */
-.vendor-detail-suite [data-slot="vendor-workspace-tabs"],
-.vendor-detail-suite .platform-v6-kpi-strip,
-.vendor-detail-suite .platform-v6-kpi-strip--executive{display:none !important}
+.vendor-detail-suite [data-slot="vendor-workspace-tabs"]{display:none !important}
 /* Currency-separated creator totals must remain readable in the header. */
 .vendor-detail-suite .tw-ms2 > div{min-width:0}
 .vendor-detail-suite .tw-ms2 b{white-space:normal;overflow-wrap:anywhere;line-height:1.4}

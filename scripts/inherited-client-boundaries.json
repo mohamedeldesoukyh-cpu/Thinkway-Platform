@@ -1,11 +1,15 @@
 [
   {
     "file": "features/quotations/components/use-live-quotation-enrichment.ts",
-    "parents": ["features/quotations/components/quotation-workspace.tsx"]
+    "parents": [
+      "features/quotations/components/quotation-workspace.tsx"
+    ]
   },
   {
     "file": "features/quotations/components/quotation-creator-link-tab.tsx",
-    "parents": ["features/quotations/components/add-creators-to-quotation-modal.tsx"]
+    "parents": [
+      "features/quotations/components/add-creators-to-quotation-modal.tsx"
+    ]
   },
   {
     "file": "features/campaigns/components/assignment-commercial-workspace-dialog.tsx",
@@ -1022,6 +1026,231 @@
   },
   {
     "file": "features/accounting/journal-desk.tsx",
-    "parents": ["features/accounting/console.tsx"]
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
+  },
+  {
+    "file": "components/forms/use-client-category-classification.ts",
+    "parents": [
+      "features/clients/components/new-client-dialog.tsx",
+      "features/clients/components/tabs/client-overview-tab.tsx"
+    ]
+  },
+  {
+    "file": "components/forms/use-name-availability.ts",
+    "parents": [
+      "features/brands/components/client-add-brand-dialog.tsx",
+      "features/brands/components/new-brand-dialog.tsx",
+      "features/clients/components/new-client-dialog.tsx",
+      "features/groups/components/brand-sheet.tsx",
+      "features/groups/components/group-edit-sheet.tsx",
+      "features/groups/components/legal-entity-sheet.tsx",
+      "features/groups/components/new-group-dialog.tsx"
+    ]
+  },
+  {
+    "file": "features/ai-workspace/hooks/use-ai-chat.ts",
+    "parents": [
+      "features/ai-workspace/components/intelligence-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/ai-workspace/hooks/use-ai-composer-metrics.ts",
+    "parents": [
+      "features/ai-workspace/components/intelligence-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/ai-workspace/hooks/use-ai-topbar-metrics.ts",
+    "parents": [
+      "features/ai-workspace/components/intelligence-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/ai-workspace/hooks/use-conversations.ts",
+    "parents": [
+      "features/ai-workspace/components/intelligence-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/billing/components/use-billing-queue-column-visibility.ts",
+    "parents": [
+      "features/billing/components/billing-queue-assignment-row.tsx",
+      "features/billing/components/billing-queue-campaign-row.tsx",
+      "features/billing/components/billing-vendor-payments-panel.tsx"
+    ]
+  },
+  {
+    "file": "features/billing/hooks/use-operational-invoice-create.ts",
+    "parents": [
+      "features/billing/components/billing-campaign-queue-table.tsx",
+      "features/billing/hooks/use-invoice-confirm-flow.tsx"
+    ]
+  },
+  {
+    "file": "features/campaign-outputs/hooks/use-campaign-object-overlay.ts",
+    "parents": [
+      "features/campaign-outputs/components/studio-outputs-view.tsx"
+    ]
+  },
+  {
+    "file": "features/campaign-outputs/hooks/use-resizable-document-window.ts",
+    "parents": [
+      "features/campaign-outputs/components/outputs-center.tsx"
+    ]
+  },
+  {
+    "file": "features/campaign-studio/hooks/use-section-body-mount.ts",
+    "parents": [
+      "features/campaign-studio/components/campaign-studio-sections/studio-section-card.tsx"
+    ]
+  },
+  {
+    "file": "features/campaign-studio/hooks/use-studio-section-nav.ts",
+    "parents": [
+      "features/campaign-studio/components/campaign-studio-sections/studio-section-card.tsx"
+    ]
+  },
+  {
+    "file": "features/campaign-studio/hooks/use-viewport-creator-ids.ts",
+    "parents": [
+      "features/campaign-studio/components/sections/vendor-recommendations-section.tsx",
+      "features/campaign-studio/hooks/use-creator-hydration.ts"
+    ]
+  },
+  {
+    "file": "features/campaigns/hooks/use-campaign-tab-data.ts",
+    "parents": [
+      "features/campaigns/components/campaign-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/hooks/use-metrics-enrichment-batch.ts",
+    "parents": [
+      "features/campaigns/components/performance/campaign-performance-center-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/client-workspace/debug/client-workspace-dom-probe.ts",
+    "parents": [
+      "features/client-workspace/components/client-workspace-app.tsx",
+      "features/client-workspace/components/client-workspace-shell.tsx",
+      "features/client-workspace/components/creators-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-search/creator-search-acquisition-session.ts",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/enrichment/use-manual-refresh-flow.ts",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-workspace.tsx",
+      "features/discovery/enrichment/components/refresh-creator-button.tsx",
+      "features/discovery/enrichment/components/refresh-creator-menu.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/hooks/use-discovery-creator-hover-details.ts",
+    "parents": [
+      "features/discovery/components/discovery-creator-profile-summary.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/search-analytics.ts",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/shortlists/use-live-shortlist-enrichment.ts",
+    "parents": [
+      "features/discovery/shortlists/components/shortlist-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/use-quotation-sticky-headers.ts",
+    "parents": [
+      "features/quotations/components/quotation-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/use-quotation-workspace-shortcuts.ts",
+    "parents": [
+      "features/quotations/components/quotation-workspace.tsx"
+    ]
+  },
+  {
+    "file": "hooks/use-form-action-with-toast.ts",
+    "parents": [
+      "features/vendors/components/tabs/vendor-bank-details-section.tsx",
+      "features/vendors/components/tabs/vendor-finance-tab.tsx"
+    ]
+  },
+  {
+    "file": "hooks/use-media-proxy-image-recovery.ts",
+    "parents": [
+      "components/creator/creator-avatar-image.tsx",
+      "components/creator/publication-preview-image.tsx",
+      "features/campaigns/components/performance/publication-workspace/publication-workspace.tsx",
+      "features/client-workspace/components/review-avatar.tsx",
+      "lib/performance/publication-grid-visual.tsx"
+    ]
+  },
+  {
+    "file": "hooks/use-operational-table-columns.ts",
+    "parents": [
+      "components/tables/operational-table-column-context.tsx"
+    ]
+  },
+  {
+    "file": "hooks/use-operational-table-filter-sort.ts",
+    "parents": [
+      "components/tables/operational-table-data-context.tsx"
+    ]
+  },
+  {
+    "file": "hooks/use-reports-hub-preferences.ts",
+    "parents": [
+      "features/reports/components/reports-hub-view.tsx"
+    ]
+  },
+  {
+    "file": "hooks/use-workspace-tab-order.ts",
+    "parents": [
+      "features/billing/components/billing-workspace.tsx",
+      "features/campaigns/hooks/use-campaign-workspace-tab-order.ts",
+      "features/finance/aging/components/aging-workspace.tsx",
+      "features/finance/exchange-rates/components/exchange-rates-workspace.tsx",
+      "features/finance/vat/components/vat-workspace.tsx",
+      "features/groups/components/group-workspace.tsx",
+      "features/operations/components/move-operations-tabs.tsx",
+      "features/vendors/components/vendor-profile.tsx"
+    ]
+  },
+  {
+    "file": "lib/hooks/use-debounced-autosave.ts",
+    "parents": [
+      "features/clients/components/onboarding-workspace.tsx",
+      "features/quotations/components/quotation-price-breakdown-panel.tsx"
+    ]
+  },
+  {
+    "file": "lib/hooks/use-escape-clear-selection.ts",
+    "parents": [
+      "features/discovery/shortlists/components/shortlist-workspace.tsx",
+      "features/quotations/components/quotation-workspace.tsx"
+    ]
+  },
+  {
+    "file": "lib/hooks/use-fullscreen-portal-container.ts",
+    "parents": [
+      "components/ui/dialog.tsx",
+      "components/ui/popover.tsx",
+      "components/ui/select.tsx"
+    ]
   }
 ]
