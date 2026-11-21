@@ -1264,5 +1264,11 @@
     "parents": [
       "features/billing/components/invoice-workspace.tsx"
     ]
+  },
+  {
+    "file": "features/accounting/receipt-desk.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
   }
 ]

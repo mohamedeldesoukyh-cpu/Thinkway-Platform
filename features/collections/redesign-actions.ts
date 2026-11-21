@@ -39,7 +39,7 @@ export async function reviseCollectionPayment(input: { id: string; revision: num
  const parsed = z.object({id:z.string().uuid(),revision:z.number().int().min(0),amount:z.number().positive().finite(),date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),method:z.string(),reference:z.string().max(120),notes:z.string().max(2000),reason:z.string().trim().min(1).max(500)}).safeParse(input);
  if (!parsed.success) return {ok:false,error:"Check the payment details and enter a correction reason."};
  const {error}=await planningDb(db).rpc("revise_collection_payment",{p_id:input.id,p_revision:input.revision,p_amount:input.amount,p_date:input.date,p_method:input.method,p_reference:input.reference,p_notes:input.notes,p_reason:input.reason});
- if(error) return {ok:false,error:"Could not save the correction. Refresh and check the invoice balance, payment date and your payment-edit permission."};
+ if(error) return {ok:false,error:error.message.includes('Accounting') ? 'This receipt has an Accounting journal. Reverse it from TW Accounting; posted receipts cannot be edited.' : "Could not save the correction. Refresh and check the invoice balance, payment date and your payment-edit permission."};
  for(const path of ["/collections","/billing","/treasury","/"]) revalidatePath(path);
  return {ok:true};
 }
@@ -51,7 +51,7 @@ export async function deleteCollectionPayment(input: {id: string; revision: numb
  const parsed = z.object({id:z.string().uuid(),revision:z.number().int().min(0),reason:z.string().trim().min(1).max(500)}).safeParse(input);
  if (!parsed.success) return {ok:false,error:"Enter a reason for deleting this payment."};
  const {error} = await planningDb(db).rpc("delete_collection_payment",{p_id:parsed.data.id,p_revision:parsed.data.revision,p_reason:parsed.data.reason});
- if (error) return {ok:false,error:"Could not delete the payment. Refresh and check your permissions and whether this payment has changed or needs allocation reconciliation."};
+ if (error) return {ok:false,error:error.message.includes('Accounting') ? 'This receipt has an Accounting journal. Reverse it from TW Accounting; posted receipts cannot be deleted.' : "Could not delete the payment. Refresh and check your permissions and whether this payment has changed or needs allocation reconciliation."};
  for (const path of ["/collections","/billing","/treasury","/"]) revalidatePath(path);
  return {ok:true};
 }
@@ -63,7 +63,7 @@ export async function restoreCollectionPayment(input: {id: string; revision: num
  const parsed = z.object({id:z.string().uuid(),revision:z.number().int().min(0),reason:z.string().trim().min(1).max(500)}).safeParse(input);
  if (!parsed.success) return {ok:false,error:"Enter a reason for restoring this payment."};
  const {error} = await planningDb(db).rpc("restore_collection_payment",{p_id:parsed.data.id,p_revision:parsed.data.revision,p_reason:parsed.data.reason});
- if (error) return {ok:false,error:"Could not restore the payment. Refresh and check your permissions and the invoice balance; restoring must not overpay the invoice."};
+ if (error) return {ok:false,error:error.message.includes('Accounting') ? 'Accounting receipts cannot be restored. Record a new corrected receipt in TW Accounting.' : "Could not restore the payment. Refresh and check your permissions and the invoice balance; restoring must not overpay the invoice."};
  for (const path of ["/collections","/billing","/treasury","/"]) revalidatePath(path);
  return {ok:true};
 }
