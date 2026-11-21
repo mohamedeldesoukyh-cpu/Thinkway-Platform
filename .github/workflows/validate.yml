@@ -71,6 +71,9 @@ jobs:
       - name: Auth / appsec P1
         run: npm run test:auth-p1
 
+      - name: TW Accounting setup and module routing
+        run: npx tsx --test features/accounting/chart.test.ts features/accounting/setup.test.ts
+
       - name: Application security and workspace boundaries
         run: |
           npm run test:appsec-p2

@@ -9,6 +9,9 @@ import {
 } from "@/lib/security/cookie-options";
 import { supabaseAnonKey, supabaseUrl } from "@/lib/supabase/env";
 import type { Database } from "@/types/database";
+import { loadModuleAccess, moduleHome, isAccountingPath } from "@/lib/auth/module-access";
+import { resolveWorkspaceActor } from "@/lib/security/workspace-actor";
+import { portalHomePath } from "@/lib/security/workspace-auth";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -35,7 +38,14 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      return NextResponse.redirect(new URL(next, origin));
+      const {data:{user}} = await supabase.auth.getUser();
+      const actor = await resolveWorkspaceActor(supabase,user?.id);
+      if (actor.kind === "client_portal" || actor.kind === "creator_portal") return NextResponse.redirect(new URL(portalHomePath(actor.kind),origin));
+      try {
+        const access = await loadModuleAccess(supabase);
+        const destination = next === "/" || (isAccountingPath(next) ? !access.accounting : !access.media) ? moduleHome(access) : next;
+        return NextResponse.redirect(new URL(destination,origin));
+      } catch { return NextResponse.redirect(new URL("/login?error=module_access_unavailable",origin)); }
     }
   }
 

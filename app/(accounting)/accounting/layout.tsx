@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient, getRequestAuth } from "@/lib/supabase/server";
-import { requireFinancePermission } from "@/lib/auth/permissions-server";
+import { getRequestAuth } from "@/lib/supabase/server";
+import { accountingContext } from "@/features/accounting/setup-server";
 import "@/features/accounting/accounting.css";
 
 export const metadata: Metadata = { title: "TW Accounting" };
@@ -11,9 +11,8 @@ export const metadata: Metadata = { title: "TW Accounting" };
 async function AccountingAccess({ children }: { children: React.ReactNode }) {
   const { user } = await getRequestAuth();
   if (!user) redirect("/login?next=%2Faccounting");
-  const supabase = await createSupabaseServerClient();
-  const access = await requireFinancePermission(supabase, "finance.read");
-  if ("error" in access) return <main className="tw-accounting tw-accounting-access"><h1>Accounting access required</h1><p>{access.error}</p><Link href="/">Return to TW Media</Link></main>;
+  try { await accountingContext(); }
+  catch(e) { return <main className="tw-accounting tw-accounting-access"><h1>Accounting access required</h1><p>{e instanceof Error ? e.message : "Access could not be verified"}</p><Link href="/modules">Your modules</Link><br/><Link href={e instanceof Error && e.message.includes("enrollment") ? "/auth/mfa/enroll?next=%2Faccounting" : "/auth/mfa?next=%2Faccounting"}>Verify sign-in</Link></main>; }
   return children;
 }
 

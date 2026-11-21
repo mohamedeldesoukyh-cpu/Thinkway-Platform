@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ensurePrivilegedAal2 } from "@/lib/auth/mfa";
 import { getRequestAuth } from "@/lib/supabase/server";
+import { loadModuleAccess } from "@/lib/auth/module-access";
 import {
   isPortalActor,
   resolveWorkspaceActor,
@@ -34,6 +35,17 @@ export async function getAuthContext(
 
   if (error || !user) {
     return { allowed: false, userId: null, roleSlug: null, error: "Unauthorized" };
+  }
+
+  const actor = await resolveWorkspaceActor(_supabase, user.id);
+  if (!isPortalActor(actor.kind)) {
+    try {
+      if (!(await loadModuleAccess(_supabase)).media) {
+        return { allowed:false, userId:null, roleSlug:null, error:"TW Media access is not assigned to your user." };
+      }
+    } catch {
+      return { allowed:false, userId:null, roleSlug:null, error:"Module access could not be verified." };
+    }
   }
 
   return { allowed: true, userId: user.id, roleSlug };
