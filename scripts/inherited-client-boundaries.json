@@ -1019,5 +1019,9 @@
     "parents": [
       "features/quotations/components/quotation-workspace.tsx"
     ]
+  },
+  {
+    "file": "features/accounting/journal-desk.tsx",
+    "parents": ["features/accounting/console.tsx"]
   }
 ]

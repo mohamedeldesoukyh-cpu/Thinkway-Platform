@@ -1,4 +1,4 @@
-"use client";
+// Inherits the client boundary from AccountingConsole.
 import { useEffect,useState } from 'react';
 import { Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle } from '@/components/ui/dialog';
 import { cents,decimal,money,reportCsv,totals,type Journal,type JournalDetail,type JournalLine,type LedgerReport,type TrialRow } from './journal-model';
