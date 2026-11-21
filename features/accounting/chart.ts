@@ -79,7 +79,11 @@ export function isWithin(account: Account, ancestor: string, accounts = CHART): 
   return false;
 }
 
-export function chartCsv(accounts: Account[]): string {
-  const rows = [["Code", "Account name", "Parent code", "Type", "Normal balance", "Account use", "Subledger"], ...accounts.map(a => [a.code, a.name, a.parent ?? "", a.type, a.normal, a.kind, a.subledger ?? ""])];
-  return "\uFEFF" + rows.map(row => row.map(value => `"${value.replaceAll('"', '""')}"`).join(",")).join("\r\n");
+export function chartCsv(accounts: (Account & {active?:boolean; nameAr?:string})[]): string {
+  const rows = [["Code", "Account name", "Parent code", "Type", "Normal balance", "Account use", "Subledger", "Status", "Arabic name"], ...accounts.map(a => [a.code, a.name, a.parent ?? "", a.type, a.normal, a.kind, a.subledger ?? "", a.active === false ? "Inactive" : "Active", a.nameAr ?? ""])];
+  const escape = (value:string) => {
+    const safe = /^[\s]*[=+@-]/.test(value) || /^[\t\r\n]/.test(value) ? `'${value}` : value;
+    return `"${safe.replaceAll('"', '""')}"`;
+  };
+  return "\uFEFF" + rows.map(row => row.map(escape).join(",")).join("\r\n");
 }

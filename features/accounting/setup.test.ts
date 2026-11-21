@@ -2,6 +2,13 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { moduleHome, isAccountingPath, NO_MODULES } from '../../lib/auth/module-access';
 import { companySchema, accountSchema } from './setup-validation';
+import { CHART, chartCsv } from './chart';
+
+test('saved chart exports status and neutralizes spreadsheet formulas',()=>{
+ const csv=chartCsv([{...CHART[0],name:'=1+1',active:false,nameAr:'اسم الحساب'}]);
+ assert.ok(csv.includes('"\'=1+1"'));
+ assert.ok(csv.includes('"Inactive","اسم الحساب"'));
+});
 
 test('login destination follows assigned modules',()=>{
  assert.equal(moduleHome(NO_MODULES),'/modules');
