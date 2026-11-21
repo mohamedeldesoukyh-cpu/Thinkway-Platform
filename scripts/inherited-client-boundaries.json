@@ -1297,7 +1297,9 @@
       "features/accounting/statement-desk.tsx",
       "features/accounting/journal-desk.tsx",
       "features/accounting/auxiliaries.tsx",
-      "features/accounting/account-moves.tsx"
+      "features/accounting/account-moves.tsx",
+      "features/accounting/mapping-desk.tsx",
+      "features/accounting/party-accounts-desk.tsx"
     ]
   },
   {
@@ -1308,7 +1310,8 @@
       "features/accounting/cost-invoice-desk.tsx",
       "features/accounting/auxiliaries.tsx",
       "features/accounting/account-moves.tsx",
-      "features/accounting/allocation-controls.tsx"
+      "features/accounting/allocation-controls.tsx",
+      "features/accounting/mapping-desk.tsx"
     ]
   },
   {
@@ -1327,11 +1330,24 @@
       "features/accounting/settlement-desk.tsx",
       "features/accounting/cost-invoice-desk.tsx",
       "features/accounting/invoice-desk.tsx",
-      "features/accounting/statement-desk.tsx"
+      "features/accounting/statement-desk.tsx",
+      "features/accounting/mapping-desk.tsx"
     ]
   },
   {
     "file": "features/accounting/account-moves.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/mapping-desk.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/party-accounts-desk.tsx",
     "parents": [
       "features/accounting/console.tsx"
     ]

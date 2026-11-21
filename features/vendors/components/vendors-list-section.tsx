@@ -129,7 +129,7 @@ export function VendorsListSection({
             <span className="st">{total} creators</span>
             <span className="sub">
               {crmOnly
-                ? "creators with an active commercial relationship — Discovery stays separate until converted"
+                ? "vendors and creators used in Media assignments — Discovery stays separate"
                 : "full identity inventory (Commercial CRM filter temporarily off)"}
             </span>
             <span style={{ flex: 1 }} />

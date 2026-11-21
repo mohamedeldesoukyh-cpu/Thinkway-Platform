@@ -23,14 +23,17 @@ export async function loadAccountingSetup(companyId?: string): Promise<Accountin
   const companies = (data ?? []) as Company[];
   const company = (companyId ? companies.find(c => c.id === companyId) : companies[0]) ?? null;
   if (companyId && !company) throw new Error("Accounting company not found.");
+  let mappings: import('./mapping-model').SystemMapping[] = [];
   let accounts: SavedAccount[] = [], years: FiscalYear[] = [], periods: FiscalPeriod[] = [];
   if (company) {
-    const [a, y] = await Promise.all([
-      db.from("tw_accounting_accounts").select("code,name,name_ar,parent_code,account_type,normal_balance,kind,subledger,has_auxiliary,client_id,vendor_id,active,version").eq("company_id", company.id).order("code"),
+    const [a, m, y] = await Promise.all([
+      db.from("tw_accounting_accounts").select("code,name,name_ar,parent_code,account_type,normal_balance,kind,subledger,has_auxiliary,auxiliary_source_code,client_id,vendor_id,active,version").eq("company_id", company.id).order("code"),
+      db.rpc('tw_accounting_mappings_read',{p_company:company.id}),
       db.from("tw_accounting_years").select("id,start_date,end_date").eq("company_id", company.id).order("start_date"),
     ]);
-    if (a.error || y.error) throw new Error("Could not load saved chart or financial years.");
-    accounts = (a.data ?? []).map(row => ({ code: row.code, name: row.name, nameAr: row.name_ar, parent: row.parent_code, type: row.account_type, normal: row.normal_balance, kind: row.kind, subledger: row.subledger ?? undefined, hasAuxiliary:row.has_auxiliary,clientId:row.client_id,vendorId:row.vendor_id, active: row.active, version: row.version }));
+    if (a.error || y.error || m.error) throw new Error("Could not load saved chart or financial years.");
+    accounts = (a.data ?? []).map(row => ({ code: row.code, name: row.name, nameAr: row.name_ar, parent: row.parent_code, type: row.account_type, normal: row.normal_balance, kind: row.kind, subledger: row.subledger ?? undefined, hasAuxiliary:row.has_auxiliary,auxiliarySource:row.auxiliary_source_code,clientId:row.client_id,vendorId:row.vendor_id, active: row.active, version: row.version }));
+    mappings = m.data ?? [];
     years = (y.data ?? []) as FiscalYear[];
     if (years.length) {
       const result = await db.from("tw_accounting_periods").select("id,year_id,period_number,start_date,end_date,is_closed,lock_reason,version").in("year_id",years.map(y => y.id)).order("start_date");
@@ -54,5 +57,5 @@ export async function loadAccountingSetup(companyId?: string): Promise<Accountin
       return { id:r.id, full_name:r.full_name, email:r.email, role, media: locked || (assignment?.media ?? true), accounting_role: locked ? "manage" : assignment?.accounting_role ?? (role === "finance" ? "manage" : "none"), version: assignment?.version ?? null, locked };
     }).filter(u => !["client_user","influencer"].includes(u.role));
   }
-  return { access, companies, company, accounts, years, periods, users };
+  return { access, companies, company, accounts, years, periods, users, mappings };
 }

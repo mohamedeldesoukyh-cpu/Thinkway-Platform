@@ -77,7 +77,7 @@ jobs:
         run: npm run test:auth-p1
 
       - name: TW Accounting setup and module routing
-        run: npx tsx --test features/accounting/chart.test.ts features/accounting/setup.test.ts features/accounting/journal-model.test.ts features/accounting/invoice-model.test.ts features/accounting/receipt-model.test.ts features/accounting/allocation-model.test.ts
+        run: npx tsx --test features/accounting/chart.test.ts features/accounting/setup.test.ts features/accounting/journal-model.test.ts features/accounting/invoice-model.test.ts features/accounting/receipt-model.test.ts features/accounting/allocation-model.test.ts lib/billing/invoice-accounting-components.test.ts
 
       - name: Application security and workspace boundaries
         run: |

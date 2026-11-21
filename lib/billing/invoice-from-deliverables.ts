@@ -1,3 +1,4 @@
+import { invoiceAccountingWeights } from './invoice-accounting-components';
 import { loadClientAcceptedLineIds } from "./client-acceptance";
 import { invoicePercentageDescription } from "./selected-invoice-batches";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -190,7 +191,7 @@ function deliverableInvoiceLinePayload(
     quantity: 1,
     unit_price: beforeVat,
     revenue_before_vat: beforeVat,
-    metadata: { operational_source_amount: beforeVat, operational_fx_refresh: Boolean(options?.forRegeneration) },
+    metadata: { accounting_components: invoiceAccountingWeights(deliverable), operational_source_amount: beforeVat, operational_fx_refresh: Boolean(options?.forRegeneration) },
     revenue_vat_percent: vatExempt ? 0 : vatPercent,
     revenue_vat_exempt: vatExempt,
   };
@@ -249,7 +250,7 @@ export function packageAssignmentLineItemPayload(
     quantity: 1,
     unit_price: beforeVat,
     revenue_before_vat: beforeVat,
-    metadata: { operational_source_amount: beforeVat, operational_fx_refresh: Boolean(options?.forRegeneration) },
+    metadata: { accounting_components: invoiceAccountingWeights(line), operational_source_amount: beforeVat, operational_fx_refresh: Boolean(options?.forRegeneration) },
     revenue_vat_percent: vatPercent,
     revenue_vat_exempt: vatExempt,
   };
