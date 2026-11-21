@@ -5,8 +5,6 @@ export function InvoiceAccountingBridge({invoiceId}:{invoiceId:string}){
  const [data,setData]=useState<Bridge|null>(null),[company,setCompany]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[epoch,setEpoch]=useState(0);
  useEffect(()=>{const controller=new AbortController();void fetch(`/api/invoices/accounting?invoice=${invoiceId}`,{cache:'no-store',signal:controller.signal}).then(async r=>{const value=await r.json();if(!r.ok)throw new Error(value.error);if(!controller.signal.aborted){setData(value);setCompany(value.submission?.company??(value.companies.length===1?value.companies[0].id:''));setError('');}}).catch(e=>{if(!controller.signal.aborted)setError(e.message);});return()=>controller.abort();},[invoiceId,epoch]);
  async function write(operation:'submit'|'withdraw'){
-  if(operation==='submit'&&!window.confirm('Submit this invoice to the selected accounting company? Posting will be reviewed separately in TW Accounting.'))return;
-  if(operation==='withdraw'&&!window.confirm('Withdraw this unposted accounting submission?'))return;
   setBusy(true);setError('');try{const r=await fetch('/api/invoices/accounting',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation,value:{invoice:invoiceId,company,version:data?.submission?.version}})});const value=await r.json();if(!r.ok)throw new Error(value.error);setEpoch(n=>n+1);}catch(e){setError(e instanceof Error?e.message:'Accounting request failed');}finally{setBusy(false);}
  }
  const submission=data?.submission;const available=!submission||submission.status==='withdrawn';
