@@ -32,7 +32,7 @@ export async function POST(request:Request){
   const body=await request.json();let result;
   if(body.operation==='post'){
    const v=requestSchema.parse(body.value);
-   result=await db.rpc('tw_accounting_post_invoice',{p_invoice:v.invoice,p_company:v.company,p_version:v.version,p_date:v.date,p_receivable:v.receivable,p_revenue:v.revenue,p_vat:v.vat,p_expected_rate:v.rate});
+   const auxiliaries=z.record(z.string().regex(/^\d{6}$/),z.union([z.string().uuid(),z.literal('')])).parse(body.value.auxiliaries??{});result=await db.rpc('tw_accounting_post_with_aux',{p_operation:'invoice',p_auxiliaries:auxiliaries,p_value:v});
   }else if(body.operation==='unpost'){
    const v=z.object({invoice:z.string().uuid(),company:z.string().uuid(),version:z.number().int().positive(),reason:z.string().trim().min(3).max(500)}).parse(body.value);
    result=await db.rpc('tw_accounting_unpost_invoice',{p_invoice:v.invoice,p_company:v.company,p_version:v.version,p_reason:v.reason});

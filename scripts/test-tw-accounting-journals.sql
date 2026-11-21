@@ -16,12 +16,15 @@ BEGIN
  {"code":"600000","name":"Expenses","parent":null,"type":"Expense","normal":"Debit","kind":"Group"},
  {"code":"633001","name":"Depreciation expense","parent":"600000","type":"Expense","normal":"Debit","kind":"Posting"}]');
  lines:='[{"account":"633001","description":"Test expense","debit":"123.45","credit":"0"},{"account":"111001","description":"Test cash","debit":"0","credit":"123.44"}]';
+ blocked:=false;BEGIN PERFORM tw_accounting_save_journal(j,c,'2026-01-15','QA','Rollback test',NULL,lines);EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked OR EXISTS(SELECT 1 FROM tw_accounting_journals WHERE id=j) THEN RAISE EXCEPTION 'Unbalanced journal saved'; END IF;
+ lines:=jsonb_set(lines,'{1,credit}','"123.45"');
  PERFORM tw_accounting_save_journal(j,c,'2026-01-15','QA','Rollback test',NULL,lines);
  IF EXISTS(SELECT 1 FROM tw_accounting_journal_sequences WHERE company_id=c) THEN RAISE EXCEPTION 'Draft allocated a number'; END IF;
  report:=tw_accounting_trial_balance(c,'2026-01-01','2026-12-31');
  IF EXISTS(SELECT 1 FROM jsonb_array_elements(report) r WHERE (r->>'closing')::numeric<>0) THEN RAISE EXCEPTION 'Draft affected balances'; END IF;
- blocked:=false;BEGIN PERFORM tw_accounting_post_journal(j,c,1);EXCEPTION WHEN OTHERS THEN blocked:=true;END;
- IF NOT blocked THEN RAISE EXCEPTION 'Unbalanced journal posted'; END IF;
+ blocked:=false;BEGIN PERFORM tw_accounting_post_journal(j,c,9);EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Stale journal posted'; END IF;
  IF EXISTS(SELECT 1 FROM tw_accounting_journal_sequences WHERE company_id=c) THEN RAISE EXCEPTION 'Failed post allocated number'; END IF;
  blocked:=false;BEGIN PERFORM tw_accounting_save_journal(j,c,'2026-01-15','QA','Rollback test',9,lines);EXCEPTION WHEN serialization_failure THEN blocked:=true;END;
  IF NOT blocked THEN RAISE EXCEPTION 'Stale edit accepted'; END IF;
