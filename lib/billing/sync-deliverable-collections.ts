@@ -5,6 +5,11 @@ export async function syncDeliverableCollectionsForInvoice(
   supabase: SupabaseClient,
   invoiceId: string
 ): Promise<void> {
+  // Accounting maintains aggregate coverage transactionally, including reversals.
+  const managed = await supabase.rpc("tw_accounting_manages_invoice_collections", { p_invoice: invoiceId });
+  // The payment is already saved. A failed follow-up must not invite a duplicate
+  // payment retry or overwrite coverage maintained by the database.
+  if (managed.error || managed.data === true) return;
   const { data: invoice } = await supabase
     .from("invoices")
     .select("total, amount_paid")

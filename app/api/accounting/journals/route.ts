@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { accountingContext } from '@/features/accounting/setup-server';
 import { isoDate,journalSchema,journalActionSchema,reversalSchema,periodSchema } from '@/features/accounting/journal-validation';
 import { assertCsrfRequest } from '@/lib/security/csrf';
-const header='id,company_id,entry_date,reference,memo,status,voucher_number,version,reversal_of,reversal_reason,source_invoice_id,transaction_currency,exchange_rate,exchange_rate_date,unpost_reason,created_at,posted_at';
+const header='id,company_id,entry_date,reference,memo,status,voucher_number,version,reversal_of,reversal_reason,source_invoice_id,source_payment_id,transaction_currency,exchange_rate,exchange_rate_date,unpost_reason,created_at,posted_at';
 const reply=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
 const message=(e:unknown)=>e instanceof z.ZodError?e.issues[0]?.message:e instanceof Error?e.message:'Accounting request failed';
 export async function GET(request:Request){
