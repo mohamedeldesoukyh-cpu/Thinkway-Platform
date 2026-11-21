@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       result = await db.from("tw_accounting_companies").update({name:v.name,country_code:v.country_code,currencies:[...new Set(v.currencies)]}).eq("id",v.id).eq("version",v.version).select("id").single();
     } else if (body.operation === "account-save") {
       const v = accountSchema.parse(body.value);
-      const row = {company_id:v.companyId,code:v.code,name:v.name,name_ar:v.nameAr,parent_code:v.parent,account_type:v.type,normal_balance:v.normal,kind:v.kind,subledger:v.subledger,client_id:v.clientId,vendor_id:v.vendorId,has_auxiliary:v.hasAuxiliary,active:v.active};
+      const row = {company_id:v.companyId,code:v.code,name:v.name,name_ar:v.nameAr,parent_code:v.parent,account_type:v.type,normal_balance:v.normal,kind:v.kind,subledger:v.subledger,client_id:v.clientId,vendor_id:v.vendorId,has_auxiliary:v.hasAuxiliary,auxiliary_source_code:v.auxiliarySource,active:v.active};
       if (v.version === null && v.kind === "System") throw new Error("System accounts are reserved for the accounting engine");
       result = v.version === null ? await db.from("tw_accounting_accounts").insert(row).select("code").single() : await db.from("tw_accounting_accounts").update(row).eq("company_id",v.companyId).eq("code",v.code).eq("version",v.version).select("code").single();
     } else if (body.operation === "year-create") {

@@ -1,6 +1,6 @@
 import { cents,decimal } from './journal-model';
 export type InvoiceSubmission={invoice_id:string;company_id:string;client_id?:string;client_code:string;client_name:string;source:{number:string;date:string;currency:string;net:string;vat:string;total:string};status:'submitted'|'posted'|'pending';version:number;journal_id:string|null;voucher:string|null;reversal:string|null};
-export type InvoiceFx={currency:string;base:string;rate:string;date:string};
+export type InvoiceFx={currency:string;base:string;rate:string;date:string;plan?:{lines:{account:string;description:string;foreignDebit:string;foreignCredit:string;debit:string;credit:string}[];components:{combined_legacy:boolean}}};
 export function convertInvoiceAmount(amount:string,rate:string):string {
  if(!/^\d+(\.\d{1,8})?$/.test(rate))throw new Error('Invalid exchange rate');
  const [whole,fraction='']=rate.split('.');const scaled=BigInt(whole)*BigInt(100000000)+BigInt(fraction.padEnd(8,'0'));

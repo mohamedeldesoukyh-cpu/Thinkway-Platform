@@ -1,4 +1,5 @@
 // Inherits AccountingConsole's client boundary.
+import { mappedAccount,mappedAuxiliaries } from './mapping-model';
 import { useEffect,useState } from 'react';
 import type { AccountingSetup } from './setup-types';
 import { cents,decimal,money } from './journal-model';
@@ -11,7 +12,7 @@ import { ReceiptDesk } from './receipt-desk';
 type Entry={partyLabel?:string;auxiliaries:Record<string,string>;id:string;party:string;currency:string;date:string;amount:string;cash:string;control:string;advance:string;gain:string;loss:string;parent:string|null;advanceRow:boolean;method:string;reference:string;lines:Allocation[]};
 export function SettlementDesk({setup,kind,onBusyChange,autoOpen=false}:{setup:AccountingSetup;kind:'receipt'|'payment';onBusyChange:(b:boolean)=>void;autoOpen?:boolean}){
  const company=setup.company!,client=kind==='receipt',partyKind=client?'client':'vendor';
- const empty=():Entry=>({auxiliaries:{},id:crypto.randomUUID(),party:'',currency:company.base_currency,date:accountingToday(),amount:'',cash:'112001',control:client?'121001':'211001',advance:client?'221001':'131001',gain:'712001',loss:'722001',parent:null,advanceRow:false,method:'bank_transfer',reference:'',lines:[]});
+ const empty=():Entry=>({auxiliaries:mappedAuxiliaries(setup),id:crypto.randomUUID(),party:'',currency:company.base_currency,date:accountingToday(),amount:'',cash:mappedAccount(setup,'cash_bank','112001'),control:mappedAccount(setup,client?'client_receivable':'vendor_payable',client?'121001':'211001'),advance:mappedAccount(setup,client?'customer_advance':'vendor_advance',client?'221001':'131001'),gain:mappedAccount(setup,'fx_gain','712001'),loss:mappedAccount(setup,'fx_loss','722001'),parent:null,advanceRow:false,method:'bank_transfer',reference:'',lines:[]});
  const [print,setPrint]=useState<PrintVoucher|null>(null);
  const [entry,setEntry]=useState<Entry|null>(()=>autoOpen?empty():null),[review,setReview]=useState<Voucher|null>(null),[quote,setQuote]=useState<SettlementQuote|null>(null),[confirmed,setConfirmed]=useState(false);
  const [rows,setRows]=useState<Voucher[]>([]),[count,setCount]=useState(0),[page,setPage]=useState(0),[epoch,setEpoch]=useState(0),[search,setSearch]=useState(''),[filter,setFilter]=useState('');

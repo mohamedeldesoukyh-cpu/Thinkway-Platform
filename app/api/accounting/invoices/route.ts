@@ -10,6 +10,10 @@ export async function GET(request:Request){
  try{
   const {db}=await accountingContext();const q=new URL(request.url).searchParams;
   const company=z.string().uuid().parse(q.get('company'));const page=z.coerce.number().int().min(0).max(100000).parse(q.get('page')??0);
+  if(q.get('mode')==='posting-plan'){
+   const invoice=z.string().uuid().parse(q.get('invoice')),code=z.string().regex(/^\d{6}$/);
+   const r=await db.rpc('tw_accounting_invoice_mapping_preview',{p_invoice:invoice,p_company:company,p_receivable:code.parse(q.get('receivable')),p_revenue:code.parse(q.get('revenue')),p_vat:q.get('vat')||null});if(r.error)throw new Error(r.error.message);return reply({...r.data,plan:r.data});
+  }
   if(q.get('mode')==='fx'){
    const invoice=z.string().uuid().parse(q.get('invoice'));
    const r=await db.rpc('tw_accounting_invoice_fx',{p_invoice:invoice,p_company:company});if(r.error)throw new Error(r.error.message);return reply(r.data);
@@ -32,7 +36,7 @@ export async function POST(request:Request){
   const body=await request.json();let result;
   if(body.operation==='post'){
    const v=requestSchema.parse(body.value);
-   const auxiliaries=z.record(z.string().regex(/^\d{6}$/),z.union([z.string().uuid(),z.literal('')])).parse(body.value.auxiliaries??{});result=await db.rpc('tw_accounting_post_with_aux',{p_operation:'invoice',p_auxiliaries:auxiliaries,p_value:v});
+   const auxiliaries=z.record(z.string().regex(/^\d{6}$/),z.union([z.string().uuid(),z.literal('')])).parse(body.value.auxiliaries??{});const plan=z.record(z.string(),z.unknown()).parse(body.value.expectedPlan);result=await db.rpc('tw_accounting_post_mapped_invoice',{p_invoice:v.invoice,p_company:v.company,p_version:v.version,p_date:v.date,p_receivable:v.receivable,p_revenue:v.revenue,p_vat:v.vat,p_expected_rate:v.rate,p_expected_plan:plan,p_auxiliaries:auxiliaries});
   }else if(body.operation==='unpost'){
    const v=z.object({invoice:z.string().uuid(),company:z.string().uuid(),version:z.number().int().positive(),reason:z.string().trim().min(3).max(500)}).parse(body.value);
    result=await db.rpc('tw_accounting_unpost_invoice',{p_invoice:v.invoice,p_company:v.company,p_version:v.version,p_reason:v.reason});
