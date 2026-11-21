@@ -23,6 +23,7 @@ export const PAGE_PREFIX_CLASSIFICATIONS: Array<{
   { prefix: "/client-portal", class: "client_workspace", portal: "client" },
   { prefix: "/creator-portal", class: "client_workspace", portal: "creator" },
   { prefix: "/finance", class: "internal_workspace" },
+  { prefix: "/accounting", class: "internal_workspace" },
   { prefix: "/operations", class: "internal_workspace" },
   { prefix: "/billing", class: "internal_workspace" },
   { prefix: "/collections", class: "internal_workspace" },
@@ -222,6 +223,7 @@ export const WORKER_CLASSIFICATIONS: WorkspaceClassificationEntry[] = [
 
 /** Path prefixes that portal (client/creator) actors must never reach. */
 export const PORTAL_BLOCKED_PAGE_PREFIXES = [
+  "/accounting",
   "/finance",
   "/operations",
   "/billing",
