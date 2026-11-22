@@ -15,11 +15,11 @@ export async function GET(request:Request){
    if(result.error)return reply({error:result.error.message},result.error.code==='42501'?403:400);return reply(result.data);
   }
   const v=controlFiltersSchema.parse(Object.fromEntries(q));
-  let query=db.from('tw_accounting_journals').select('id,company_id,entry_date,memo,reference,status,voucher_number,version,created_by,control_editor,control_locked,control_reason,approval_state,approval_by,source_invoice_id,source_payment_id,automatic_source,reversal_of',{count:'exact'})
+  let query=db.from('tw_accounting_journals').select('resume_status,id,company_id,entry_date,memo,reference,status,voucher_number,version,created_by,control_editor,control_locked,control_reason,approval_state,approval_by,source_invoice_id,source_payment_id,automatic_source,reversal_of',{count:'exact'})
    .eq('company_id',v.company).gte('entry_date',v.from).lte('entry_date',v.to).order('entry_date',{ascending:false}).order('id').range(v.page*50,v.page*50+49);
   if(v.approval!=='all')query=query.eq('approval_state',v.approval);
   if(v.locked!=='all')query=query.eq('control_locked',v.locked==='yes');
-  if(q.get('mode')==='approvals')query=query.eq('status','draft').is('source_invoice_id',null).is('source_payment_id',null).is('automatic_source',null).is('reversal_of',null);
+  if(q.get('mode')==='approvals')query=query.or('status.eq.draft,resume_status.not.is.null').is('source_invoice_id',null).is('source_payment_id',null).is('automatic_source',null).is('reversal_of',null);
   const result=await query;if(result.error)throw new Error(result.error.message);
   return reply({rows:result.data,count:result.count,actor:user.id});
  }catch(error){return failure(error);}

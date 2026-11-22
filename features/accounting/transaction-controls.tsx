@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import type {AccountingSetup} from './setup-types';
 import {money,totals,type JournalDetail} from './journal-model';
-type Entry={id:string;entry_date:string;memo:string;reference:string;status:string;voucher_number:string|null;version:number;created_by:string;control_editor:string|null;control_locked:boolean;control_reason:string|null;approval_state:string;source_invoice_id:string|null;source_payment_id:string|null;automatic_source:string|null;reversal_of:string|null};
+type Entry={resume_status?:'draft'|'posted'|null;id:string;entry_date:string;memo:string;reference:string;status:string;voucher_number:string|null;version:number;created_by:string;control_editor:string|null;control_locked:boolean;control_reason:string|null;approval_state:string;source_invoice_id:string|null;source_payment_id:string|null;automatic_source:string|null;reversal_of:string|null};
 type History={id:number;occurred_at:string;operation:string;actor:string;record_id:string;voucher:string;reason:string};
 async function request(url:string,value?:unknown){const r=await fetch(url,value?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)}:{cache:'no-store'});const data=await r.json();if(!r.ok)throw new Error(data.error??'Accounting request failed');return data;}
 export function TransactionControls({setup,mode,onBusyChange,onSaved}:{setup:AccountingSetup;mode:'approvals'|'transaction-locks'|'approval-policy';onBusyChange:(busy:boolean)=>void;onSaved:()=>Promise<void>}){
@@ -26,7 +26,7 @@ export function TransactionControls({setup,mode,onBusyChange,onSaved}:{setup:Acc
  async function open(entry:Entry){setBusy(true);setError('');try{const detail:JournalDetail=await request(`/api/accounting/journals?company=${company.id}&mode=detail&id=${entry.id}`);setReview({entry:{...entry,...detail.journal,control_locked:!!detail.journal.control_locked,approval_state:detail.journal.approval_state??'none',control_reason:detail.journal.control_reason??null},detail});setReason('');}catch(e){setError(e instanceof Error?e.message:'Could not review journal');}finally{setBusy(false);}}
  async function act(action:string,entries:Entry[]){setBusy(true);setError('');setNotice('');try{await request('/api/accounting/controls',{operation:'action',value:{company:company.id,action,reason,entries:entries.map(({id,version})=>({id,version}))}});setNotice(`${entries.length} journal(s): ${action} completed.`);setReview(null);setSelected([]);setReason('');reloadList();}catch(e){setError(e instanceof Error?e.message:'Action failed');}finally{setBusy(false);}}
  const selectedRows=rows.filter(row=>selected.includes(row.id));
- const eligible=review&&!review.entry.control_locked&&review.entry.status==='draft'&&!review.entry.source_invoice_id&&!review.entry.source_payment_id&&!review.entry.automatic_source&&!review.entry.reversal_of;
+ const eligible=review&&!review.entry.control_locked&&(review.entry.status==='draft'||!!review.entry.resume_status)&&!review.entry.source_invoice_id&&!review.entry.source_payment_id&&!review.entry.automatic_source&&!review.entry.reversal_of;
  const independent=review&&actor!==review.entry.created_by&&actor!==review.entry.control_editor;
  const reasonReady=reason.trim().length>=3;
  const showHistory=(id:string|null)=>{resetList();setHistory(true);setHistoryJournal(id);setPage(0);setReview(null);};
