@@ -1280,7 +1280,8 @@
   {
     "file": "features/accounting/statement-desk.tsx",
     "parents": [
-      "features/accounting/console.tsx"
+      "features/accounting/console.tsx",
+      "features/accounting/mini-statement.tsx"
     ]
   },
   {
@@ -1392,6 +1393,13 @@
     "file": "features/accounting/fiscal-desk.tsx",
     "parents": [
       "features/accounting/console.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/mini-statement.tsx",
+    "parents": [
+      "features/accounting/journal-desk.tsx",
+      "features/accounting/settlement-desk.tsx"
     ]
   }
 ]
