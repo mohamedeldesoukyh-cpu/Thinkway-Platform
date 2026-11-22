@@ -8,6 +8,9 @@ j:=tw_accounting_save_signed_workflow(jsonb_build_object('id',gen_random_uuid(),
 PERFORM tw_accounting_post_journal(j,c,1);
 END LOOP;
 
+q:=tw_accounting_statement_filtered(c,'2026-01-01','2026-12-31','1,4');IF (q->>'count')::integer<>4 OR jsonb_array_length(q->'accounts')<>2 THEN RAISE EXCEPTION 'Prefix selection omitted accounts';END IF;
+q:=tw_accounting_statement_filtered(c,'2026-01-01','2026-12-31','1,11,111001');IF (q->>'count')::integer<>2 THEN RAISE EXCEPTION 'Overlapping prefixes duplicated rows';END IF;
+IF (SELECT sum((x->>'closing')::numeric) FROM jsonb_array_elements(q->'auxiliaries') x)<>300 THEN RAISE EXCEPTION 'Auxiliary totals do not reconcile';END IF;
 q:=tw_accounting_statement_filtered(c,'2026-01-01','2026-12-31','111001,411001');IF (q->>'count')::integer<>4 OR jsonb_array_length(q->'accounts')<>2 THEN RAISE EXCEPTION 'Multiple account selection omitted records';END IF;
 q:=tw_accounting_statement_filtered(c,'2026-01-01','2026-12-31','100000,111001');IF (q->>'count')::integer<>2 THEN RAISE EXCEPTION 'Overlapping parent and child duplicated records';END IF;
 q:=tw_accounting_statement_filtered(c,'2026-01-01','2026-12-31','111001');old:=tw_accounting_statement(c,'2026-01-01','2026-12-31','111001');
