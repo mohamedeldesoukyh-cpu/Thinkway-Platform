@@ -13,7 +13,7 @@ export async function loadModuleAccess(db: SupabaseClient): Promise<ModuleAccess
 export function moduleHome(access: ModuleAccess): string {
   if (access.media && access.accounting) return "/modules";
   if (access.accounting) return "/accounting";
-  if (access.media) return "/";
+  if (access.media) return "/media";
   return "/modules";
 }
 

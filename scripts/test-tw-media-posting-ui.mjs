@@ -16,7 +16,7 @@ const calls=[],posted=new Set();let failSecond=true;
 const css=fs.readdirSync('.next/static/chunks').filter(f=>f.endsWith('.css')).map(f=>fs.readFileSync('.next/static/chunks/'+f,'utf8')).join('\n');
 const server=http.createServer(async(req,res)=>{try{
  const url=new URL(req.url,'http://127.0.0.1');
- if(url.pathname==='/'){res.setHeader('Content-Type','text/html');return res.end('<!doctype html><html><head><link rel="stylesheet" href="/style.css"></head><body style="padding:24px"><h1>Post to Accounting</h1><div id="root"></div><script src="/app.js"></script></body></html>');}
+ if(url.pathname==='/'){res.setHeader('Content-Type','text/html');return res.end('<!doctype html><html><head><link rel="stylesheet" href="/style.css"></head><body class="finance-suite" style="padding:24px;font-family:Arial,sans-serif"><h1>Post to Accounting</h1><div id="root"></div><script src="/app.js"></script></body></html>');}
  if(url.pathname==='/style.css'){res.setHeader('Content-Type','text/css');return res.end(css);}
  if(url.pathname==='/app.js'){res.setHeader('Content-Type','text/javascript');return res.end(fs.readFileSync(path.join(out,'app.js')));}
  if(url.pathname!=='/api/accounting/media-posting'){res.statusCode=404;return res.end();}

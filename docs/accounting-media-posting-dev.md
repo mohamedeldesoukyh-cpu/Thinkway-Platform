@@ -125,3 +125,15 @@ full cash settlement and reversal, debit removal protection and statement refs.
 `scripts/test-tw-media-posting-ui.mjs` tests the actual React components with
 controlled HTTP responses; it is browser UI evidence, not a live authenticated
 Dev end-to-end test.
+
+
+## Platform entry and Accounting landing
+
+The root URL opens the existing module chooser. The Media home dashboard is now
+at `/media`; its navigation links and single-module login destination follow that
+route. Existing module permissions and portal destinations are retained. Users
+assigned only one module continue directly into their assigned module.
+Accounting without a section hash opens a centered TW welcome screen. Toolbar
+navigation chooses the workspace; explicit section links and refresh retain the
+requested section. The posting queue uses existing Finance cards, controls and
+table styling, with unused generic Export/Actions buttons hidden.

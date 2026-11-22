@@ -65,7 +65,7 @@ export function AccountingWorkspace({accounts, companyName, controls, showChart,
       })}</nav>
     </aside>
     <main className="tw-ac-main" dir="ltr"><div className="tw-ac-breadcrumb" dir={arabic?'rtl':'ltr'} lang={language}>{arabic?'المحاسبة':'Accounting'} <ChevronRight size={13}/> {activeGroup?.[language]} <ChevronRight size={13}/> <span>{activeItem?.[language]??sectionTitle}</span></div>
-    <div className="tw-ac-title-row"><div><div className="tw-ac-eyebrow">THE FOUNDATION OF YOUR BOOKS</div><h1>{sectionTitle}</h1><p>Clear accounts, balanced journals and traceable transactions.</p></div>{showChart && <button className="tw-ac-button" onClick={exportChart}><Download size={16} /> Export CSV</button>}</div>
+    {activeView!=='home'&&<div className="tw-ac-title-row"><div><div className="tw-ac-eyebrow">THE FOUNDATION OF YOUR BOOKS</div><h1>{sectionTitle}</h1><p>Clear accounts, balanced journals and traceable transactions.</p></div>{showChart && <button className="tw-ac-button" onClick={exportChart}><Download size={16} /> Export CSV</button>}</div>}
     {controls}
     {showChart && <><div className="tw-ac-summary"><div><Layers3 size={18} /><span><strong>{roots.length}</strong> account classes</span></div><div><FolderTree size={18} /><span><strong>{groups.length}</strong> summary groups</span></div><div><BookOpen size={18} /><span><strong>{leaves.length}</strong> detail accounts</span></div><span className="tw-ac-summary-note">Six-digit account codes</span></div>
     <div className="tw-ac-notice"><span className="tw-ac-notice-label">SETUP REVIEW</span><p>Your chart is saved. Use Journal vouchers for manual entries and General ledger to review posted balances.</p></div>
