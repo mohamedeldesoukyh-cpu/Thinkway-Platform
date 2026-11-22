@@ -44,6 +44,15 @@ BEGIN
  blocked:=false;BEGIN PERFORM tw_accounting_unpost_invoice(inv,c,2,'Correction');EXCEPTION WHEN OTHERS THEN blocked:=true;END;
  IF NOT blocked THEN RAISE EXCEPTION 'Closed period unposted'; END IF;
  PERFORM tw_accounting_set_period(c,p,false,'QA reopen',2);
+ -- Savepoint keeps the existing fixture versions and serial expectations unchanged.
+ BEGIN
+  PERFORM tw_accounting_control_action(c,'lock',(SELECT jsonb_build_array(jsonb_build_object('id',id,'version',version)) FROM tw_accounting_journals WHERE id=j),'Lock source correction fixture');
+  blocked:=false;BEGIN PERFORM tw_accounting_unpost_invoice(inv,c,2,'Locked invoice correction'); EXCEPTION WHEN OTHERS THEN blocked:=SQLERRM LIKE '%locked%';END;
+  IF NOT blocked THEN RAISE EXCEPTION 'Locked source invoice unposted'; END IF;
+  RAISE NOTICE 'PASS: source journal lock enforced';
+  RAISE EXCEPTION 'Rollback lock scenario only' USING ERRCODE='ZX001';
+ EXCEPTION WHEN SQLSTATE 'ZX001' THEN NULL;
+ END;
  PERFORM tw_accounting_unpost_invoice(inv,c,2,'Correct pricing');
  PERFORM tw_accounting_unpost_invoice(inv,c,2,'Retry');
  IF NOT tw_accounting_invoice_correction_allowed(inv) THEN RAISE EXCEPTION 'Pending invoice not editable'; END IF;

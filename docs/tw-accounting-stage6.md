@@ -1,5 +1,7 @@
 # Stage 6 — Accounting navigation and audited module inventory
 
+This is the Stage 6 baseline inventory. [Stage 7 transaction controls](tw-accounting-stage7.md) implements optional journal approvals, individual/bulk locks and scoped control history from the pending list below.
+
 ## Scope and architecture
 
 Navigation restructuring only. Cost centers are excluded by user instruction. No database migration, accounting calculation, API, posting rule, record, serial, or authorization change is required. Future budgets use GL accounts and fiscal periods.

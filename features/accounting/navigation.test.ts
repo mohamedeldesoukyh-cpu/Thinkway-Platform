@@ -4,7 +4,7 @@ import {accountingGroups,accountingNavigation,visibleAccountingNavigation} from 
 
 test('all legacy screens remain reachable; vendor preset reuses the shared directory',()=>{
   const items=visibleAccountingNavigation({accounting:true,admin:true});
-  assert.deepEqual(new Set(items.map(item=>item.view)),new Set(['parties','vendors','mapping','auxiliaries','moves','expenses','statements','costs','payments','receipts','invoices','chart','company','years','users','journals','ledger','trial','periods']));
+  assert.deepEqual(new Set(items.map(item=>item.view)),new Set(['approvals','transaction-locks','approval-policy','parties','vendors','mapping','auxiliaries','moves','expenses','statements','costs','payments','receipts','invoices','chart','company','years','users','journals','ledger','trial','periods']));
   assert.ok(items.every(item=>item.route==='/accounting'));
 });
 test('registry has unique identities, valid parents, bilingual labels and evidence',()=>{
@@ -24,10 +24,10 @@ test('pending and embedded/global capabilities never become placeholder links',(
 });
 test('navigation preserves accounting and administrator visibility boundaries',()=>{
   assert.deepEqual(visibleAccountingNavigation({accounting:false,admin:true}),[]);
-  assert.equal(visibleAccountingNavigation({accounting:true,admin:false}).some(item=>item.view==='users'),false);
+  assert.equal(visibleAccountingNavigation({accounting:true,admin:false}).some(item=>item.view==='users'||item.view==='approval-policy'),false);
   assert.equal(visibleAccountingNavigation({accounting:true,admin:true}).filter(item=>item.view==='users').length,1);
 });
-test('transaction reclassification and period locks do not imply transfers or individual locks',()=>{
-  for(const id of ['moves','periods'])assert.equal(accountingNavigation.find(item=>item.id===id)?.status,'Ready');
-  for(const id of ['transfers','transaction-locks','approvals','closing'])assert.equal(accountingNavigation.find(item=>item.id===id)?.status,'Pending');
+test('transaction controls are ready while dedicated transfers and closing remain pending',()=>{
+  for(const id of ['moves','periods','approvals','transaction-locks'])assert.equal(accountingNavigation.find(item=>item.id===id)?.status,'Ready');
+  for(const id of ['transfers','closing'])assert.equal(accountingNavigation.find(item=>item.id===id)?.status,'Pending');
 });

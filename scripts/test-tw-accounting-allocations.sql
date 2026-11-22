@@ -46,6 +46,15 @@ BEGIN
  IF (SELECT sum(p.amount) FROM payments p JOIN tw_accounting_settlement_payments m ON m.payment_id=p.id WHERE m.settlement_id IN(rv,av) AND p.status='completed')<>30 THEN RAISE EXCEPTION 'Advance application recorded cash twice'; END IF;
  IF (SELECT sum(l.debit-l.credit) FROM tw_accounting_journal_lines l JOIN tw_accounting_journals j ON j.id=l.journal_id WHERE l.company_id=c AND l.account_code='221001' AND j.status='posted')<>0 THEN RAISE EXCEPTION 'Advance did not clear'; END IF;
  blocked:=false;BEGIN PERFORM tw_accounting_settlement_reverse(rv,c,'2026-02-03','Illegal parent reversal');EXCEPTION WHEN raise_exception THEN blocked:=true;END;IF NOT blocked THEN RAISE EXCEPTION 'Allocated advance reversed'; END IF;
+ -- Savepoint keeps the existing fixture versions and serial expectations unchanged.
+ BEGIN
+  PERFORM tw_accounting_control_action(c,'lock',(SELECT jsonb_build_array(jsonb_build_object('id',id,'version',version)) FROM tw_accounting_journals WHERE id=j2),'Lock source correction fixture');
+  blocked:=false;BEGIN PERFORM tw_accounting_settlement_reverse(av,c,'2026-02-03','Locked source settlement reversal'); EXCEPTION WHEN OTHERS THEN blocked:=SQLERRM LIKE '%locked%';END;
+  IF NOT blocked THEN RAISE EXCEPTION 'Locked source settlement reversed'; END IF;
+  RAISE NOTICE 'PASS: source journal lock enforced';
+  RAISE EXCEPTION 'Rollback lock scenario only' USING ERRCODE='ZX001';
+ EXCEPTION WHEN SQLSTATE 'ZX001' THEN NULL;
+ END;
  PERFORM tw_accounting_settlement_reverse(av,c,'2026-02-03','Undo application');
  IF NOT EXISTS(SELECT 1 FROM payments p JOIN tw_accounting_settlement_payments m ON m.payment_id=p.id WHERE m.settlement_id=rv AND m.is_advance AND p.status='completed' AND p.amount=10) THEN RAISE EXCEPTION 'Reversal did not restore advance'; END IF;
  PERFORM tw_accounting_settlement_reverse(rv,c,'2026-02-03','Undo receipt');
