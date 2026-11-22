@@ -1,0 +1,98 @@
+-- Development only: all fixtures, access assignments and document numbers roll back.
+BEGIN;
+DO $$
+DECLARE actor uuid; reviewer uuid; c uuid; j uuid:=gen_random_uuid(); draft uuid:=gen_random_uuid();
+ lines jsonb:='[{"account":"633001","description":"Expense","debit":"100","credit":"0"},{"account":"111001","description":"Cash","debit":"0","credit":"100"}]';
+ blocked boolean; v integer; entries jsonb; history jsonb; policy_version integer;
+BEGIN
+ SELECT p.id INTO actor FROM profiles p JOIN roles r ON r.id=p.role_id WHERE r.slug='super_admin' AND p.is_active LIMIT 1;
+ SELECT p.id INTO reviewer FROM profiles p JOIN roles r ON r.id=p.role_id WHERE r.slug='viewer' AND p.is_active AND NOT EXISTS(SELECT 1 FROM client_users WHERE profile_id=p.id) AND NOT EXISTS(SELECT 1 FROM influencers WHERE profile_id=p.id) LIMIT 1;
+ IF actor IS NULL OR reviewer IS NULL THEN RAISE EXCEPTION 'Dev actors missing'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',actor::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal2')::text,true);
+ SET LOCAL ROLE authenticated;
+ INSERT INTO tw_module_assignments(profile_id,media,accounting_role) VALUES(reviewer,false,'manage') ON CONFLICT(profile_id) DO UPDATE SET media=false,accounting_role='manage';
+ c:=tw_accounting_create_company('QA rollback transaction controls','EG','EGP','2026-01-01','[
+ {"code":"100000","name":"Assets","parent":null,"type":"Asset","normal":"Debit","kind":"Group"},
+ {"code":"111001","name":"Cash","parent":"100000","type":"Asset","normal":"Debit","kind":"Posting"},
+ {"code":"111002","name":"Other cash","parent":"100000","type":"Asset","normal":"Debit","kind":"Posting"},
+ {"code":"600000","name":"Expenses","parent":null,"type":"Expense","normal":"Debit","kind":"Group"},
+ {"code":"633001","name":"Depreciation","parent":"600000","type":"Expense","normal":"Debit","kind":"Posting"}]');
+ IF (SELECT journal_approval_required FROM tw_accounting_companies WHERE id=c) THEN RAISE EXCEPTION 'Approval is not opt-in'; END IF;
+ PERFORM tw_accounting_save_journal(j,c,'2026-01-15','','Default direct posting',NULL,lines);
+ PERFORM tw_accounting_post_journal(j,c,1);
+ SELECT version INTO policy_version FROM tw_accounting_companies WHERE id=c;
+ PERFORM tw_accounting_approval_policy(c,true,policy_version,'Enable independent approval');
+ PERFORM tw_accounting_save_journal(draft,c,'2026-01-16','','Needs independent approval',NULL,lines);
+ blocked:=false;BEGIN PERFORM tw_accounting_post_journal(draft,c,1);EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked OR (SELECT last_number FROM tw_accounting_journal_sequences WHERE company_id=c)<>1 THEN RAISE EXCEPTION 'Unapproved post or numbering bypass'; END IF;
+ PERFORM tw_accounting_control_action(c,'submit',jsonb_build_array(jsonb_build_object('id',draft,'version',1)),'Ready for review');
+ SELECT version INTO v FROM tw_accounting_journals WHERE id=draft;
+ blocked:=false;BEGIN PERFORM tw_accounting_control_action(c,'approve',jsonb_build_array(jsonb_build_object('id',draft,'version',v)),'Self approval attempt');EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Self approval accepted'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',reviewer::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',reviewer,'role','authenticated','aal','aal2')::text,true);
+ blocked:=false;BEGIN UPDATE tw_accounting_companies SET journal_approval_required=false WHERE id=c;EXCEPTION WHEN insufficient_privilege THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Manager changed approval policy directly'; END IF;
+ PERFORM tw_accounting_control_action(c,'reject',jsonb_build_array(jsonb_build_object('id',draft,'version',v)),'Please review supporting documents');
+ SELECT version INTO v FROM tw_accounting_journals WHERE id=draft;
+ PERFORM tw_accounting_control_action(c,'submit',jsonb_build_array(jsonb_build_object('id',draft,'version',v)),'Supporting documents reviewed');
+ SELECT version INTO v FROM tw_accounting_journals WHERE id=draft;
+ PERFORM tw_accounting_control_action(c,'approve',jsonb_build_array(jsonb_build_object('id',draft,'version',v)),'Independent check complete');
+ SELECT version INTO v FROM tw_accounting_journals WHERE id=draft;
+ PERFORM set_config('request.jwt.claim.sub',actor::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal2')::text,true);
+ PERFORM tw_accounting_save_journal(draft,c,'2026-01-16','','Edited after approval',v,lines);
+ IF (SELECT approval_state FROM tw_accounting_journals WHERE id=draft)<>'none' THEN RAISE EXCEPTION 'Edit retained old approval'; END IF;
+ SELECT version INTO v FROM tw_accounting_journals WHERE id=draft;
+ blocked:=false;BEGIN PERFORM tw_accounting_post_journal(draft,c,v);EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Edited approved draft posted'; END IF;
+ SELECT jsonb_agg(jsonb_build_object('id',id,'version',version)) INTO entries FROM tw_accounting_journals WHERE id IN(j,draft);
+ PERFORM tw_accounting_control_action(c,'lock',entries,'Freeze reviewed transactions');
+ SELECT version INTO v FROM tw_accounting_journals WHERE id=draft;
+ blocked:=false;BEGIN PERFORM tw_accounting_save_journal(draft,c,'2026-01-16','','Locked edit',v,lines);EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Locked draft edited'; END IF;
+ blocked:=false;BEGIN PERFORM tw_accounting_cancel_journal(draft,c,v);EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Locked draft cancelled'; END IF;
+ blocked:=false;BEGIN PERFORM tw_accounting_reverse_journal(j,c,gen_random_uuid(),'2026-01-17','Locked reversal');EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Locked journal reversed'; END IF;
+ blocked:=false;BEGIN PERFORM tw_accounting_move_accounts(gen_random_uuid(),c,'111001','111002',NULL,true,'[]',2,'Locked account move',tw_accounting_move_lines(c,'111001')->>'snapshot');EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Locked journal reclassified'; END IF;
+ SELECT jsonb_agg(jsonb_build_object('id',id,'version',version)) INTO entries FROM tw_accounting_journals WHERE id IN(j,draft);
+ blocked:=false;BEGIN PERFORM tw_accounting_control_action(c,'unlock',jsonb_set(entries,'{1,version}','999'),'Stale bulk unlock');EXCEPTION WHEN serialization_failure THEN blocked:=true;END;
+ IF NOT blocked OR EXISTS(SELECT 1 FROM tw_accounting_journals WHERE id IN(j,draft) AND NOT control_locked) THEN RAISE EXCEPTION 'Bulk unlock was not atomic'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',reviewer::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',reviewer,'role','authenticated','aal','aal2')::text,true);
+ blocked:=false;BEGIN PERFORM tw_accounting_control_action(c,'unlock',entries,'Unauthorized unlock');EXCEPTION WHEN insufficient_privilege THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Non-admin unlocked'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',actor::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal2')::text,true);
+ PERFORM tw_accounting_control_action(c,'unlock',entries,'Administrator authorizes correction');
+ SELECT version INTO v FROM tw_accounting_journals WHERE id=draft;
+ PERFORM tw_accounting_control_action(c,'submit',jsonb_build_array(jsonb_build_object('id',draft,'version',v)),'Resubmit corrected draft');
+ PERFORM set_config('request.jwt.claim.sub',reviewer::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',reviewer,'role','authenticated','aal','aal2')::text,true);
+ SELECT version INTO v FROM tw_accounting_journals WHERE id=draft;
+ PERFORM tw_accounting_control_action(c,'approve',jsonb_build_array(jsonb_build_object('id',draft,'version',v)),'Approve current contents');
+ SELECT version INTO v FROM tw_accounting_journals WHERE id=draft;
+ PERFORM tw_accounting_post_journal(draft,c,v);
+ IF (SELECT last_number FROM tw_accounting_journal_sequences WHERE company_id=c)<>2 THEN RAISE EXCEPTION 'Approved post numbering changed'; END IF;
+ history:=tw_accounting_control_history(c,draft,0);
+ IF (history->>'count')::integer<8 OR EXISTS(SELECT 1 FROM jsonb_array_elements(history->'rows') x WHERE x->>'record_id'<>draft::text OR x->>'actor' IS NULL OR length(x->>'reason')<3) THEN RAISE EXCEPTION 'History missing attribution or journal scope'; END IF;
+ IF (tw_accounting_control_history(gen_random_uuid(),NULL,0)->>'count')::integer<>0 THEN RAISE EXCEPTION 'History crossed company boundary'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',actor::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal2')::text,true);
+ INSERT INTO tw_module_assignments(profile_id,media,accounting_role) VALUES(reviewer,false,'read') ON CONFLICT(profile_id) DO UPDATE SET accounting_role='read';
+ PERFORM set_config('request.jwt.claim.sub',reviewer::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',reviewer,'role','authenticated','aal','aal2')::text,true);
+ blocked:=false;BEGIN PERFORM tw_accounting_control_action(c,'lock',entries,'Reader write');EXCEPTION WHEN insufficient_privilege THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Reader changed locks'; END IF;
+ blocked:=false;BEGIN PERFORM tw_accounting_control_history(c,NULL,0);EXCEPTION WHEN insufficient_privilege THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Reader viewed management audit history'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',actor::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal1')::text,true);
+ blocked:=false;BEGIN PERFORM tw_accounting_control_action(c,'lock',entries,'MFA bypass');EXCEPTION WHEN insufficient_privilege THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'MFA bypass'; END IF;
+ RAISE NOTICE 'PASS: optional approval, independent review, rejection, edit invalidation, posting, individual/bulk locks, atomic stale protection, source reversal/reclassification protection, scoped history, administrator policy/unlock and MFA/read-only boundaries';
+END $$;
+ROLLBACK;

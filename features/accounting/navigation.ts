@@ -13,7 +13,7 @@ export const accountingGroups = [
   {id:'settings',en:'Settings',ar:'الإعدادات'},
 ] as const;
 export type AccountingGroup = typeof accountingGroups[number]['id'];
-export type AccountingView = 'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
+export type AccountingView = 'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
 export type NavigationItem = {
   id:string; parent:AccountingGroup; en:string; ar:string; status:'Ready'|'Partial'|'Pending';
   view?:AccountingView; route?:string; permission:'accounting'|'admin'; navigation:boolean; evidence:string;
@@ -47,8 +47,9 @@ export const accountingNavigation:readonly NavigationItem[] = [
   pending('scheduled-reversal','transactions','Scheduled reversing JV','القيود العكسية المجدولة','Manual reversal exists in General JV; scheduling does not.'),
   pending('opening','transactions','Opening balance workflow','الأرصدة الافتتاحية','Manual journals supported; dedicated opening workflow absent.'),
   pending('transfers','transactions','Account transfers','التحويلات بين الحسابات','Balanced manual JV possible; dedicated transfer workflow absent.'),
-  pending('approvals','transactions','Journal approvals','اعتماد القيود','Posting permission is not an approval matrix.'),
-  pending('transaction-locks','transactions','Individual / bulk transaction locks','قفل وفتح المعاملات','Posted immutability and period locks exist; dedicated transaction locks/history do not.'),
+  ready('approvals','transactions','Journal approvals','اعتماد القيود','Independent approval of saved manual drafts when enabled per company.'),
+  ready('transaction-locks','transactions','Transaction locks & history','قفل المعاملات وسجل التحكم','Individual/bulk lock, administrator unlock, approval and lock history.'),
+  ready('approval-policy','settings','Journal approval policy','سياسة اعتماد القيود','Administrator-managed optional independent approval; direct posting by default.','admin'),
   pending('payment-preparation','payments','Payment preparation','إعداد المدفوعات','No separate payment batch preparation workflow.'),
   pending('cheques','payments','Cheque payments','مدفوعات الشيكات','No cheque register or clearing workflow.'),
   pending('bank-accounts','banking','Bank account management','إدارة الحسابات البنكية','GL bank accounts and auxiliaries exist; no dedicated bank master workflow.'),

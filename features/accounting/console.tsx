@@ -5,6 +5,7 @@ import { accountingNavigation, type AccountingView } from "./navigation";
 import { AccountingWorkspace } from "./workspace";
 import { PartySelect } from './allocation-controls';
 import { AuxiliaryConfiguration, AuxiliaryDesk, AuxiliaryManager } from './auxiliaries';
+import { TransactionControls } from './transaction-controls';
 import { PartyAccountsDesk } from './party-accounts-desk';
 import { MappingDesk } from './mapping-desk';
 import { AccountMoves } from './account-moves';
@@ -65,6 +66,7 @@ export function AccountingConsole({initial}:{initial:AccountingSetup}) {
     {company && view==='payments' && <SettlementDesk key={`${company.id}-${journalEpoch}`} setup={data} kind="payment" autoOpen={cashNew} onBusyChange={setJournalBusy}/>}
     {company && view==='costs' && <CostInvoiceDesk key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy}/>}
     {company && (view==='parties'||view==='vendors') && <PartyAccountsDesk key={`${company.id}:${view}`} initialKind={view==='vendors'?'vendor':'client'} setup={data} onBusyChange={setJournalBusy} onSaved={()=>refresh()}/>}
+    {company && (view==='approvals'||view==='transaction-locks'||view==='approval-policy') && <TransactionControls key={`${company.id}-${view}`} setup={data} mode={view} onBusyChange={setJournalBusy} onSaved={()=>refresh()}/>}
     {company && view==='mapping' && <MappingDesk setup={data} onBusyChange={setJournalBusy} onSaved={()=>refresh()}/>}
     {company && view==='auxiliaries' && <AuxiliaryDesk accountEditorOpen={!!editing} key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy} onOpenAccount={account=>{setError('');setEditing(account);}}/>}
     {company && view==='moves' && <AccountMoves key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy}/>}
