@@ -1,0 +1,4 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { statementGroups,statementHtml,type Statement } from './statement-model';
+test('foreign statements keep independent currency balances and print sections',()=>{const s:Statement={rows:[],count:0,currency:'FC',accounts:[{account:'111001',name:'Bank <safe>',currency:'EGP',opening:'0',debit:'300',credit:'0',closing:'300'},{account:'111001',name:'Bank',currency:'USD',opening:'0',debit:'2',credit:'0',closing:'2'}]};const groups=statementGroups(s);assert.deepEqual(groups.map(g=>[g.currency,g.totals.closing]),[['EGP','300.00'],['USD','2.00']]);const html=statementHtml(s,'TW <company>','2026',true,true,true);assert.equal((html.match(/<section>/g)||[]).length,2);assert.ok(html.includes('break-before:page'));assert.ok(html.includes('TW &lt;company&gt;'));assert.ok(!html.includes('302.00'));});
