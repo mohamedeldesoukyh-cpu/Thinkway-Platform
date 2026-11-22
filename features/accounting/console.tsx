@@ -15,6 +15,7 @@ import { StatementDesk } from "./statement-desk";
 import { CostInvoiceDesk } from "./cost-invoice-desk";
 import { InvoiceDesk } from "./invoice-desk";
 import { ChequeRegister } from './cheque-register';
+import {FinancialReports} from './financial-reports';
 import { BankDesk } from './bank-desk';
 import { JournalSchedules } from './journal-schedules';
 import { JournalDesk, type LedgerView } from "./journal-desk";
@@ -78,6 +79,7 @@ export function AccountingConsole({initial}:{initial:AccountingSetup}) {
     {company && (view==='transfers'||view==='opening') && <JournalDesk key={company.id+view} setup={data} mode="journals" workflow={view==='transfers'?'transfer':'opening'} onDirtyChange={setJournalDirty} onBusyChange={setJournalBusy}/>}
     {company && (view==='banks'||view==='reconciliation'||view==='bank-movements') && <BankDesk key={company.id+view} setup={data} mode={view} onBusyChange={setJournalBusy}/>}
     {company && view==='moves' && <AccountMoves key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy}/>}
+    {company && (view==='financial-statements'||view==='aging') && <FinancialReports key={company.id+view} setup={data} aging={view==='aging'}/>}
     {company && view==='statements' && <StatementDesk key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy}/>}
     {company && view==='invoices' && <InvoiceDesk key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy}/>}
     {company && ["expenses","journals","ledger","trial","periods"].includes(view) && <JournalDesk key={`${company.id}-${view}-${journalEpoch}`} setup={data} mode={view==='expenses'?'journals':view as LedgerView} expenses={view==='expenses'} onPayableExpense={()=>setView('costs')} onCashEntry={kind=>{if(journalBusy)return;if(journalDirty&&!window.confirm("Discard unsaved journal changes?"))return;setJournalDirty(false);setCashNew(true);setCurrentView(kind==='receipt'?'receipts':'payments');}} onDirtyChange={setJournalDirty} onBusyChange={setJournalBusy}/>}

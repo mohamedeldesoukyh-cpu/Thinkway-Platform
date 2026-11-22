@@ -7,8 +7,8 @@ User authorization: implement sequentially, test and resolve blockers, deploy ea
 | 1–6 | Foundation, posting, settlement, auxiliaries, Third Parties, mappings and navigation | Delivered on dev |
 | 7 | Optional independent journal approval, transaction locks, control history | Delivered and browser verified; PRs 38/39, develop `1a0100f8` |
 | 8 | Transfers, opening balances, recurring journals and scheduled reversals | Delivered and browser verified; PRs 40/41, develop `199665a5` |
-| 9 | Bank accounts, movements, reconciliation and payment preparation | In progress |
-| 10 | Financial statements and Third Party aging | Pending |
+| 9 | Bank accounts, movements, reconciliation and payment preparation | Delivered on dev; matching/closing browser verified and fixtures removed; CSV chooser verification incomplete |
+| 10 | Financial statements and Third Party aging | Implemented; dev verification in progress |
 | 11 | Budgets, allocation and variance | Pending |
 | 12 | Fiscal closing and final regression/review | Pending |
 

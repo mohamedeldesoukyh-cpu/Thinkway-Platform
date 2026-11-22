@@ -85,6 +85,7 @@ BEGIN
  PERFORM tw_accounting_payment_prepare(c,'cancel',prep_cancel,1,NULL,NULL,'Cancel unused preparation');
  IF (SELECT status FROM tw_accounting_payment_preparations WHERE id=prep_cancel)<>'cancelled' THEN RAISE EXCEPTION 'Preparation cancellation failed';END IF;
  IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(tw_accounting_open_items(c,'vendor',vendor,'USD','211001')) x WHERE x->>'id'=cost::text AND (x->>'outstanding')::numeric=60) THEN RAISE EXCEPTION 'Vendor unsettled statement incorrect'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(tw_accounting_aging(c,'vendor','USD',NULL)) x WHERE x->>'id'=cost::text AND (x->>'outstanding')::numeric=60 AND x->>'party' IS NOT NULL) THEN RAISE EXCEPTION 'All-vendor aging mismatch';END IF;
  j2:=tw_accounting_cost_reconcile(cost,c,2,'2026-02-02','QA-SUPPLIER-123','2026-01-15',110,0,'111001','QA received supplier invoice');
  IF NOT EXISTS(SELECT 1 FROM tw_accounting_cost_invoices WHERE id=cost AND status='supplier' AND journal_id=j AND net=110) THEN RAISE EXCEPTION 'Supplier reconciliation duplicated original cost'; END IF;
  IF (SELECT count(*) FROM tw_accounting_settlement_lines WHERE cost_id=cost)<>1 THEN RAISE EXCEPTION 'Supplier reconciliation lost allocations'; END IF;
