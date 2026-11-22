@@ -1387,5 +1387,11 @@
     "parents": [
       "features/accounting/console.tsx"
     ]
+  },
+  {
+    "file": "features/accounting/fiscal-desk.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
   }
 ]
