@@ -3,8 +3,9 @@
 import { useState, useRef } from "react";
 import Link from "next/link";
 import { ModuleSignOut } from "@/components/layout/module-sign-out";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { AccountingHelp } from './help';
-import { BookOpen, ChevronDown, ChevronRight, Download, FolderTree, Search, ShieldCheck, X, Layers3, ArrowLeftRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { BookOpen, FileText, Upload, History, ChevronDown, ChevronRight, Download, FolderTree, Search, ShieldCheck, X, Layers3, ArrowLeftRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { accountingGroups, visibleAccountingNavigation, type AccountingView, type NavigationLanguage } from "./navigation";
 import { chartCsv, isWithin, type Account } from "./chart";
 
@@ -45,8 +46,10 @@ export function AccountingWorkspace({accounts, companyName, controls, showChart,
       <button className="tw-ac-tree-label" onClick={() => setBranch(account.code)} aria-pressed={branch === account.code}><span className="tw-ac-code">{account.code}</span><span>{account.name}</span></button>
     </div>{open && children.length > 0 && <ul>{children.map(a => treeNode(a, level + 1))}</ul>}</li>;
   }
-  return <div className="tw-accounting">
+  return <div className={'tw-accounting '+(['journals','expenses','opening','transfers','receipts','payments','payment-preparation','statements'].includes(activeView)?'tw-ac-work-page':'')}>
     <header className="tw-ac-topbar"><Link href="/accounting" className="tw-ac-brand"><span className="tw-ac-monogram">tw<span>.</span></span><span>Accounting<small>THINKWAY WORKSPACE</small></span></Link><div className="tw-ac-topbar-right"><span className="tw-ac-review">{companyName}</span>{canMedia && <Link className="tw-ac-switch" href="/modules"><ArrowLeftRight size={16} /> Switch module</Link>}<AccountingHelp /><ModuleSignOut /></div></header>
+    <nav className="tw-ac-menu-bar" aria-label="Accounting menus">{accountingGroups.filter(g=>g.id!=='administration'||canAdmin).map(group=><DropdownMenu key={group.id}><DropdownMenuTrigger className="tw-ac-menu-trigger" aria-current={group.id===activeGroup?.id?'true':undefined}>{group[language]} <ChevronDown size={12}/></DropdownMenuTrigger><DropdownMenuContent>{navigationItems.filter(item=>item.parent===group.id).map(item=><DropdownMenuItem key={item.id} onSelect={()=>onNavigate(item.view!)}>{item[language]}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>)}</nav>
+    <div className="tw-ac-command-bar" role="toolbar" aria-label="Accounting shortcuts"><button className="tw-ac-button" title="Open general journal vouchers" aria-label="General JV" onClick={()=>onNavigate('journals')}><BookOpen size={16} aria-hidden="true"/>General JV</button><button className="tw-ac-button" title="Record and allocate client receipts" aria-label="Receipts" onClick={()=>onNavigate('receipts')}><Download size={16} aria-hidden="true"/>Receipts</button><button className="tw-ac-button" title="Record and allocate vendor payments" aria-label="Payments" onClick={()=>onNavigate('payments')}><Upload size={16} aria-hidden="true"/>Payments</button><button className="tw-ac-button" title="View account and Third Party statements" aria-label="Statements" onClick={()=>onNavigate('statements')}><FileText size={16} aria-hidden="true"/>Statements</button><span/><button className="tw-ac-button" title="Review transaction approvals, locks and history" aria-label="Approval & lock history" onClick={()=>onNavigate('transaction-locks')}><History size={16} aria-hidden="true"/>Approval & lock history</button>{canAdmin&&<button className="tw-ac-button" title="View accounting activity and audit history" aria-label="Audit log" onClick={()=>onNavigate('audit-viewer')}><ShieldCheck size={16} aria-hidden="true"/>Audit log</button>}</div>
     <div className="tw-ac-navigation-bar" dir={arabic?'rtl':'ltr'}>
       <button ref={navigationToggle} className="tw-ac-button tw-ac-mobile-navigation" aria-expanded={mobileNavigation} aria-controls="accounting-navigation" onClick={()=>setMobileNavigation(!mobileNavigation)}><PanelLeftOpen size={18}/>{arabic?'القائمة':'Menu'}</button>
       <div className="tw-ac-language" aria-label="Navigation language"><button lang="en" aria-pressed={!arabic} onClick={()=>setLanguage('en')}>English</button><button lang="ar" aria-pressed={arabic} onClick={()=>setLanguage('ar')}>العربية</button></div>
