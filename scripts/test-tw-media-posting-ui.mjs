@@ -9,14 +9,14 @@ import { build } from 'esbuild';
 const require=createRequire(import.meta.url);
 const {chromium}=require('C:/thinkway-platform/services/discovery-worker/node_modules/playwright');
 const root=process.cwd(),out=path.join(root,'.tmp/media-posting-ui');fs.mkdirSync(out,{recursive:true});
-const entry=`import React from 'react';import{createRoot}from'react-dom/client';import{AccountingPostingQueue}from ${JSON.stringify(path.join(root,'features/finance/posting-center/components/accounting-posting-queue.tsx'))};createRoot(document.getElementById('root')).render(<AccountingPostingQueue company="11111111-1111-4111-8111-111111111111" manage={true} today="2026-11-22"/>);`;
+const entry=`import React from 'react';import{createRoot}from'react-dom/client';import{PostingPageHeader}from ${JSON.stringify(path.join(root,'features/finance/posting-center/components/posting-page-header.tsx'))};import{AccountingPostingQueue}from ${JSON.stringify(path.join(root,'features/finance/posting-center/components/accounting-posting-queue.tsx'))};createRoot(document.getElementById('root')).render(<><PostingPageHeader/><AccountingPostingQueue company="11111111-1111-4111-8111-111111111111" manage={true} today="2026-11-22"/></>);`;
 fs.writeFileSync(path.join(out,'entry.tsx'),entry);
 await build({entryPoints:[path.join(out,'entry.tsx')],bundle:true,outfile:path.join(out,'app.js'),platform:'browser',jsx:'automatic',define:{'process.env.NODE_ENV':'"production"','process.env':'{}'}});
 const calls=[],posted=new Set();let failSecond=true;
 const css=fs.readdirSync('.next/static/chunks').filter(f=>f.endsWith('.css')).map(f=>fs.readFileSync('.next/static/chunks/'+f,'utf8')).join('\n');
 const server=http.createServer(async(req,res)=>{try{
  const url=new URL(req.url,'http://127.0.0.1');
- if(url.pathname==='/'){res.setHeader('Content-Type','text/html');return res.end('<!doctype html><html><head><link rel="stylesheet" href="/style.css"></head><body class="finance-suite" style="padding:24px;font-family:Arial,sans-serif"><h1>Post to Accounting</h1><div id="root"></div><script src="/app.js"></script></body></html>');}
+ if(url.pathname==='/'){res.setHeader('Content-Type','text/html');return res.end('<!doctype html><html><head><link rel="stylesheet" href="/style.css"></head><body class="finance-suite" style="padding:24px;font-family:Arial,sans-serif"><div id="root"></div><script src="/app.js"></script></body></html>');}
  if(url.pathname==='/style.css'){res.setHeader('Content-Type','text/css');return res.end(css);}
  if(url.pathname==='/app.js'){res.setHeader('Content-Type','text/javascript');return res.end(fs.readFileSync(path.join(out,'app.js')));}
  if(url.pathname!=='/api/accounting/media-posting'){res.statusCode=404;return res.end();}

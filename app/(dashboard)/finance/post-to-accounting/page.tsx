@@ -1,3 +1,4 @@
+import { PostingPageHeader } from "@/features/finance/posting-center/components/posting-page-header";
 import { FinanceSuiteShell } from '@/components/finance/suite/finance-suite-shell';
 import { accountingContext } from '@/features/accounting/setup-server';
 import { requireFinancePermission } from '@/lib/auth/permissions-server';
@@ -11,7 +12,7 @@ export default async function PostToAccountingPage() {
   if (companies.error) throw Error('Could not load Accounting configuration');
   const company = companies.data?.find(c=>c.name.trim().toLowerCase()==='thinkway') ?? (companies.data?.length===1?companies.data[0]:null);
   const today = new Intl.DateTimeFormat('en-CA', { timeZone:'Africa/Cairo', year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date());
-  return <FinanceSuiteShell hideDefaultActions backFallbackHref="/finance" title="Post to Accounting" description="Media invoices, credit notes and debit notes → Accounting journals">
+  return <FinanceSuiteShell header={<PostingPageHeader/>} hideDefaultActions backFallbackHref="/finance" title="Post to Accounting" description="Media invoices, credit notes and debit notes → Accounting journals">
     {company ? <AccountingPostingQueue company={company.id} manage={access.manage} today={today}/> : <p>Configure the accounting company before posting.</p>}
   </FinanceSuiteShell>;
 }
