@@ -13,7 +13,7 @@ export const accountingGroups = [
   {id:'settings',en:'Settings',ar:'الإعدادات'},
 ] as const;
 export type AccountingGroup = typeof accountingGroups[number]['id'];
-export type AccountingView = 'payment-preparation'|'cheques'|'banks'|'reconciliation'|'bank-movements'|'recurring'|'scheduled-reversal'|'opening'|'transfers'|'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
+export type AccountingView = 'financial-statements'|'aging'|'payment-preparation'|'cheques'|'banks'|'reconciliation'|'bank-movements'|'recurring'|'scheduled-reversal'|'opening'|'transfers'|'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
 export type NavigationItem = {
   id:string; parent:AccountingGroup; en:string; ar:string; status:'Ready'|'Partial'|'Pending';
   view?:AccountingView; route?:string; permission:'accounting'|'admin'; navigation:boolean; evidence:string;
@@ -57,8 +57,8 @@ export const accountingNavigation:readonly NavigationItem[] = [
   ready('bank-movements','banking','Cash and bank movements','حركة النقدية والبنوك','Bank-currency and local-currency posted movements with reconciliation status.'),
   pending('budget-setup','budgets','Budget setup & allocation','إعداد وتوزيع الموازنة','Future GL/fiscal-period budgets; Media assignment budgets are operational.'),
   pending('budget-control','budgets','Budget control & variance','رقابة الموازنة وتحليل الانحرافات','Depends on accounting budget setup.'),
-  pending('financial-statements','reports','Profit & loss, balance sheet, cash flow','الأرباح والخسائر والميزانية والتدفقات النقدية','Dedicated GL financial statements absent; Media P&L is operational.'),
-  pending('aging','reports','Client / vendor aging','أعمار أرصدة العملاء والموردين','Unsettled statements exist; aging buckets report absent.'),
+  ready('financial-statements','reports','Profit & loss, balance sheet, cash flow','الأرباح والخسائر والميزانية والتدفقات النقدية','Dedicated GL financial statements absent; Media P&L is operational.'),
+  ready('aging','reports','Client / vendor aging','أعمار أرصدة العملاء والموردين','Unsettled statements exist; aging buckets report absent.'),
   pending('budget-reports','reports','Budget reports','تقارير الموازنة','Depends on accounting budgets.'),
   pending('closing','general-ledger','Fiscal year closing','إقفال السنة المالية','System accounts reserved; no closing workflow.'),
   {...pending('audit-viewer','administration','Audit logs & activity history','سجل التدقيق والنشاط','Database audit records exist; dedicated accounting viewer absent.'),status:'Partial'},
