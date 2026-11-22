@@ -101,11 +101,9 @@ function deriveCollectionStatus(
 }
 
 function deriveWorkflowStatusFromPosts(
-  posts: AssignmentPostOperationalRow[],
-  billingStatus: AssignmentDeliverableBillingStatus
+  posts: AssignmentPostOperationalRow[]
 ): string {
   if (posts.length === 0) {
-    if (billingStatus === "invoiced" || billingStatus === "collected") return "posted";
     return "draft";
   }
   const priority = [
@@ -559,7 +557,7 @@ async function loadCampaignAssignmentHierarchy(
       invoice_id: invoiceLink?.invoice_id ?? null,
       invoice_document_number: invoiceLink?.document_number ?? null,
       payout_status: line?.vendor_payment_status ?? null,
-      workflow_status: deriveWorkflowStatusFromPosts(posts, billingStatus),
+      workflow_status: deriveWorkflowStatusFromPosts(posts),
       posts,
       remaining_amount: Number(row.remaining_amount),
       invoiced_amount: Number(row.invoiced_amount),
@@ -620,11 +618,16 @@ async function loadCampaignAssignmentHierarchy(
     }
   }
 
+  const publicationResult = await supabase.from("campaign_publications")
+    .select("id,campaign_line_id,platform,publication_type,content_url,status,assignment_deliverable_id,assignment_post_schedule_id")
+    .eq("campaign_header_id", campaignId);
+  if (publicationResult.error) loadWarnings.push("Publication verification is unavailable.");
   const result = sanitizeAssignmentHierarchy(
     {
       groups,
       currency_code: workspace.currency_code,
       billing_context: billingContext,
+      delivery_publications: publicationResult.data ?? [],
       load_error: loadWarnings.length > 0 ? loadWarnings.join(" · ") : null,
     },
     { campaignId }

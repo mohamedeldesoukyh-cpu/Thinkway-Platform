@@ -546,7 +546,7 @@ export function CampaignPerformanceCenterTab({
           },
           {
             key: "completion",
-            label: "Completion",
+            label: "Publications live",
             value:
               publications.length > 0
                 ? `${Math.round(

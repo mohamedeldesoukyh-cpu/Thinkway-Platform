@@ -1,6 +1,7 @@
 
 import { Loader2Icon } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { queuePlatformAddition, splitPlatformLinks } from "@/features/discovery/enrichment/platform-add-queue";
 import { toast } from "sonner";
 import { PlatformOwnerConflict } from "./platform-owner-conflict";
 
@@ -13,8 +14,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { addPlatformToCreatorAction } from "@/features/discovery/add-platform/actions";
+import { getCreatorRefreshPollStatusAction } from "@/features/discovery/enrichment/actions";
 import {
   DISCOVERY_DIALOG_BODY_CLASS,
   DISCOVERY_DIALOG_CONTENT_CLASS,
@@ -66,17 +68,17 @@ export function AddCreatorPlatformDialog({
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<UnifiedCreatorResult | null>(null);
   const [mergeBusy, setMergeBusy] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const requestIdRef = useRef(0);
+  const [pendingCount, setPendingCount] = useState(0);
+  const isPending = pendingCount > 0;
   const openRef = useRef(open);
 
   const parsed = useMemo(() => {
-    const trimmed = profileUrl.trim();
-    if (trimmed.length < 8) return null;
-    return parseProfileInput(trimmed);
+    const links = splitPlatformLinks(profileUrl);
+    if (!links.length || links.some(link => !parseProfileInput(link))) return null;
+    return links;
   }, [profileUrl]);
 
-  const canConfirm = parsed != null && !isPending && !mergeBusy && !conflict;
+  const canConfirm = parsed != null && !mergeBusy && !conflict;
 
   const linkedSummary =
     existingPlatforms.length > 0
@@ -99,24 +101,34 @@ export function AddCreatorPlatformDialog({
   }
 
   function handleConfirm() {
-    const trimmed = profileUrl.trim();
-    if (!parseProfileInput(trimmed)) {
+    const links = splitPlatformLinks(profileUrl);
+    if (!links.length || links.some(link => !parseProfileInput(link))) {
       setError("Enter a valid Instagram, TikTok, YouTube, Snapchat, Facebook, or X profile link.");
       return;
     }
 
     setError(null); setConflict(null);
-    const requestId = ++requestIdRef.current;
-    startTransition(async () => {
+    setProfileUrl("");
+    setPendingCount(count => count + links.length);
+    for (const trimmed of links) void queuePlatformAddition(influencerId ?? unifiedId, async () => {
       try {
+        // Admission is creator-wide: wait for existing work before linking the next
+        // profile, otherwise the backend would treat it as an already-running job.
+        if (influencerId) {
+          let status = await getCreatorRefreshPollStatusAction(influencerId);
+          while (status.syncStatus === "queued" || status.syncStatus === "collecting") {
+            await pollCreatorAfterRefresh({ unifiedId, influencerId }, {
+              onUpdated: creator => onCreatorUpdated?.(creator),
+            });
+            status = await getCreatorRefreshPollStatusAction(influencerId);
+          }
+        }
         const result = await addPlatformToCreatorAction({
           profileUrl: trimmed,
           unifiedId,
           influencerId,
           discoveredProfileId,
         });
-
-        if (requestId !== requestIdRef.current) return;
 
         if (!result.ok) {
           if (openRef.current) {
@@ -127,17 +139,14 @@ export function AddCreatorPlatformDialog({
         }
 
         toast.success(result.message);
-        onSuccess?.(result.creator, result.platformAccountId);
-        onCreatorUpdated?.(result.creator);
-        if (openRef.current) {
-          onOpenChange(false);
-        }
+        if (onSuccess) onSuccess(result.creator, result.platformAccountId);
+        else onCreatorUpdated?.(result.creator);
 
         const resolvedInfluencerId = result.creator.influencer_id;
         if (result.enrichmentQueued && resolvedInfluencerId) {
           const resolvedUnifiedId = result.creator.unified_id;
           onEnrichmentStatusChange?.(resolvedUnifiedId, "queued");
-          void pollCreatorAfterRefresh(
+          await pollCreatorAfterRefresh(
             { unifiedId: resolvedUnifiedId, influencerId: resolvedInfluencerId },
             {
               onUpdated: (creator) => {
@@ -162,11 +171,12 @@ export function AddCreatorPlatformDialog({
           );
         }
       } catch (err) {
-        if (requestId !== requestIdRef.current) return;
         const message =
           err instanceof Error ? err.message : "Could not link platform. Please try again.";
         if (openRef.current) setError(message);
         toast.error(message);
+      } finally {
+        setPendingCount(count => Math.max(0, count - 1));
       }
     });
   }
@@ -195,21 +205,20 @@ export function AddCreatorPlatformDialog({
         </DialogHeader>
 
         <div className={cn("space-y-2", DISCOVERY_DIALOG_BODY_CLASS)}>
-          <Input
+          <Textarea
             value={profileUrl}
             onChange={(event) => {
               setProfileUrl(event.target.value);
               if (error) setError(null); setConflict(null);
             }}
-            type="url"
             inputMode="url"
             autoComplete="off"
-            placeholder="https://instagram.com/… or tiktok.com/@…"
+            placeholder="Paste profile links, separated by spaces or new lines"
             className={DISCOVERY_DIALOG_INPUT_CLASS}
-            disabled={isPending || mergeBusy}
+            disabled={mergeBusy}
             autoFocus
             onKeyDown={(event) => {
-              if (event.key === "Enter" && canConfirm) {
+              if (event.key === "Enter" && (event.ctrlKey || event.metaKey) && canConfirm) {
                 event.preventDefault();
                 handleConfirm();
               }
@@ -220,12 +229,11 @@ export function AddCreatorPlatformDialog({
           ) : isPending ? (
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2Icon className="size-3.5 animate-spin" />
-              Linking profile… enrichment will continue in the background.
+              {pendingCount} platform(s) queued or enriching. You can add more or close this dialog.
             </p>
           ) : parsed ? (
             <p className="text-xs text-emerald-600 dark:text-emerald-400">
-              {parsed.platform.charAt(0).toUpperCase() + parsed.platform.slice(1)} profile
-              detected (@{parsed.normalized_username})
+              {parsed.length} valid profile link(s) ready to add
             </p>
           ) : profileUrl.trim().length >= 8 ? (
             <p className="text-xs text-muted-foreground">
@@ -245,7 +253,7 @@ export function AddCreatorPlatformDialog({
           </Button>
           <Button type="button" onClick={handleConfirm} disabled={!canConfirm}>
             {isPending ? <Loader2Icon className="size-4 animate-spin" /> : null}
-            Add platform
+            Add to queue
           </Button>
         </DialogFooter>
       </DialogContent>
