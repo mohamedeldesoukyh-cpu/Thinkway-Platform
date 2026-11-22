@@ -13,7 +13,7 @@ export const accountingGroups = [
   {id:'settings',en:'Settings',ar:'الإعدادات'},
 ] as const;
 export type AccountingGroup = typeof accountingGroups[number]['id'];
-export type AccountingView = 'financial-statements'|'aging'|'payment-preparation'|'cheques'|'banks'|'reconciliation'|'bank-movements'|'recurring'|'scheduled-reversal'|'opening'|'transfers'|'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
+export type AccountingView = 'budget-setup'|'budget-control'|'budget-reports'|'financial-statements'|'aging'|'payment-preparation'|'cheques'|'banks'|'reconciliation'|'bank-movements'|'recurring'|'scheduled-reversal'|'opening'|'transfers'|'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
 export type NavigationItem = {
   id:string; parent:AccountingGroup; en:string; ar:string; status:'Ready'|'Partial'|'Pending';
   view?:AccountingView; route?:string; permission:'accounting'|'admin'; navigation:boolean; evidence:string;
@@ -55,11 +55,11 @@ export const accountingNavigation:readonly NavigationItem[] = [
   ready('banks','banking','Bank account management','إدارة الحسابات البنكية','Bank profiles linked to GL, auxiliary and currency.'),
   ready('reconciliation','banking','Bank reconciliation','التسوية البنكية','CSV import, grouped matching, audited unmatch, closing and administrator reopen.'),
   ready('bank-movements','banking','Cash and bank movements','حركة النقدية والبنوك','Bank-currency and local-currency posted movements with reconciliation status.'),
-  pending('budget-setup','budgets','Budget setup & allocation','إعداد وتوزيع الموازنة','Future GL/fiscal-period budgets; Media assignment budgets are operational.'),
-  pending('budget-control','budgets','Budget control & variance','رقابة الموازنة وتحليل الانحرافات','Depends on accounting budget setup.'),
+  ready('budget-setup','budgets','Budget setup & allocation','إعداد وتوزيع الموازنة','Monthly GL budget allocations with audited revisions.'),
+  ready('budget-control','budgets','Budget control & variance','رقابة الموازنة وتحليل الانحرافات','Posted actuals and favorable/unfavorable variance.'),
   ready('financial-statements','reports','Profit & loss, balance sheet, cash flow','الأرباح والخسائر والميزانية والتدفقات النقدية','Posted GL financial statements, explicit unclosed earnings and cash-flow classifications.'),
   ready('aging','reports','Client / vendor aging','أعمار أرصدة العملاء والموردين','Current all-party or selected-party aging by due date and currency.'),
-  pending('budget-reports','reports','Budget reports','تقارير الموازنة','Depends on accounting budgets.'),
+  ready('budget-reports','reports','Budget reports','تقارير الموازنة','Monthly saved budget and actual CSV reports.'),
   pending('closing','general-ledger','Fiscal year closing','إقفال السنة المالية','System accounts reserved; no closing workflow.'),
   {...pending('audit-viewer','administration','Audit logs & activity history','سجل التدقيق والنشاط','Database audit records exist; dedicated accounting viewer absent.'),status:'Partial'},
   {...pending('global-administration','administration','Shared users, roles & permissions','المستخدمون والأدوار والصلاحيات المشتركة','Existing /settings/users, /settings/roles, /settings/permissions, /settings/access-control in Media; existing module switch preserves access. No duplicate admin screens.'),status:'Partial'},

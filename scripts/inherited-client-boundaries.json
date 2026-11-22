@@ -1381,5 +1381,11 @@
     "parents": [
       "features/accounting/console.tsx"
     ]
+  },
+  {
+    "file": "features/accounting/budget-desk.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
   }
 ]
