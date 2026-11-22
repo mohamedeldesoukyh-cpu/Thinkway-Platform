@@ -43,7 +43,7 @@ export function JournalDesk({onDraftLoaded,initialDraft,setup,mode,onDirtyChange
  const [editor,setEditor]=useState<Editor|null>(null),[dirty,setOwnDirty]=useState(false),[decision,setDecision]=useState<Decision|null>(null);
  const initialRecordOpened=useRef(!!initialDraft);
  useEffect(()=>{if(!initialDraft||!setup.access.manage)return;const draft:Editor={...initialDraft,id:crypto.randomUUID(),version:null,currency:company.base_currency,workflow:'closing',kind:'manual',status:'draft',number:null,reversalOf:null,reversal:null,postedAt:null};setEditor(draft);setDirty(true);onDraftLoaded?.();},[]);
- useEffect(()=>{if(mode!=='journals'||loading||initialRecordOpened.current)return;initialRecordOpened.current=true;if(!editor&&!dirty&&journals[0])void openJournal(journals[0].id);},[loading,journals,mode]);
+ useEffect(()=>{if(mode!=='journals'||loading||initialRecordOpened.current)return;initialRecordOpened.current=true;if(!editor&&!dirty){const linked=new URL(window.location.href).searchParams.get('journal');if(!expenses&&workflow==='general'&&linked&&/^[0-9a-f-]{36}$/i.test(linked))void openJournal(linked);else if(journals[0])void openJournal(journals[0].id);}},[loading,journals,mode]);
  const undoStack=useRef<{editor:Editor|null;dirty:boolean}[]>([]),redoStack=useRef<{editor:Editor|null;dirty:boolean}[]>([]),savedEditor=useRef<Editor|null>(null);
  const [reason,setReason]=useState(''),[reverseDate,setReverseDate]=useState(today()),[reversalId,setReversalId]=useState('');
  const [showZero,setShowZero]=useState(false);const filterInput=useRef<HTMLInputElement>(null);const [focusFilters,setFocusFilters]=useState(false);
