@@ -13,7 +13,7 @@ export const accountingGroups = [
   {id:'settings',en:'Settings',ar:'الإعدادات'},
 ] as const;
 export type AccountingGroup = typeof accountingGroups[number]['id'];
-export type AccountingView = 'budget-setup'|'budget-control'|'budget-reports'|'financial-statements'|'aging'|'payment-preparation'|'cheques'|'banks'|'reconciliation'|'bank-movements'|'recurring'|'scheduled-reversal'|'opening'|'transfers'|'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
+export type AccountingView = 'closing'|'audit-viewer'|'budget-setup'|'budget-control'|'budget-reports'|'financial-statements'|'aging'|'payment-preparation'|'cheques'|'banks'|'reconciliation'|'bank-movements'|'recurring'|'scheduled-reversal'|'opening'|'transfers'|'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
 export type NavigationItem = {
   id:string; parent:AccountingGroup; en:string; ar:string; status:'Ready'|'Partial'|'Pending';
   view?:AccountingView; route?:string; permission:'accounting'|'admin'; navigation:boolean; evidence:string;
@@ -60,8 +60,8 @@ export const accountingNavigation:readonly NavigationItem[] = [
   ready('financial-statements','reports','Profit & loss, balance sheet, cash flow','الأرباح والخسائر والميزانية والتدفقات النقدية','Posted GL financial statements, explicit unclosed earnings and cash-flow classifications.'),
   ready('aging','reports','Client / vendor aging','أعمار أرصدة العملاء والموردين','Current all-party or selected-party aging by due date and currency.'),
   ready('budget-reports','reports','Budget reports','تقارير الموازنة','Monthly saved budget and actual CSV reports.'),
-  pending('closing','general-ledger','Fiscal year closing','إقفال السنة المالية','System accounts reserved; no closing workflow.'),
-  {...pending('audit-viewer','administration','Audit logs & activity history','سجل التدقيق والنشاط','Database audit records exist; dedicated accounting viewer absent.'),status:'Partial'},
+  ready('closing','general-ledger','Fiscal year closing','إقفال السنة المالية','Preview, administrator close, protected periods and reversal-based reopen.'),
+  ready('audit-viewer','administration','Audit logs & activity history','سجل التدقيق والنشاط','Company audit search and before/after history.','admin'),
   {...pending('global-administration','administration','Shared users, roles & permissions','المستخدمون والأدوار والصلاحيات المشتركة','Existing /settings/users, /settings/roles, /settings/permissions, /settings/access-control in Media; existing module switch preserves access. No duplicate admin screens.'),status:'Partial'},
   {...pending('exchange-rates','settings','Shared currencies & exchange rates','العملات وأسعار الصرف المشتركة','Existing /finance/exchange-rates in Media; accounting uses shared rates. No new cross-module permission grant.'),status:'Partial'},
 ];

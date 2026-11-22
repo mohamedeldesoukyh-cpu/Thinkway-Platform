@@ -1,0 +1,11 @@
+# Stage 12: fiscal closing, audit and final verification
+
+Closing is an explicit administrator/MFA action after the fiscal year has ended. A snapshot preview prevents stale closes. Pending journals and open bank statements must be resolved first. Closing groups income/expense balances by GL, auxiliary, Third Party, currency and original rate, preserving foreign/local amounts, and balances the generated journals to the selected retained-earnings account. Large closes split into journals within the existing 200-line limit. No opening balances are duplicated: balance-sheet balances carry through the existing ledger.
+
+The year is protected against posting, reclassification and direct period reopening. Posting guards serialize with the company close. Reopening preserves the original closing journals, posts reversals at year end, restores prior period locks and retains the reason/actor history. Later closed years must be reopened first. Automatic closing/reopening journals remain read-only. Profit-and-loss and budget actuals exclude closing/reopening movements while balance-sheet and ledger totals include them.
+
+The audit screen reads existing company audit records, with date/search filters, actor IDs, before/after details, pagination and current-page CSV export. Navigation is administrator-only; database management/MFA boundaries remain in force. Shared platform users/roles and exchange rates retain their existing shared ownership; no duplicate administration or exchange-rate tables were added.
+
+Validation: sixteen rollback-only development SQL regression suites, relevant monetary/navigation tests, typecheck and targeted lint. Build, security and unchanged performance thresholds are required for release. Browser review verifies the 2026 preview-only control and audit history; 2026 remains open. Prior-year close/reopen, FX and auxiliary preservation are covered by isolated rollback fixtures.
+
+Review notes: current aging includes completed Media collections awaiting Accounting posting and does not reconstruct historical aging. Cash-flow classification follows counterpart-account rules and shows mixed journals for review. Budgets are advisory. Stage 9 CSV parser/import regressions passed, but the browser file chooser repeatedly stalled, so file-upload UI verification is not claimed.
