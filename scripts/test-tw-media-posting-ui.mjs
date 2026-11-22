@@ -22,12 +22,14 @@ const server=http.createServer(async(req,res)=>{try{
  if(url.pathname!=='/api/accounting/media-posting'){res.statusCode=404;return res.end();}
  res.setHeader('Content-Type','application/json');
  if(req.method==='GET'){
+  if(url.searchParams.get('mode')==='allocations')return res.end(JSON.stringify({note:{number:'QA-1',currency:'EGP',total:'1140',version:1,invoice:'inv-1'},invoices:[{id:'inv-1',number:'INV-1',date:'2026-11-20',total:'2000',paid:'100',outstanding:'1900',allocated:'0',locked:false}]}));
   const kind=url.searchParams.get('type');calls.push({method:'GET',kind});
   const rows=[1,2].map(n=>({id:String(n),type:kind==='cost'?'supplier_invoice':kind,number:'QA-'+n,date:'2026-11-22',party:'Isolated browser fixture',code:'100'+n,currency:'EGP',net:'1000',tax:'140',total:'1140',eligible:true,reason:'',status:posted.has(String(n))?'posted':'unposted',token:'test-preview',version:1,journal:posted.has(String(n))?'22222222-2222-4222-8222-222222222222':null,accruals:[]})).filter(r=>(r.status==='posted')===(url.searchParams.get('posted')==='true'));
   return res.end(JSON.stringify({rows,count:rows.length,more:false}));
  }
  let body='';for await(const chunk of req)body+=chunk;const v=JSON.parse(body);calls.push({method:'POST',...v});
  if(v.id==='2'&&failSecond){res.statusCode=409;return res.end(JSON.stringify({error:'Document changed. Browse again.'}));}
+ if(v.operation==='allocate')return res.end(JSON.stringify({saved:true}));
  if(v.operation==='post')posted.add(v.id);else posted.delete(v.id);res.end(JSON.stringify({journal:'22222222-2222-4222-8222-222222222222'}));
  }catch(e){res.statusCode=500;res.end(JSON.stringify({error:e.message}));}});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -44,7 +46,15 @@ try{
  await page.getByRole('button',{name:'Post selected',exact:true}).click();await page.getByRole('button',{name:'Confirm posting',exact:true}).click();await page.getByRole('status').filter({hasText:'1 posted to Accounting. 1 failed.'}).waitFor();assert.equal(await page.getByLabel('Select QA-1').count(),0);await page.getByRole('alert').filter({hasText:'Document changed'}).waitFor();assert.equal(calls.filter(c=>c.method==='POST').length,2);
  evidence.checks.push('One request per selected document; success disappears and failed row remains with error');
  failSecond=false;await page.getByRole('button',{name:'Browse',exact:true}).click();await page.getByRole('status').filter({hasText:'1 unposted'}).waitFor();await page.getByLabel('Select QA-2').check();await page.getByRole('button',{name:'Post selected',exact:true}).click();await page.getByRole('button',{name:'Confirm posting',exact:true}).click();await page.getByRole('status').filter({hasText:'1 posted to Accounting. 0 failed.'}).waitFor();
- await page.getByLabel('View').selectOption('true');await page.getByRole('button',{name:'Browse',exact:true}).click();await page.getByRole('status').filter({hasText:'2 posted documents'}).waitFor();await page.getByLabel('Select QA-1').check();await page.getByLabel('Unposting reason').fill('Correct supplier cost');await page.getByRole('button',{name:'Unpost selected',exact:true}).click();await page.getByRole('button',{name:'Confirm unposting',exact:true}).click();await page.getByRole('status').filter({hasText:'1 unposted; linked JVs are pending'}).waitFor();assert.equal(calls.at(-1).operation,'unpost');assert.equal(calls.at(-1).reason,'Correct supplier cost');
+ await page.getByLabel('View').selectOption('true');await page.getByRole('button',{name:'Browse',exact:true}).click();await page.getByRole('status').filter({hasText:'2 posted documents'}).waitFor();await page.getByRole('button',{name:'Invoice allocations',exact:true}).first().click();
+ await page.getByLabel('Allocate INV-1',{exact:true}).fill('100.00');await page.getByRole('button',{name:'Save allocations',exact:true}).click();
+ const before=calls.filter(c=>c.method==='POST').length;
+ await page.getByRole('button',{name:'Cancel',exact:true}).click();assert.equal(calls.filter(c=>c.method==='POST').length,before);
+ await page.getByRole('button',{name:'Save allocations',exact:true}).click();await page.getByRole('button',{name:'Confirm allocations',exact:true}).click();
+ await page.getByRole('heading',{name:/Invoice allocations/}).waitFor({state:'hidden'});
+ const allocationCall=calls.filter(c=>c.operation==='allocate').at(-1);assert.deepEqual(allocationCall.lines,[{id:'inv-1',amount:'100.00'}]);assert.equal(allocationCall.version,1);
+ evidence.checks.push('Note allocations display invoice balances, cancel without saving and submit confirmed amounts with version');
+ await page.getByLabel('Select QA-1').check();await page.getByLabel('Unposting reason').fill('Correct supplier cost');await page.getByRole('button',{name:'Unpost selected',exact:true}).click();await page.getByRole('button',{name:'Confirm unposting',exact:true}).click();await page.getByRole('status').filter({hasText:'1 unposted; linked JVs are pending'}).waitFor();assert.equal(calls.at(-1).operation,'unpost');assert.equal(calls.at(-1).reason,'Correct supplier cost');
  evidence.checks.push('Posted view, reason and confirmed unposting work');
  await page.screenshot({path:path.join(out,'queue.png'),fullPage:true});assert.deepEqual(errors,[]);evidence.passed=true;console.log('PASS: '+evidence.checks.join('; '));
 }catch(e){evidence.passed=false;evidence.error=e.stack;evidence.browserErrors=errors;process.exitCode=1;console.error(e.stack);}finally{fs.writeFileSync(path.join(out,'results.json'),JSON.stringify(evidence,null,2));await browser.close();await new Promise(r=>server.close(r));}
