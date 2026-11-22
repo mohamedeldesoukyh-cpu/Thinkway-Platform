@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { format } from "date-fns";
+import { formatClientCreatedDate } from "../client-created-date";
 
 import { DocumentNumber } from "@/components/ui/document-number";
 import {
@@ -101,7 +101,7 @@ export const CLIENTS_TABLE_COLUMNS: OperationalConfigurableColumnDef<ClientRow>[
     colWidth: "112px",
     cellClassName: "whitespace-nowrap",
     renderCell: (client) => (
-      <span className="tw-d">{format(new Date(client.created_at), "MMM d, yyyy")}</span>
+      <span className="tw-d">{formatClientCreatedDate(client.created_at)}</span>
     ),
   },
   {
