@@ -56,6 +56,7 @@ export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
   "/api/accounting/fiscal": "internal_workspace",
   "/api/accounting/budgets": "internal_workspace",
   "/api/accounting/reports": "internal_workspace",
+  "/api/accounting/report-export": "internal_workspace",
   "/api/accounting/banking": "internal_workspace",
   "/api/accounting/controls": "internal_workspace",
   "/api/accounting/allocations": "internal_workspace",
