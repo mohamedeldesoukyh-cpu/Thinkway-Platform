@@ -1,5 +1,7 @@
 # Stage 5 — Invoice receipts and collections
 
+Historical initial Stage 5 scope. Subsequent allocations, vendor payments, shared auxiliaries and Third Party enhancements are included in the current [Stage 6 inventory](tw-accounting-stage6.md).
+
 Accounting records full or partial receipts against original posted invoices.
 It uses the existing Media `payments` and `payment_allocations` records and PAY
 counter. A receipt created in Accounting updates Media's balance in the same
