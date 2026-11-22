@@ -32,7 +32,7 @@ export async function loadAccountingSetup(companyId?: string): Promise<Accountin
       db.from("tw_accounting_years").select("id,start_date,end_date").eq("company_id", company.id).order("start_date"),
     ]);
     if (a.error || y.error || m.error) throw new Error("Could not load saved chart or financial years.");
-    accounts = (a.data ?? []).map(row => ({ code: row.code, name: row.name, nameAr: row.name_ar, parent: row.parent_code, type: row.account_type, normal: row.normal_balance, kind: row.kind, subledger: row.subledger ?? undefined, hasAuxiliary:row.has_auxiliary,auxiliarySource:row.auxiliary_source_code,clientId:row.client_id,vendorId:row.vendor_id, active: row.active, version: row.version }));
+    accounts = (a.data ?? []).filter(row=>!row.client_id&&!row.vendor_id).map(row => ({ code: row.code, name: row.name, nameAr: row.name_ar, parent: row.parent_code, type: row.account_type, normal: row.normal_balance, kind: row.kind, subledger: row.subledger ?? undefined, hasAuxiliary:row.has_auxiliary,auxiliarySource:row.auxiliary_source_code,clientId:row.client_id,vendorId:row.vendor_id, active: row.active, version: row.version }));
     mappings = m.data ?? [];
     years = (y.data ?? []) as FiscalYear[];
     if (years.length) {

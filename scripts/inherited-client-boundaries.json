@@ -1418,5 +1418,11 @@
     "parents": [
       "features/accounting/console.tsx"
     ]
+  },
+  {
+    "file": "features/accounting/account-detail.tsx",
+    "parents": [
+      "features/accounting/journal-desk.tsx"
+    ]
   }
 ]
