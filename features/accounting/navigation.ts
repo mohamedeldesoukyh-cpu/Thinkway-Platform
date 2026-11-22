@@ -13,7 +13,7 @@ export const accountingGroups = [
   {id:'settings',en:'Settings',ar:'الإعدادات'},
 ] as const;
 export type AccountingGroup = typeof accountingGroups[number]['id'];
-export type AccountingView = 'pl-closing'|'customer-advances'|'vendor-advances'|'balance-sheet'|'cash-flow'|'vendor-aging'|'auxiliary-statements'|'client-statements'|'vendor-statements'|'unsettled-receivables'|'unsettled-payables'|'closing'|'audit-viewer'|'budget-setup'|'budget-control'|'budget-reports'|'financial-statements'|'aging'|'payment-preparation'|'cheques'|'banks'|'reconciliation'|'bank-movements'|'recurring'|'scheduled-reversal'|'opening'|'transfers'|'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
+export type AccountingView = 'staff'|'pl-closing'|'customer-advances'|'vendor-advances'|'balance-sheet'|'cash-flow'|'vendor-aging'|'auxiliary-statements'|'client-statements'|'vendor-statements'|'unsettled-receivables'|'unsettled-payables'|'closing'|'audit-viewer'|'budget-setup'|'budget-control'|'budget-reports'|'financial-statements'|'aging'|'payment-preparation'|'cheques'|'banks'|'reconciliation'|'bank-movements'|'recurring'|'scheduled-reversal'|'opening'|'transfers'|'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
 export type NavigationItem = {
   id:string; parent:AccountingGroup; en:string; ar:string; status:'Ready'|'Partial'|'Pending';
   view?:AccountingView; route?:string; permission:'accounting'|'admin'; navigation:boolean; evidence:string;
@@ -35,6 +35,7 @@ export const accountingNavigation:readonly NavigationItem[] = [
   ready('payments','payments','Payments','المدفوعات وتخصيص الدفعات المقدمة','SettlementDesk payment: vendor allocations, advances and reversal.'),
   ready('parties','third-parties','Clients','العملاء','PartyAccountsDesk client preset; shared Media identities.'),
   ready('vendors','third-parties','Vendors / creators','الموردون وصناع المحتوى','PartyAccountsDesk vendor preset; assignment vendors only.'),
+  ready('staff','third-parties','Staff','الموظفون','StaffDesk: existing Employee directory with shared detail identities and independent GL balances.'),
   ready('chart','general-ledger','Chart of accounts','دليل الحسابات','AccountingConsole account setup and chart.'),
   ready('auxiliaries','general-ledger','Auxiliaries & sharing','الحسابات المساعدة ومشاركتها','AuxiliaryDesk and account setup: own/shared/none, common UUIDs.'),
   ready('pl-closing','general-ledger','Close P&L Accounts','إقفال حسابات الأرباح والخسائر','Select P&L balances and destination, confirm, then review an editable manual JV.'),
