@@ -44,3 +44,9 @@ test('reporting columns preserve stored LC and original USD amounts',()=>{
  assert.equal(reportingAmount(egp,'USD','EGP',{USD:'0'}),'Rate required');
  assert.equal(reportingAmount({...egp,debit:'1'},'USD','EGP',{USD:'3'}),'0.33');
 });
+test('AED entry shows EGP local and USD reporting equivalents',()=>{
+ const aed={account:'111001',description:'',lineCurrency:'AED',foreignDebit:'100',foreignCredit:'0',debit:'1360',credit:'0'};
+ assert.equal(reportingAmount(aed,'AED','EGP',{AED:'13.6',USD:'50'}),'100.00');
+ assert.equal(reportingAmount(aed,'EGP','EGP',{AED:'13.6',USD:'50'}),'1360.00');
+ assert.equal(reportingAmount(aed,'USD','EGP',{AED:'13.6',USD:'50'}),'27.20');
+});
