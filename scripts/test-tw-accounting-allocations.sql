@@ -1,7 +1,7 @@
 -- Development only. All data, source numbers and journal counters roll back.
 BEGIN;
 DO $$
-DECLARE actor uuid; viewer uuid; customer uuid:=gen_random_uuid(); inv uuid:=gen_random_uuid(); egp uuid:=gen_random_uuid(); c uuid; j uuid; j2 uuid; original uuid; p uuid; rev uuid; req uuid:=gen_random_uuid(); q jsonb; blocked boolean; period uuid; vendor uuid; val jsonb; quote jsonb; rv uuid:=gen_random_uuid(); av uuid:=gen_random_uuid(); cost uuid:=gen_random_uuid(); pv uuid:=gen_random_uuid(); saved jsonb;
+DECLARE prep_cancel uuid:=gen_random_uuid();bank_profile uuid:=gen_random_uuid();bank_statement uuid:=gen_random_uuid();before_count integer;bank_line integer;actor uuid; viewer uuid; customer uuid:=gen_random_uuid(); inv uuid:=gen_random_uuid(); egp uuid:=gen_random_uuid(); c uuid; j uuid; j2 uuid; original uuid; p uuid; rev uuid; req uuid:=gen_random_uuid(); q jsonb; blocked boolean; period uuid; vendor uuid; val jsonb; quote jsonb; rv uuid:=gen_random_uuid(); av uuid:=gen_random_uuid(); cost uuid:=gen_random_uuid(); pv uuid:=gen_random_uuid(); saved jsonb;
 BEGIN
  SELECT p.id INTO actor FROM profiles p JOIN roles r ON r.id=p.role_id WHERE r.slug='super_admin' AND p.is_active LIMIT 1;
  SELECT p.id INTO viewer FROM profiles p JOIN roles r ON r.id=p.role_id WHERE r.slug='viewer' AND p.is_active AND NOT EXISTS(SELECT 1 FROM client_users WHERE profile_id=p.id) AND NOT EXISTS(SELECT 1 FROM influencers WHERE profile_id=p.id) LIMIT 1;
@@ -63,7 +63,27 @@ BEGIN
  PERFORM tw_accounting_cost_save(val);quote:=tw_accounting_cost_fx(cost,c);j:=tw_accounting_cost_post(cost,c,1,(quote->>'rate')::numeric);
  IF NOT EXISTS(SELECT 1 FROM tw_accounting_cost_invoices WHERE id=cost AND status='internal' AND number LIKE 'IC-%') THEN RAISE EXCEPTION 'Internal cost not posted'; END IF;
  val:=jsonb_build_object('company',c,'kind','payment','party',vendor,'currency','USD','date','2026-02-01','amount','50','cash','111001','control','211001','advance','131001','gain','712001','loss','722001','parent',NULL,'advanceRow',true,'method','bank_transfer','reference','QA vendor allocation','lines',jsonb_build_array(jsonb_build_object('id',cost,'amount','40')));
- quote:=tw_accounting_settlement_quote(val);PERFORM tw_accounting_settlement_post(pv,val,quote);
+ val:=val||jsonb_build_object('method','check','reference','QA-CHEQUE-001');
+ SELECT count(*) INTO before_count FROM tw_accounting_journals WHERE company_id=c;
+ PERFORM tw_accounting_payment_prepare(c,'save',pv,NULL,val);
+ IF (SELECT count(*) FROM tw_accounting_journals WHERE company_id=c)<>before_count OR EXISTS(SELECT 1 FROM tw_accounting_settlements WHERE id=pv) THEN RAISE EXCEPTION 'Saving preparation posted financial records';END IF;
+ blocked:=false;BEGIN PERFORM tw_accounting_payment_prepare(c,'save',pv,99,val);EXCEPTION WHEN serialization_failure THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Stale preparation overwritten';END IF;
+ quote:=tw_accounting_settlement_quote(val);
+ blocked:=false;BEGIN PERFORM tw_accounting_payment_prepare(c,'post',pv,1,val,quote||jsonb_build_object('rate','999'));EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked OR (SELECT version FROM tw_accounting_payment_preparations WHERE id=pv)<>1 THEN RAISE EXCEPTION 'Stale quote changed preparation';END IF;
+ PERFORM tw_accounting_payment_prepare(c,'post',pv,1,val,quote);
+ PERFORM tw_accounting_payment_prepare(c,'post',pv,1,val,quote);
+ IF (SELECT status FROM tw_accounting_payment_preparations WHERE id=pv)<>'posted' OR (SELECT count(*) FROM tw_accounting_settlements WHERE id=pv)<>1 THEN RAISE EXCEPTION 'Prepared payment retry duplicated';END IF;
+ IF (tw_accounting_cheques(c)->>'count')::integer<>1 THEN RAISE EXCEPTION 'Cheque register missing payment';END IF;
+ PERFORM tw_accounting_bank_action(c,'bank-save',jsonb_build_object('id',bank_profile,'name','QA USD bank','account','111001','auxiliary','','currency','USD','reference','QA ONLY','active',true));
+ PERFORM tw_accounting_bank_action(c,'import',jsonb_build_object('id',bank_statement,'bank',bank_profile,'reference','QA CHEQUE','from','2026-02-01','to','2026-02-01','opening','0','closing','-50','rows','[{"date":"2026-02-01","reference":"QA-CHEQUE-001","description":"Cheque","amount":"-50"}]'::jsonb));
+ SELECT l.line_number INTO bank_line FROM tw_accounting_journal_lines l JOIN tw_accounting_settlements st ON st.journal_id=l.journal_id WHERE st.id=pv AND l.account_code='111001' AND l.credit>0;
+ PERFORM tw_accounting_bank_action(c,'match',jsonb_build_object('id',bank_statement,'version',1,'reason','Cheque cleared in bank statement','rows',(SELECT jsonb_agg(id) FROM tw_accounting_bank_rows WHERE statement_id=bank_statement),'lines',jsonb_build_array(jsonb_build_object('journal',(SELECT journal_id FROM tw_accounting_settlements WHERE id=pv),'line',bank_line))));
+ IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(tw_accounting_cheques(c)->'rows') x WHERE x->>'id'=pv::text AND x->>'cleared_date'='2026-02-01') THEN RAISE EXCEPTION 'Cheque clearing status missing';END IF;
+ PERFORM tw_accounting_payment_prepare(c,'save',prep_cancel,NULL,val);
+ PERFORM tw_accounting_payment_prepare(c,'cancel',prep_cancel,1,NULL,NULL,'Cancel unused preparation');
+ IF (SELECT status FROM tw_accounting_payment_preparations WHERE id=prep_cancel)<>'cancelled' THEN RAISE EXCEPTION 'Preparation cancellation failed';END IF;
  IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(tw_accounting_open_items(c,'vendor',vendor,'USD','211001')) x WHERE x->>'id'=cost::text AND (x->>'outstanding')::numeric=60) THEN RAISE EXCEPTION 'Vendor unsettled statement incorrect'; END IF;
  j2:=tw_accounting_cost_reconcile(cost,c,2,'2026-02-02','QA-SUPPLIER-123','2026-01-15',110,0,'111001','QA received supplier invoice');
  IF NOT EXISTS(SELECT 1 FROM tw_accounting_cost_invoices WHERE id=cost AND status='supplier' AND journal_id=j AND net=110) THEN RAISE EXCEPTION 'Supplier reconciliation duplicated original cost'; END IF;
