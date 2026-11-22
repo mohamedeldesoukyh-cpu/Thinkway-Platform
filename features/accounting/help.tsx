@@ -11,7 +11,7 @@ export function AccountingHelp() {
         <DialogHeader><DialogTitle>Accounting Help</DialogTitle><DialogDescription>Keyboard shortcuts work in the relevant entry form. Validation and posting permissions still apply.</DialogDescription></DialogHeader>
         <h3>Keyboard shortcuts</h3>
         <table className="tw-ac-journal-table"><thead><tr><th>Shortcut</th><th>Action</th></tr></thead><tbody>
-          <tr><td>F2</td><td>Open lookup from an account, auxiliary, currency or Third Party field. Enter a code prefix first to narrow the results.</td></tr>
+          <tr><td>Ctrl+F</td><td>Search voucher numbers; press Enter to search.</td></tr><tr><td>Ctrl+M</td><td>Open the selected transaction account’s mini statement.</td></tr><tr><td>F2</td><td>Open lookup from an account, auxiliary, currency or Third Party field. Enter a code prefix first to narrow the results.</td></tr>
           <tr><td>Ctrl+S</td><td>Save the current journal, cost invoice or payment preparation. In receipts and payments, run the current save/post action after reviewing the allocation preview.</td></tr>
           <tr><td>Ctrl+P</td><td>Preview the journal or receipt/payment print pages.</td></tr>
           <tr><td>Ctrl+N</td><td>Add a journal line, or an advance row in a receipt or payment.</td></tr>

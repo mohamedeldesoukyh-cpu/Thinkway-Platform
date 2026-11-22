@@ -5,7 +5,7 @@ export function convertInvoiceAmount(amount:string,rate:string):string {
  if(!/^\d+(\.\d{1,8})?$/.test(rate))throw new Error('Invalid exchange rate');
  const [whole,fraction='']=rate.split('.');const scaled=BigInt(whole)*BigInt(100000000)+BigInt(fraction.padEnd(8,'0'));
  if(scaled<=BigInt(0))throw new Error('Invalid exchange rate');
- return decimal((cents(amount)*scaled+BigInt(50000000))/BigInt(100000000));
+ const signed=cents(amount),magnitude=signed<BigInt(0)?-signed:signed;return decimal(((magnitude*scaled+BigInt(50000000))/BigInt(100000000))*(signed<BigInt(0)?-BigInt(1):BigInt(1)));
 }
 export function localInvoicePreview(source:InvoiceSubmission['source'],rate:string,receivable:string,revenue:string,vat:string){
  invoicePreview(source,receivable,revenue,vat);

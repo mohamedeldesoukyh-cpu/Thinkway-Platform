@@ -11,7 +11,7 @@ test('single amount moves between debit and credit without retaining both sides'
 test('new line balances prior debit or credit in the same currency without overwriting input',()=>{
  const empty={account:'112001',description:'',debit:'0',credit:'0'};
  assert.equal(entrySide(empty),'D');
- assert.deepEqual(balancingSuggestion([line,empty],1,'EGP',{USD:'50'}),{side:'C',autoBalance:true,foreignDebit:'0',foreignCredit:'100.00',lineCurrency:'USD'});
+ assert.deepEqual(balancingSuggestion([line,empty],1,'EGP',{USD:'50'}),{side:'C',autoBalance:true,enteredAmount:null,enteredSide:null,foreignDebit:'0',foreignCredit:'100.00',lineCurrency:'USD'});
  const credit={...line,debit:'0',credit:'5000.00',foreignDebit:'0',foreignCredit:'100'};
  assert.equal(balancingSuggestion([credit,empty],1,'EGP',{USD:'50'})?.side,'D');
  assert.equal(balancingSuggestion([line,{...empty,foreignDebit:'10'}],1,'EGP',{USD:'50'}),null);
@@ -49,4 +49,16 @@ test('AED entry shows EGP local and USD reporting equivalents',()=>{
  assert.equal(reportingAmount(aed,'AED','EGP',{AED:'13.6',USD:'50'}),'100.00');
  assert.equal(reportingAmount(aed,'EGP','EGP',{AED:'13.6',USD:'50'}),'1360.00');
  assert.equal(reportingAmount(aed,'USD','EGP',{AED:'13.6',USD:'50'}),'27.20');
+});
+test('negative input retains its red-display sign but uses the opposite ledger side',()=>{
+ const patch=amountPatch('D','-100');
+ const negative={...line,...patch,debit:'0',credit:'5000'};
+ assert.equal(entrySide(negative),'D');assert.equal(entryAmount(negative),'-100');
+ assert.equal(patch.foreignDebit,'0');assert.equal(patch.foreignCredit,'100.00');
+ assert.equal(reportingAmount(negative,'EGP','EGP',{USD:'50'}),'-5000.00');
+ assert.equal(reportingAmount(negative,'USD','EGP',{USD:'50'}),'-100.00');
+ const small={...negative,lineCurrency:'EGP',enteredAmount:'-1',credit:'1'};
+ assert.equal(reportingAmount(small,'USD','EGP',{USD:'3'}),'-0.33');
+ const positive={...negative,...amountPatch('C','100'),debit:'0',credit:'5000'};
+ assert.equal(entryAmount(positive),'100');assert.equal(positive.enteredAmount,null);
 });
