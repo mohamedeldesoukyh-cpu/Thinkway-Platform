@@ -18,7 +18,7 @@ export async function accountingContext() {
 
 export async function loadAccountingSetup(companyId?: string): Promise<AccountingSetup> {
   const { db, access } = await accountingContext();
-  const { data, error } = await db.from("tw_accounting_companies").select("id,name,country_code,base_currency,currencies,fiscal_start_month,journal_approval_required,version").order("name");
+  const { data, error } = await db.from("tw_accounting_companies").select("id,name,country_code,base_currency,currencies,fiscal_start_month,journal_approval_required,automatic_cost_accrual,version").order("name");
   if (error) throw new Error("Could not load accounting companies.");
   const companies = (data ?? []) as Company[];
   const company = (companyId ? companies.find(c => c.id === companyId) : companies[0]) ?? null;
