@@ -22,3 +22,11 @@ test('Preview and Word format amounts without changing codes or signature text',
 });
 
 test('Word and Excel retain portrait voucher and landscape JV orientations',async()=>{const mixed:FormattedReport={...report,sections:report.sections.map((s,i)=>({...s,orientation:i?'landscape':'portrait'}))};const zip=await JSZip.loadAsync(await reportWord(mixed));const xml=await zip.file('word/document.xml')!.async('string');assert.ok(xml.includes('w:orient="portrait"'));assert.ok(xml.includes('w:orient="landscape"'));const book=new ExcelJS.Workbook();await book.xlsx.load(await reportExcel(mixed) as any);assert.equal(book.worksheets[0].pageSetup.orientation,'portrait');assert.equal(book.worksheets[1].pageSetup.orientation,'landscape');});
+
+test('settled amounts stay numeric in Excel and negative amounts are red and aligned in Word',async()=>{
+ const value:FormattedReport={...report,sections:[{heading:'Unsettled',columns:['Invoice','Settled','Outstanding'],rows:[['000012','1234.50','-25.25']]}]};
+ const book=new ExcelJS.Workbook();await book.xlsx.load(await reportExcel(value) as any);
+ assert.equal(book.worksheets[0].getCell('B5').value,1234.5);
+ const zip=await JSZip.loadAsync(await reportWord(value));const xml=await zip.file('word/document.xml')!.async('string');
+ assert.ok(xml.includes('w:color w:val="B42338"'));assert.ok(xml.includes('w:jc w:val="right"'));assert.ok(xml.includes('1,234.50'));
+});
