@@ -31,6 +31,12 @@ jobs:
       - name: Shared Discovery control styles
         run: node scripts/check-discovery-shared-controls.mjs
 
+      - name: Runtime stylesheet coverage
+        run: |
+          node --test scripts/ui-source-graph.test.cjs
+          node scripts/check-retired-styles.cjs
+          node scripts/check-release-css.cjs
+
       - name: Service layer tests
         run: npm run test:services
 
@@ -70,6 +76,9 @@ jobs:
 
       - name: Auth / appsec P1
         run: npm run test:auth-p1
+
+      - name: TW Accounting setup and module routing
+        run: npx tsx --test features/accounting/bank-model.test.ts features/accounting/financial-model.test.ts features/accounting/budget-model.test.ts features/accounting/control-validation.test.ts features/accounting/navigation.test.ts features/accounting/chart.test.ts features/accounting/setup.test.ts features/accounting/journal-model.test.ts features/accounting/invoice-model.test.ts features/accounting/receipt-model.test.ts features/accounting/allocation-model.test.ts lib/billing/invoice-accounting-components.test.ts
 
       - name: Application security and workspace boundaries
         run: |

@@ -23,7 +23,7 @@ import {
 } from "@/lib/billing/invoice-from-posts";
 import { repairDesyncedUngeneratedInvoiceHeaders } from "@/lib/billing/repair-orphaned-invoice-state";
 import { runPreInvoiceCreateRepairPipeline } from "@/lib/billing/repair-invoice-create-pipeline";
-import { invoiceAmountMutationError } from "@/lib/billing/invoice-amount-protection";
+import { invoiceAmountMutationError,isAccountingCorrectionAllowed } from "@/lib/billing/invoice-amount-protection";
 import {
   resolveOperationalInvoiceTargets,
   validateAppendableInvoice,
@@ -678,10 +678,11 @@ export async function ungenerateInvoice(supabase: SupabaseClient, userId: string
     return { ok: false, message: invError?.message ?? "Invoice not found." };
   }
 
+  const accountingCorrection=await isAccountingCorrectionAllowed(supabase,invoice.id);
   const ineligible = invoiceUngenerateIneligibleReason({
-    status: invoice.status as string,
+    status: accountingCorrection?'draft':invoice.status as string,
     regeneration_status: invoice.regeneration_status,
-    is_operational_locked: invoice.is_operational_locked,
+    is_operational_locked: accountingCorrection?false:invoice.is_operational_locked,
   });
   if (ineligible) {
     return { ok: false, message: ineligible };

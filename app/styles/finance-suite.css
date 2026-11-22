@@ -401,8 +401,7 @@
 
 .finance-suite input[data-slot="input"],
 .finance-suite [data-slot="select-trigger"],
-.finance-suite textarea,
-.finance-suite select {
+.finance-suite :is(textarea,select) {
   height: 30px;
   padding: 0 9px;
   border: 1px solid var(--tw-line);
@@ -469,8 +468,7 @@
 }
 
 /* Shown copy wraps instead of clipping */
-.finance-suite .truncate,
-.finance-suite .text-ellipsis {
+.finance-suite .truncate {
   overflow: visible !important;
   text-overflow: clip !important;
   white-space: normal !important;
@@ -493,30 +491,11 @@
 }
 
 .finance-suite .tw-tl i,
-.finance-suite .tw-tl b,
-.finance-suite .tw-tl p,
+.finance-suite .tw-tl :is(b,p),
 .finance-suite .tw-tl .tw-big,
-.finance-suite .tw-go,
-.finance-suite .tw-note,
-.finance-suite .tw-st i,
-.finance-suite .tw-st b,
-.finance-suite .tw-lbl,
-.finance-suite .tw-gp,
-.finance-suite .tw-grp,
-.finance-suite .fs-grp,
-.finance-suite .fs-ct,
-.finance-suite .fs-cs,
-.finance-suite .fs-empty b,
-.finance-suite .fs-empty p,
-.finance-suite .fs-id,
-.finance-suite .fs-nm,
-.finance-suite .fs-t,
-.finance-suite .fs-br,
-.finance-suite .fs-s,
-.finance-suite .fs-v,
-.finance-suite .thinkway-campaign-section-head h2,
-.finance-suite .thinkway-campaign-section-head h3,
-.finance-suite .thinkway-campaign-section-head p,
+.finance-suite :is(.tw-go,.tw-note,.tw-lbl,.tw-gp,.fs-nm,.fs-br),
+.finance-suite .tw-st :is(i,b),
+.finance-suite .thinkway-campaign-section-head :is(h2,h3,p),
 .finance-suite label,
 .finance-suite [data-slot="label"] {
   overflow-wrap: anywhere;
@@ -534,8 +513,7 @@
 }
 
 .dark .finance-suite .tw-k,
-.dark .finance-suite .tw-c,
-.dark .finance-suite .thinkway-campaign-section-card {
+.dark .finance-suite :is(.tw-c,.thinkway-campaign-section-card) {
   background: hsl(var(--card));
 }
 

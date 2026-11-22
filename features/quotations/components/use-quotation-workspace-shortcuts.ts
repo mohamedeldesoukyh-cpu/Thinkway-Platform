@@ -1,4 +1,3 @@
-"use client";
 
 import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
 

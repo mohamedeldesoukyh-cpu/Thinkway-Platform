@@ -83,14 +83,6 @@
 .workspace-redesign .campaign-detail-suite .thinkway-aurora-doc-meta { gap: 11px; }
 
 /* Inline commercial split: same inputs and callbacks, reference heading/FX geometry. */
-.workspace-redesign .assignment-commercial-pane .acp-side-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; padding-bottom: 9px; margin-bottom: 11px; border-bottom: 1px solid rgb(17 24 39 / 8%); min-height: 38px; }
-.workspace-redesign .assignment-commercial-pane .acp-side-heading h3 { margin: 0 !important; padding: 0 !important; border: 0 !important; font-size: 12px; }
-.workspace-redesign .assignment-commercial-pane .acp-rate { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-inline-start: auto; font-size: 11px; color: var(--wr-ink, #3e4659); }
-.workspace-redesign .assignment-commercial-pane .acp-rate input { width: 96px; min-height: 28px; padding: 4px 7px; border: 1px solid #d8e0ee; background: var(--wr-surface, #fff); color: var(--wr-ink, #3e4659); border-radius: 7px; font: 500 12px var(--font-geist-mono),Consolas,monospace; }
-.workspace-redesign .assignment-commercial-pane .acp-rate input:disabled { background: var(--wr-soft, #f3f6fb); color: var(--wr-muted, #64748b); }
-.workspace-redesign .assignment-commercial-pane .acp-rate input:focus-visible { outline: 2px solid #0057ff; outline-offset: 1px; }
-.workspace-redesign .assignment-commercial-pane .acp-fx-fields { grid-template-columns: repeat(2,minmax(0,1fr)); margin-bottom: 10px; }
-.workspace-redesign .assignment-commercial-pane .acp-lock-notice { margin: 0; padding: 8px 14px; border-bottom: 1px solid #e7ecf4; background: var(--wr-warning-bg, #fff6e8); color: #8a5d12; font-size: 11.5px; }
 .workspace-redesign .assignment-commercial-pane .acp-field { font-size: 8.5px; letter-spacing: .5px; }
 .workspace-redesign .assignment-commercial-pane .acp-fields input { min-height: 32px; }
 .workspace-redesign .assignment-commercial-pane .acp-footer > div { max-width: 68ch; margin-inline-end: auto; }
@@ -141,9 +133,6 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
 .workspace-redesign .wr-vio-reference-register .wr-eligibility--blocked { color: #c03636; }
 .wr-vio-reference-actions { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
 .wr-vio-reference-actions > button { min-height: 30px; height: 30px; font-size: 11.5px; }
-.wr-deliverable-reference-actions { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-.workspace-redesign .wr-deliverable-filters > summary { padding: 8px 14px; font-size: 11.5px; color: var(--wr-muted, #64748b); cursor: pointer; }
-.workspace-redesign .wr-vio-readiness-details > summary { padding: 7px 14px; font-size: 11.5px; color: var(--wr-muted, #64748b); cursor: pointer; }
 
 /* The full header keeps its height and scrolls in the same surface as the work.
    A zero-height sticky anchor owns only the separate 71px visual summary. */
@@ -199,8 +188,7 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
 @media (max-width: 860px) {
   /* Identity and description need a full row in the mobile assignment cards. */
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="creator"],
-  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="assignment"],
-  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="fullDescription"] { flex-basis: 100%; max-width: 100%; width: 100%; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent :is([data-assignment-col="assignment"],[data-assignment-col="fullDescription"]) { flex-basis: 100%; max-width: 100%; width: 100%; }
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [role="gridcell"] { position: static; }
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [role="gridcell"] button { min-height: 44px; }
 }
@@ -218,13 +206,13 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__l { flex: 0 0 auto; max-height: none; overflow: hidden; padding: 14px; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__av { width: 60px; height: 60px; margin-bottom: 10px; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__l h2 { font-size: 18px; overflow-wrap: anywhere; }
-  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); margin-top: 12px; }
-  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st > div { display: flex; flex-direction: column; gap: 4px; padding: 8px; min-width: 0; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st i { flex: none; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st b { text-align: start; font-size: 12px; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__r { flex: 0 0 auto; overflow: visible; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__b { overflow: visible; }
-  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__h { position: sticky; top: 0; z-index: 2; background: var(--wr-surface, #fff); }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__h { position: sticky; z-index: 2; background: var(--wr-surface, #fff); }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__h .tw-cdt { flex-wrap: nowrap; overflow-x: auto; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-dr__x { flex-shrink: 0; min-width: 40px; min-height: 40px; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-dl { gap: 10px; padding: 10px 12px; }
@@ -234,8 +222,7 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [role="gridcell"] { width: auto; min-width: 0; max-width: 100%; display: block; text-align: left !important; padding: 8px 10px !important; min-height: 0; }
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [role="gridcell"]::before { text-align: left; }
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="creator"],
-  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="assignment"],
-  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="fullDescription"] { grid-column: 1 / -1; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent :is([data-assignment-col="assignment"],[data-assignment-col="fullDescription"]) { grid-column: 1 / -1; }
 }
 
 @media (max-width: 860px) {
@@ -254,7 +241,7 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
 .assignment-mobile-details-toggle { display: none !important; }
 @media (max-width: 860px) {
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent[data-mobile-details="closed"] > [data-assignment-col]:not([data-assignment-col="select"]):not([data-assignment-col="assignment"]):not([data-assignment-col="creator"]):not([data-assignment-col="cost"]):not([data-assignment-col="revenue"]):not([data-assignment-col="gp"]):not([data-assignment-col="opsStatus"]):not([data-assignment-col="actions"]) { display: none !important; }
-  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="assignment"] { grid-row: 1; padding-right: 44px !important; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="assignment"] { grid-row: 1; }
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="select"] { grid-row: 1; grid-column: 2; justify-self: end; align-self: center; z-index: 1; border: 0; }
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent .assignment-mobile-details-toggle { display: block !important; grid-column: 1 / -1; padding: 0 10px !important; }
   .assignment-mobile-details-toggle button { width: 100%; color: #0057ff; font-size: 12px; font-weight: 600; text-align: left; min-height: 40px; }

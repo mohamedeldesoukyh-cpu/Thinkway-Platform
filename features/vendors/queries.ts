@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient, requireRequestUser, type RequestUser } from "@/lib/supabase/server";
 import { creatorPaymentBalances } from '@/features/creator-payments/balances';
 import { creatorAssignmentCommercials } from './financial-display';
@@ -27,7 +28,6 @@ import {
   listQuotationHistoryForInfluencer,
 } from "@/lib/creators/quotation-price-reference";
 import { fetchProfileNamesByIds } from "@/lib/services/campaigns/repositories/workspace-repository";
-import { isCreatorCrmFilterEnabled } from "@/lib/creators/crm/feature-flag";
 import {
   computeCompletenessBreakdown,
   type CompletenessBreakdown,
@@ -115,7 +115,7 @@ export async function getVendorsList(
   const search = params.search?.trim() ?? "";
   const status = params.status;
   const platform = params.platform?.trim() ?? "";
-  const crmOnly = params.crmOnly ?? isCreatorCrmFilterEnabled();
+  const crmOnly = true;
   const from = (page - 1) * VENDORS_PAGE_SIZE;
   const to = from + VENDORS_PAGE_SIZE - 1;
 
@@ -126,13 +126,11 @@ export async function getVendorsList(
 
   const select = platform ? VENDOR_LIST_SELECT_PLATFORM_FILTER : VENDOR_LIST_SELECT;
   let query = supabase
-    .rpc("search_vendor_identities", { p_search: search || null })
+    .rpc("search_worked_vendors", { p_search: search || null })
     .select(select)
     .order("created_at", { ascending: false });
 
-  if (crmOnly) {
-    query = query.eq("has_commercial_profile", true);
-  }
+
   if (platform) {
     query = query.eq("platform_accounts.platform", platform);
   }
@@ -142,7 +140,7 @@ export async function getVendorsList(
 
   const [pageResult, countResult] = await Promise.all([
     query.range(from, to),
-    supabase.rpc("vendor_identity_search_total_count", {
+    supabase.rpc("worked_vendor_total_count", {
       p_search: search || null,
       p_status: status ?? null,
       p_platform: platform || null,
@@ -251,7 +249,7 @@ export async function getLinkableCreatorProfiles(
 
   if (!roleRow) return [];
 
-  const { data: profiles, error } = await (supabase as any)
+  const { data: profiles, error } = await (supabase as SupabaseClient)
     .from("profiles")
     .select("id, full_name, email")
     .eq("role_id", (roleRow as { id: string }).id)

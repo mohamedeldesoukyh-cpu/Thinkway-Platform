@@ -15,7 +15,7 @@ async function main() {
     [null,{message:"unavailable"},"Unable to verify invoice protection. No changes were made."],
   ] as const) {
     const query = { select:()=>query, eq:()=>query, maybeSingle:async()=>({data,error}) };
-    const db = {from:()=>query} as unknown as SupabaseClient;
+    const db = {from:()=>query,rpc:async()=>({data:false,error:null})} as unknown as SupabaseClient;
     assert.equal(await invoiceAmountMutationError(db,"synthetic-invoice"),expected);
     if (expected) {
       for (const mutation of ["append", "regenerate", "ungenerate", "void"] as const) {

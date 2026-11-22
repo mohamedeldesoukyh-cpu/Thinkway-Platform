@@ -52,11 +52,8 @@
 .assignment-commercial-pane .acp-number { position:relative; display:block; min-width:0; }
 .assignment-commercial-pane .acp-percentage input { padding-right:24px; }
 .assignment-commercial-pane .acp-percent-suffix { position:absolute; right:9px; top:50%; transform:translateY(-50%); color:#52637c; font-size:12px; pointer-events:none; }
-
-.assignment-commercial-pane .acp-fx-fields { margin-bottom:12px; grid-template-columns:repeat(3,minmax(0,1fr)); }
 .assignment-commercial-pane .acp-field select { width:100%; min-width:0; height:29px; border:1px solid #dce6f4; border-radius:6px; background:white; padding:0 7px; color:#17243b; }
 .assignment-commercial-pane .acp-field select:disabled { background:#f5f7fb; color:#52637c; }
-@media(max-width:560px) { .assignment-commercial-pane .acp-fx-fields { grid-template-columns:1fr; } }
 
 .assignment-commercial-pane .acp-resizer { height:8px; }
 .assignment-commercial-pane .acp-heading { padding:4px 10px; gap:10px; }

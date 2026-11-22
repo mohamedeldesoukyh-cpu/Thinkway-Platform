@@ -23,6 +23,8 @@ export const PAGE_PREFIX_CLASSIFICATIONS: Array<{
   { prefix: "/client-portal", class: "client_workspace", portal: "client" },
   { prefix: "/creator-portal", class: "client_workspace", portal: "creator" },
   { prefix: "/finance", class: "internal_workspace" },
+  { prefix: "/accounting", class: "internal_workspace" },
+  { prefix: "/modules", class: "internal_workspace" },
   { prefix: "/operations", class: "internal_workspace" },
   { prefix: "/billing", class: "internal_workspace" },
   { prefix: "/collections", class: "internal_workspace" },
@@ -49,6 +51,18 @@ export const PAGE_PREFIX_CLASSIFICATIONS: Array<{
 
 /** Exact API path templates (Next dynamic segments kept as [id] style). */
 export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
+  "/api/accounting/setup": "internal_workspace",
+  "/api/accounting/journals": "internal_workspace",
+  "/api/accounting/fiscal": "internal_workspace",
+  "/api/accounting/budgets": "internal_workspace",
+  "/api/accounting/reports": "internal_workspace",
+  "/api/accounting/banking": "internal_workspace",
+  "/api/accounting/controls": "internal_workspace",
+  "/api/accounting/allocations": "internal_workspace",
+  "/api/accounting/receipts": "internal_workspace",
+  "/api/accounting/invoices": "internal_workspace",
+  "/api/invoices/accounting": "internal_workspace",
+  "/api/modules": "internal_workspace",
   "/api/rate-cards/import-preview": "internal_workspace",
   "/api/rate-cards/[id]/export": "internal_workspace",
   "/api/rate-cards/[id]/excel": "internal_workspace",
@@ -224,6 +238,8 @@ export const WORKER_CLASSIFICATIONS: WorkspaceClassificationEntry[] = [
 
 /** Path prefixes that portal (client/creator) actors must never reach. */
 export const PORTAL_BLOCKED_PAGE_PREFIXES = [
+  "/modules",
+  "/accounting",
   "/finance",
   "/operations",
   "/billing",

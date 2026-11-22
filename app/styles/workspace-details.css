@@ -63,8 +63,6 @@ body:has(.workspace-redesign) .wr-assignment-scope .wr-detail-form-section { pad
 .workspace-redesign .wr-eligibility { display: block; font-size: 11px; line-height: 1.5; color: #0a7a55; overflow-wrap: break-word; }
 .workspace-redesign .wr-eligibility--blocked { color: #8a5d12; }
 .workspace-redesign .wr-secondary { display: block; color: var(--wr-muted, #64748b); font-size: 10.5px; line-height: 1.5; margin-top: 3px; }
-.workspace-redesign .acp-fx { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: -3px 0 10px; color: var(--wr-muted, #64748b); font-size: 10px; }
-.workspace-redesign .acp-fx output { font-family: var(--font-geist-mono),Consolas,monospace; color: #3e4659; }
 .workspace-redesign .campaign-detail-suite.thinkway-campaign-workspace .thinkway-aurora-ops-card-head { background: linear-gradient(180deg,#f3f5fc,transparent) !important; padding: 12px 14px !important; border-bottom: 1px solid var(--wr-hair, #e7ecf4) !important; }
 .workspace-redesign .campaign-detail-suite.thinkway-campaign-workspace .thinkway-aurora-ops-card-head::after { display: none !important; }
 .workspace-redesign .campaign-detail-suite.thinkway-campaign-workspace .thinkway-aurora-ops-grid { align-items: start; }

@@ -47,8 +47,6 @@
 }
 .cp-redesign *{box-sizing:border-box}
 .cp-redesign :focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:6px}
-.cp-redesign .sr{position:absolute;width:1px;height:1px;overflow:hidden;
-  clip:rect(0 0 0 0);white-space:nowrap}
 .cp-redesign .sp{flex:1 1 auto}
 
 /* numbers: tabular everywhere, so columns of figures line up */
@@ -72,21 +70,16 @@
 .cp-redesign .b:disabled{opacity:.45;cursor:not-allowed}
 .cp-redesign .b--pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .cp-redesign .b--pri:hover:not(:disabled){background:var(--blue-i);border-color:var(--blue-i);color:#fff}
-.cp-redesign .b--ok{background:var(--ok);border-color:var(--ok);color:#fff}
-.cp-redesign .b--ok:hover:not(:disabled){background:#086446;border-color:#086446;color:#fff}
 .cp-redesign .b--wrn{border-color:var(--wrn-br);background:var(--wrn-b);color:var(--wrn)}
 .cp-redesign .b--wrn:hover:not(:disabled){background:#FDEFD6;border-color:var(--wrn);color:var(--wrn)}
 .cp-redesign .b--ghost{border-color:transparent;background:transparent}
 .cp-redesign .b--ghost:hover:not(:disabled){background:var(--soft)}
-.cp-redesign .b--danger{border-color:var(--bad-br);background:var(--surf);color:var(--bad)}
-.cp-redesign .b--danger:hover:not(:disabled){background:var(--bad-b);border-color:var(--bad);
-  color:var(--bad)}
 .cp-redesign .b--sm{min-height:32px;padding:0 10px;font-size:var(--fs-small);position:relative}
 /* a 32px control still needs a 44px target */
 .cp-redesign .b--sm::after{content:"";position:absolute;inset:-6px -3px;min-height:44px}
 
 /* ---------------- fields ---------------- */
-.cp-redesign .in,.cp-redesign .sel{min-height:var(--ctl);width:100%;border-radius:var(--r-s);
+.cp-redesign :is(.in,.sel){min-height:var(--ctl);width:100%;border-radius:var(--r-s);
   border:1px solid var(--line);background:var(--surf);padding:5px 9px;
   font:500 var(--fs-body) var(--sans);color:var(--ink)}
 .cp-redesign .in:focus,.cp-redesign .sel:focus{outline:none;border-color:var(--blue);
@@ -95,12 +88,8 @@
   cursor:not-allowed}
 .cp-redesign .in--num{text-align:end;font-family:var(--mono);font-weight:700;
   font-variant-numeric:tabular-nums}
-.cp-redesign .in--bad,.cp-redesign .in--bad:focus{border-color:var(--bad);
-  box-shadow:0 0 0 3px rgba(193,33,33,.12)}
 .cp-redesign .flab{display:block;font:600 var(--fs-small) var(--sans);color:var(--mut);
   margin-bottom:3px}
-.cp-redesign .ferr{display:flex;gap:5px;align-items:flex-start;margin-top:4px;
-  font:600 var(--fs-small)/1.4 var(--sans);color:var(--bad)}
 
 /* ---------------- chips ---------------- */
 .cp-redesign .chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;
@@ -125,23 +114,19 @@
   background:var(--soft2);border-bottom:1px solid var(--hair)}
 .cp-redesign .ccy__h b{font:700 var(--fs-body) var(--mono);letter-spacing:.3px}
 .cp-redesign .ccy__h span{font:500 var(--fs-small) var(--sans);color:var(--mut)}
-.cp-redesign .ccy__g{display:flex;flex-wrap:wrap;gap:6px 26px;padding:10px 12px}
+.cp-redesign .ccy__g{display:flex;flex-wrap:wrap;padding:10px 12px}
 .cp-redesign .fig u{display:block;text-decoration:none;font:600 var(--fs-small) var(--sans);
   color:var(--mut);margin-bottom:1px}
 .cp-redesign .fig b{display:block;font:700 var(--fs-value) var(--mono);
   font-variant-numeric:tabular-nums;letter-spacing:-.3px}
-.cp-redesign .fig--lead b{font-size:var(--fs-bal);font-weight:800}
 .cp-redesign .fig--paid b{color:var(--ok)}
 .cp-redesign .fig--rem b{color:var(--wrn)}
-.cp-redesign .fig--pend b{color:var(--cya)}
 
 /* ==========================================================================
    NAVIGATION — parent context stays, child tabs are smaller
    ========================================================================== */
 .cp-redesign .nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   padding:10px 14px;border-bottom:1px solid var(--hair);background:var(--surf)}
-.cp-redesign .crumb{font:600 var(--fs-small) var(--sans);color:var(--mut)}
-.cp-redesign .crumb b{color:var(--ink);font-weight:700}
 .cp-redesign .tabs{display:inline-flex;gap:2px;background:var(--soft2);
   border-radius:999px;padding:3px}
 .cp-redesign .tabs button{border:0;background:none;border-radius:999px;padding:0 13px;
@@ -161,31 +146,21 @@
 .cp-redesign .filt::after{content:"";position:absolute;inset:-7px -2px;min-height:44px}
 .cp-redesign .filt[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
 .cp-redesign .filt b{font-family:var(--mono);font-size:12px;opacity:.75}
-.cp-redesign .filt__note{font:500 var(--fs-small) var(--sans);color:var(--mut)}
-.cp-redesign .srch{position:relative;flex:1 1 200px;min-width:160px}
-.cp-redesign .srch .in{padding-inline-start:30px}
-.cp-redesign .srch svg{position:absolute;inset-block-start:50%;inset-inline-start:9px;
-  transform:translateY(-50%);color:var(--mut);pointer-events:none}
-.cp-redesign .srch button{position:absolute;inset-block-start:50%;inset-inline-end:5px;
-  transform:translateY(-50%);border:0;background:none;cursor:pointer;color:var(--mut);
-  width:26px;height:26px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center}
-.cp-redesign .srch button:hover{background:var(--soft2);color:var(--ink)}
 
 /* ==========================================================================
    THE CREATOR ROW — one grid, shared with its column header
    ========================================================================== */
-.cp-redesign .thead,.cp-redesign .row{display:grid;grid-template-columns:var(--cols);
+.cp-redesign :is(.thead,.row){display:grid;grid-template-columns:var(--cols);
   align-items:center;gap:0 10px;padding:0 14px}
 .cp-redesign .thead{min-height:34px;background:var(--soft2);
-  border-bottom:1px solid var(--line);position:sticky;top:0;z-index:3}
+  border-bottom:1px solid var(--line);top:0;z-index:3}
 .cp-redesign .thead span{font:700 var(--fs-head) var(--sans);letter-spacing:.4px;
   text-transform:uppercase;color:var(--mut)}
 .cp-redesign .thead .num{text-align:end}
 
 .cp-redesign .grp{border-bottom:1px solid var(--hair)}
 .cp-redesign .grp:last-child{border-bottom:0}
-.cp-redesign .row{min-height:64px;background:var(--surf);position:relative}
+.cp-redesign .row{background:var(--surf);position:relative}
 .cp-redesign .row:hover{background:var(--soft)}
 .cp-redesign .grp.open>.row{background:var(--lav)}
 .cp-redesign .grp.blocked>.row{box-shadow:inset 3px 0 0 var(--wrn)}
@@ -193,7 +168,7 @@
 .cp-redesign .row input[type=checkbox]{width:17px;height:17px;accent-color:var(--blue);
   cursor:pointer;margin:0}
 
-.cp-redesign .who{display:flex;align-items:center;gap:9px;min-width:0}
+.cp-redesign .who{display:flex;min-width:0}
 .cp-redesign .av{width:32px;height:32px;border-radius:50%;flex:0 0 auto;position:relative;
   overflow:hidden}
 .cp-redesign .av span{position:absolute;inset:0;display:flex;align-items:center;
@@ -214,14 +189,13 @@
 .cp-redesign .io u{display:block;text-decoration:none;font:500 var(--fs-small) var(--sans);
   color:var(--mut)}
 
-.cp-redesign .st{display:flex;flex-direction:column;align-items:flex-start;gap:3px}
+.cp-redesign .st{display:flex;flex-direction:column}
 
 .cp-redesign .num{text-align:end;font:700 var(--fs-value) var(--mono);
   font-variant-numeric:tabular-nums;letter-spacing:-.2px}
 .cp-redesign .num--bal{font-size:var(--fs-bal);font-weight:800}
 .cp-redesign .num--paid{color:var(--ok)}
 .cp-redesign .num--rem{color:var(--wrn)}
-.cp-redesign .num--zero{color:var(--hairline)}
 .cp-redesign .num small{display:block;font:500 var(--fs-small) var(--sans);color:var(--mut);
   letter-spacing:0;font-variant-numeric:normal}
 
@@ -236,7 +210,7 @@
 /* ---- the entry strip: appears under the row, never shifts the row ---- */
 .cp-redesign .entry{display:grid;
   grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) auto;
-  gap:10px;align-items:start;padding:10px 14px 12px calc(32px + 14px);
+  gap:10px;padding:10px 14px 12px calc(32px + 14px);
   background:var(--soft);border-top:1px dashed var(--hair)}
 .cp-redesign .entry__acts{display:flex;align-items:flex-end;gap:7px;padding-bottom:1px}
 .cp-redesign .entry__prev{grid-column:1 / -1;display:flex;align-items:center;gap:7px;
@@ -258,12 +232,6 @@
 .cp-redesign .panel{background:var(--bg);border-top:1px solid var(--hair);
   padding:12px 14px 14px;display:grid;
   grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:12px;align-items:start}
-.cp-redesign .panel__sticky{position:sticky;top:34px;z-index:2;background:var(--lav);
-  border-top:1px solid var(--lav2);padding:7px 14px;display:flex;gap:18px;
-  flex-wrap:wrap;align-items:baseline}
-.cp-redesign .panel__sticky span{font:600 var(--fs-small) var(--sans);color:var(--mut)}
-.cp-redesign .panel__sticky b{font:700 var(--fs-body) var(--mono);
-  font-variant-numeric:tabular-nums;margin-inline-start:5px;color:var(--ink)}
 .cp-redesign .sec h4{display:flex;align-items:center;gap:7px;margin:0 0 7px;
   font:700 var(--fs-head) var(--sans);letter-spacing:.4px;text-transform:uppercase;
   color:var(--mut)}
@@ -271,33 +239,10 @@
   text-transform:none;font-size:var(--fs-small)}
 .cp-redesign .kv{background:var(--surf);border:1px solid var(--hair);border-radius:var(--r);
   overflow:hidden}
-.cp-redesign .kv__r{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
-  padding:7px 11px;border-top:1px solid var(--hair)}
-.cp-redesign .kv__r:first-child{border-top:0}
-.cp-redesign .kv__r span{font:500 var(--fs-label) var(--sans);color:var(--mut)}
-.cp-redesign .kv__r b{font:700 var(--fs-body) var(--mono);font-variant-numeric:tabular-nums}
-.cp-redesign .kv__r.tot{background:var(--soft)}
-.cp-redesign .kv__r.tot span{color:var(--ink);font-weight:700}
-.cp-redesign .kv__note{margin:6px 2px 0;font:500 var(--fs-small)/1.5 var(--sans);color:var(--mut)}
 
 /* ---- ledger ---- */
 .cp-redesign .led{background:var(--surf);border:1px solid var(--hair);border-radius:var(--r);
   overflow:hidden}
-.cp-redesign .led__h,.cp-redesign .led__r{display:grid;
-  grid-template-columns:minmax(0,1.2fr) 108px minmax(0,1fr) 140px 64px;
-  gap:10px;align-items:center;padding:7px 11px}
-.cp-redesign .led__h{background:var(--soft2);border-bottom:1px solid var(--hair)}
-.cp-redesign .led__h span{font:700 var(--fs-head) var(--sans);letter-spacing:.4px;
-  text-transform:uppercase;color:var(--mut)}
-.cp-redesign .led__h .num,.cp-redesign .led__r .num{text-align:end}
-.cp-redesign .led__r{border-top:1px solid var(--hair);font:500 var(--fs-label) var(--sans)}
-.cp-redesign .led__r:first-of-type{border-top:0}
-.cp-redesign .led__r button.lnk{border:0;background:none;padding:0;cursor:pointer;
-  font:700 var(--fs-label) var(--sans);color:var(--blue-i);text-align:start}
-.cp-redesign .led__r button.lnk:hover{text-decoration:underline;text-underline-offset:2px}
-.cp-redesign .led__r .ref{display:block;font:500 12px var(--mono);color:var(--mut)}
-.cp-redesign .led__r .num b{font:700 var(--fs-label) var(--mono);font-variant-numeric:tabular-nums}
-.cp-redesign .led__tot{background:var(--soft);font-weight:700}
 
 /* ---- empty / loading ---- */
 .cp-redesign .none{padding:22px 14px;text-align:center}
@@ -314,7 +259,6 @@
 .cp-redesign .note{display:flex;gap:9px;align-items:flex-start;margin:10px 14px;
   padding:10px 12px;border-radius:var(--r-s);font:500 var(--fs-label)/1.5 var(--sans)}
 .cp-redesign .note--wrn{background:var(--wrn-b);border:1px solid var(--wrn-br);color:var(--wrn)}
-.cp-redesign .note--bad{background:var(--bad-b);border:1px solid var(--bad-br);color:var(--bad)}
 .cp-redesign .note--info{background:var(--lav);border:1px solid var(--lav2);color:var(--ink2)}
 .cp-redesign .note b{font-weight:700}
 
@@ -329,41 +273,10 @@
 /* ==========================================================================
    RECORDS TABLE
    ========================================================================== */
-.cp-redesign .rec__h,.cp-redesign .rec__r{display:grid;
-  grid-template-columns:150px 150px minmax(0,1fr) 150px 140px 120px;
-  gap:10px;align-items:center;padding:9px 14px}
-.cp-redesign .rec__h{background:var(--soft2);border-bottom:1px solid var(--line);
-  position:sticky;top:0;z-index:2}
-.cp-redesign .rec__h span{font:700 var(--fs-head) var(--sans);letter-spacing:.4px;
-  text-transform:uppercase;color:var(--mut)}
-.cp-redesign .rec__h .num,.cp-redesign .rec__r .num{text-align:end}
-.cp-redesign .rec__r{border-bottom:1px solid var(--hair);cursor:pointer;background:var(--surf)}
-.cp-redesign .rec__r:hover{background:var(--soft)}
-.cp-redesign .rec__r.on{background:var(--lav)}
-.cp-redesign .rec__r .pn{font:700 var(--fs-label) var(--mono);color:var(--ink)}
-.cp-redesign .rec__r .num b{font:700 var(--fs-value) var(--mono);font-variant-numeric:tabular-nums}
-.cp-redesign .rec__r .orig{display:block;font:500 12px var(--sans);color:var(--mut);
-  font-variant-numeric:normal}
 
 /* ---------------- drawer ---------------- */
-.cp-redesign .scrim{position:fixed;inset:0;background:rgba(11,23,51,.45);z-index:40;
-  display:flex;justify-content:flex-end}
 .cp-redesign .draw{width:min(460px,100%);background:var(--surf);height:100%;
   display:flex;flex-direction:column;box-shadow:var(--e3)}
-.cp-redesign .draw__h{padding:14px 16px;border-bottom:1px solid var(--hair);
-  display:flex;align-items:flex-start;gap:10px}
-.cp-redesign .draw__h h3{margin:0;font:800 16px/1.3 var(--sans);letter-spacing:-.3px}
-.cp-redesign .draw__h p{margin:3px 0 0;font:500 var(--fs-label) var(--sans);color:var(--mut)}
-.cp-redesign .draw__b{flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;
-  padding:14px 16px;background:var(--bg)}
-.cp-redesign .draw__f{padding:12px 16px;border-top:1px solid var(--hair);display:flex;
-  gap:9px;align-items:center;flex-wrap:wrap;background:var(--surf)}
-.cp-redesign .draw__amt{background:var(--surf);border:1px solid var(--hair);
-  border-radius:var(--r);padding:14px;margin-bottom:12px;text-align:center}
-.cp-redesign .draw__amt u{display:block;text-decoration:none;font:600 var(--fs-small) var(--sans);
-  color:var(--mut);margin-bottom:3px}
-.cp-redesign .draw__amt b{font:800 26px var(--mono);font-variant-numeric:tabular-nums;
-  letter-spacing:-.8px;display:block}
 .cp-redesign .x{width:32px;height:32px;border-radius:50%;border:1px solid var(--hair);
   background:var(--surf);color:var(--ink2);cursor:pointer;display:flex;
   align-items:center;justify-content:center;flex:0 0 auto;position:relative}
@@ -397,27 +310,20 @@
   .cp-redesign .entry{grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding-inline-start:14px}
   .cp-redesign .entry__acts{grid-column:1 / -1;justify-content:flex-start}
   .cp-redesign .panel{grid-template-columns:1fr}
-  .cp-redesign .rec__h,.cp-redesign .rec__r{grid-template-columns:130px minmax(0,1fr) 130px 120px}
-  .cp-redesign .rec__h span:nth-child(2),.cp-redesign .rec__r>*:nth-child(2){display:none}
-  .cp-redesign .rec__h span:nth-child(6),.cp-redesign .rec__r>*:nth-child(6){display:none}
   .cp-redesign .steps{grid-template-columns:1fr}
 }
 @media (max-width:860px){
   .cp-redesign .thead{display:none}
   .cp-redesign .row{grid-template-columns:32px minmax(0,1fr) 36px;row-gap:9px;
     padding:11px 12px;align-items:start}
-  .cp-redesign .row>.io,.cp-redesign .row>.st,.cp-redesign .row>.num{grid-column:2}
+  .cp-redesign .row>:is(.io,.st,.num){grid-column:2}
   .cp-redesign .num{text-align:start}
   .cp-redesign .num::before{content:attr(data-l);display:block;
     font:600 var(--fs-small) var(--sans);color:var(--mut);letter-spacing:0;
     text-transform:none;font-family:var(--sans)}
-  .cp-redesign .acts,.cp-redesign .entry{padding-inline-start:12px}
-  .cp-redesign .led__h{display:none}
-  .cp-redesign .led__r{grid-template-columns:1fr;gap:3px}
-  .cp-redesign .led__r .num{text-align:start}
-  .cp-redesign .panel__sticky{position:static}
+  .cp-redesign :is(.acts,.entry){padding-inline-start:12px}
   /* 16px minimum on inputs stops iOS zooming the page on focus */
-  .cp-redesign .in,.cp-redesign .sel{font-size:16px;min-height:44px}
+  .cp-redesign :is(.in,.sel){font-size:16px;min-height:44px}
   .cp-redesign .b{min-height:44px}
   .cp-redesign .draw{width:100%}
   .cp-redesign .foot{position:sticky;bottom:0;
@@ -431,15 +337,15 @@
   .cp-redesign *{transition:none!important;animation:none!important}
 }
 @media print{
-  .cp-redesign .nav,.cp-redesign .bar,.cp-redesign .foot,.cp-redesign .disc{display:none}
+  .cp-redesign :is(.nav,.bar,.foot,.disc){display:none}
 }
 /* Integration: scope the supplied design away from the existing Discovery .tw-cp. */
-.thinkway-creator-payments.cp-redesign{min-width:0;--sans:var(--font-geist-sans, 'Segoe UI'),'Segoe UI',system-ui,sans-serif;--mono:var(--font-geist-mono, 'Cascadia Mono'),'Cascadia Mono',Consolas,monospace}
+.thinkway-creator-payments.cp-redesign{min-width:0;--sans:var(--font-geist-sans, 'Segoe UI'),'Segoe UI',system-ui,sans-serif}
 .cp-redesign .cp-summary-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
 .cp-redesign .cp-summary-heading h2{font-size:14px;font-weight:700;margin:0}
 .cp-redesign .ccy__g{align-items:center;gap:12px 28px}
 .cp-redesign .fig{min-width:110px}
-.cp-redesign .fig .m,.cp-redesign .fig .cur{font-size:inherit}
+.cp-redesign .fig :is(.m,.cur){font-size:inherit}
 .cp-redesign .fig .cur{font-size:12px}
 .cp-redesign .fig--lead .m{font-size:17px}
 .thinkway-creator-payments.cp-redesign .campaign-finance-workspace > .cp-workflow-tabs{width:auto;max-width:100%;display:inline-flex;gap:2px;border:0;background:var(--soft2);padding:3px;border-radius:24px;min-height:38px;box-shadow:none}
@@ -455,7 +361,7 @@
 .cp-redesign .who{flex-direction:column;align-items:stretch;gap:2px}
 .cp-redesign .who small{font-size:12px;color:var(--mut)}
 .cp-redesign .thinkway-campaign-cr-cell{gap:8px;min-width:0}
-.cp-redesign .thinkway-campaign-cr-name{font-size:14px;font-weight:700;line-height:1.35;overflow-wrap:anywhere}
+.cp-redesign .thinkway-campaign-cr-name{line-height:1.35;overflow-wrap:anywhere}
 .cp-redesign .thinkway-campaign-cr-cell [class*=text-\[10px\]]{font-size:12px}
 .cp-redesign .io .cp-vendor-io-link{font-size:12px;white-space:normal}
 .cp-redesign .io u{overflow-wrap:anywhere}
@@ -464,8 +370,6 @@
 .cp-redesign .st{gap:5px;align-items:flex-start}
 .cp-redesign .num--zero{color:var(--mut)}
 .cp-redesign .num .cur{color:inherit;font-size:12px}
-.cp-redesign .num .m{font-size:14px}
-.cp-redesign .num--bal .m{font-size:17px}
 .cp-redesign .b--sm::after,.cp-redesign .tabs button::after,.cp-redesign .filt::after{content:none}
 .cp-redesign .entry{align-items:start}
 .cp-redesign .entry .flab{display:block;margin-bottom:5px;color:var(--mut);font-size:12px}
@@ -513,7 +417,7 @@
 .cp-redesign-drawer .cp-record-amount{background:white;border:1px solid #e7ecf4;border-radius:11px;text-align:center}
 .cp-redesign-drawer .cp-record-amount strong{font-size:26px;font-variant-numeric:tabular-nums}
 .cp-redesign-drawer .cp-clear-payment{color:#c12121;border-color:#f2cccc;margin-right:auto}
-.cp-redesign-drawer .cp-record-creator,.cp-redesign-drawer .cp-record-facts{background:white;border:1px solid #e7ecf4;border-radius:11px;padding:14px}
+.cp-redesign-drawer :is(.cp-record-creator,.cp-record-facts){background:white;border:1px solid #e7ecf4;border-radius:11px;padding:14px}
 .cp-redesign-drawer .cp-drawer-actions{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));flex-wrap:wrap}
 /* Use available section width as well as viewport width (sidebar/tablet). */
 @media (max-width:1200px){
@@ -537,27 +441,27 @@
  .cp-redesign .cp-export-line .chip{grid-column:2}
 }
 @media(max-width:860px){
- .cp-redesign .b,.cp-redesign .b--sm,.cp-redesign .filt,.cp-redesign .cp-button,.cp-redesign .disc{min-height:44px}
+ .cp-redesign :is(.b,.b--sm,.filt,.cp-button,.disc){min-height:44px}
  .cp-redesign .disc{min-width:44px}
  .thinkway-creator-payments.cp-redesign .campaign-finance-workspace > .cp-workflow-tabs{display:flex;width:100%}
  .thinkway-creator-payments.cp-redesign .cp-workflow-tabs [role=tab].cp-workflow-tab{flex:1;padding:0 8px;min-height:44px}
  .cp-redesign .cp-workflow-tab svg{display:none}
  .cp-redesign .cp-search-fields{flex-basis:100%;order:-1}
- .cp-redesign input,.cp-redesign select{font-size:16px!important;min-height:44px}
+ .cp-redesign :is(input,select){font-size:16px!important;min-height:44px}
  .cp-redesign input[type=checkbox]{min-height:20px;width:20px;height:20px}
  .cp-redesign .cp-designed-history .cp-payment-details{margin-left:0;flex-basis:100%}
  .cp-redesign .cp-designed-history .cp-payment-details>summary{min-height:44px}
- .cp-redesign .cp-ledger-table,.cp-redesign .cp-ledger-table tbody,.cp-redesign .cp-ledger-table tr,.cp-redesign .cp-ledger-table td{display:block;min-width:0;width:100%}
- .cp-redesign .cp-ledger-table colgroup,.cp-redesign .cp-ledger-table thead{display:none}
+ .cp-redesign .cp-ledger-table,.cp-redesign .cp-ledger-table :is(tbody,tr,td){display:block;min-width:0;width:100%}
+ .cp-redesign .cp-ledger-table :is(colgroup,thead){display:none}
  .cp-redesign .cp-ledger-table tr{padding:10px 14px;border-bottom:1px solid var(--line)}
  .cp-redesign .cp-ledger-table td{border:0;padding:5px 0;text-align:start;overflow-wrap:anywhere}
  .cp-redesign .cp-ledger-table td[data-label]:before{content:attr(data-label);display:block;font:600 12px var(--sans);color:var(--mut)}
- .cp-redesign .cp-head-actions,.cp-redesign .cp-head-actions input,.cp-redesign .cp-head-actions select{max-width:100%;width:100%}
+ .cp-redesign .cp-head-actions,.cp-redesign .cp-head-actions :is(input,select){max-width:100%;width:100%}
  .cp-redesign .cp-creator-ledger{min-width:0}
  .cp-redesign .cp-creator-ledger thead{display:none}
- .cp-redesign .cp-creator-ledger tbody,.cp-redesign .cp-creator-ledger tr,.cp-redesign .cp-creator-ledger td,.cp-redesign .cp-creator-ledger th{display:block;width:100%;text-align:start}
+ .cp-redesign .cp-creator-ledger :is(tbody,tr,td,th){display:block;width:100%;text-align:start}
  .cp-redesign .cp-creator-ledger tr{padding:8px;border-bottom:1px solid var(--line)}
- .cp-redesign .cp-creator-ledger td,.cp-redesign .cp-creator-ledger th{padding:4px 0;border:0}
+ .cp-redesign .cp-creator-ledger :is(td,th){padding:4px 0;border:0}
 }
 @media (max-width:480px){
  .cp-redesign .row{grid-template-columns:24px minmax(0,1fr) 36px}
@@ -589,12 +493,12 @@
 .cp-balance-group h3 span{font-weight:400;color:#64748b}
 .cp-balance-table-scroll{overflow-x:auto;border:1px solid #dce3ed;border-radius:10px}
 .cp-balance-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
-.cp-balance-table th,.cp-balance-table td{padding:12px;text-align:right;white-space:nowrap;border-bottom:1px solid #e5eaf1}
+.cp-balance-table :is(th,td){padding:12px;text-align:right;white-space:nowrap;border-bottom:1px solid #e5eaf1}
 .cp-balance-table th:first-child{text-align:left;white-space:normal;min-width:150px}
 .cp-balance-table thead th{font-size:12px;color:#536176;background:#f4f6fa;font-weight:600}
 .cp-balance-table tbody th{font-weight:500}
 .cp-balance-table tfoot{background:#f4f6fa;font-weight:700}
-.cp-balance-table tfoot th,.cp-balance-table tfoot td{border-bottom:0}
+.cp-balance-table tfoot :is(th,td){border-bottom:0}
 .cp-balance-table small{display:block;font-size:11px;font-weight:400;color:#64748b;margin-top:3px}
 .cp-balance-paid{color:#087f5b}
 .cp-balance-outstanding{color:#946000}
@@ -609,7 +513,7 @@
 .cp-redesign .fig--lead b{font-size:15px;font-weight:600}
 .cp-redesign .thead{font-size:12px;text-transform:none;letter-spacing:0}
 @media(max-width:640px){
-  .cp-redesign .entry input,.cp-redesign .entry select{font-size:16px}
+  .cp-redesign .entry :is(input,select){font-size:16px}
   .cp-balance-dialog{padding:18px}
 }
 .thinkway-creator-payments.cp-redesign .thinkway-campaign-cr-cell p,

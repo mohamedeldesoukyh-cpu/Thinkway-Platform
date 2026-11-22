@@ -347,18 +347,13 @@
   min-width: 0;
 }
 
-.campaigns-list-suite .tw-lnk .platform-v6-c-green,
-.campaigns-list-suite .tw-lnk .platform-v6-c-red,
+
 .campaigns-list-suite .tw-lnk .text-muted-foreground,
 .campaigns-list-suite .tw-lnk .platform-v6-link {
   font-size: 11px !important;
   font-weight: 600 !important;
   color: var(--tw-mut) !important;
   text-transform: none !important;
-}
-
-.campaigns-list-suite .tw-lnk .platform-v6-c-green {
-  color: var(--tw-ok) !important;
 }
 
 .campaigns-list-suite .tw-lnk .tw-sw {
@@ -445,7 +440,6 @@
 .campaigns-list-suite .platform-v6-page,
 .campaigns-list-suite .platform-v6-page-header-row,
 .campaigns-list-suite .platform-v6-section-meta,
-.campaigns-list-suite .platform-v6-kpi-strip,
 .campaigns-list-suite .platform-v6-toolbar,
 .campaigns-list-suite .platform-v6-section-wrap {
   all: unset;
@@ -467,15 +461,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   box-shadow: none !important;
-}
-
-.campaigns-list-suite .tw-hs-live-dot,
-.campaigns-list-suite .platform-v6-hs-live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--tw-ok);
-  display: inline-block;
 }
 
 .campaigns-list-suite .tw-sc {

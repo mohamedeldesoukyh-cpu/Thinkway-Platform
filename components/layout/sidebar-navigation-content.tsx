@@ -5,16 +5,19 @@ import { AppNavLink } from "@/components/navigation/app-nav-link";
 import { NAV_SECTIONS, DAILY_NAV_ITEMS, activeNavigationHref } from "./app-navigation";
 import { SidebarSuiteIcon } from "./sidebar-suite-icons";
 import { DailyWorkNavigation } from "./daily-work-navigation";
+import { useModuleAccess } from "./module-access-provider";
 
 const STORAGE = "thinkway-sidebar-collapsed-groups-v2";
 const accents: Record<string, string> = { Home: "home", "Campaign workspace": "campaign", Discovery: "discovery", "Clients & brands": "clients", Vendors: "vendors", Finance: "finance", Operations: "operations", Insights: "insights", Administration: "admin" };
-const groups = NAV_SECTIONS.reduce<{ name: string; sections: typeof NAV_SECTIONS }[]>((result, section) => {
+const allGroups = NAV_SECTIONS.reduce<{ name: string; sections: typeof NAV_SECTIONS }[]>((result, section) => {
   if (section.group) result.push({ name: section.group, sections: [] });
   result[result.length - 1].sections.push(section);
   return result;
 }, []);
 
 export function SidebarNavigationContent({ onNavigate, onClose, focusRequest = 0 }: { onNavigate?: () => void; onClose?: () => void; focusRequest?: number }) {
+  const modules = useModuleAccess();
+  const groups = allGroups.map(group => ({...group, sections:group.sections.map(section => ({...section, items:section.items.filter(item => item.href!=="/accounting" || modules.accounting)}))}));
   const pathname = usePathname();
   const active = activeNavigationHref(pathname);
   const [query, setQuery] = useState("");

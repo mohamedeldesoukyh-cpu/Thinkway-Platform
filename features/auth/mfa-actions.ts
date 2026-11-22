@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 
-import { roleRequiresMfa } from "@/lib/auth/mfa-policy";
+import { accessRequiresMfa } from "@/lib/auth/mfa-policy";
+import { loadModuleAccess } from "@/lib/auth/module-access";
 import { sanitizeNextPath } from "@/lib/auth/routes";
 import { requireRequestUser } from "@/lib/supabase/server";
 import {
@@ -22,7 +23,7 @@ export type MfaActionState = {
 export async function startTotpEnrollmentAction(): Promise<MfaActionState> {
   try {
     const { supabase, roleSlug } = await requireRequestUser();
-    if (!roleRequiresMfa(roleSlug)) {
+    if (!accessRequiresMfa(roleSlug,await loadModuleAccess(supabase))) {
       return {
         ok: false,
         error: "Your role does not require multi-factor authentication.",

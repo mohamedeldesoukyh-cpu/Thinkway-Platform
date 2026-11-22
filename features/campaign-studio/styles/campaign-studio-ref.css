@@ -2114,15 +2114,7 @@
   }
 
   .campaign-studio-ref .cs-field-grid,
-  .campaign-studio-ref .cs-insight-grid,
-  .campaign-studio-ref .cs-concept-grid,
-  .campaign-studio-ref .cs-timeline-grid,
-  .campaign-studio-ref .cs-bench-grid,
-  .campaign-studio-ref .cs-risk-grid,
-  .campaign-studio-ref .cs-exec-cols,
-  .campaign-studio-ref .cs-two-col-list,
-  .campaign-studio-ref .cs-status-meta-grid,
-  .campaign-studio-ref .cs-pair-grid {
+  .campaign-studio-ref :is(.cs-insight-grid,.cs-concept-grid,.cs-timeline-grid,.cs-bench-grid,.cs-risk-grid,.cs-exec-cols,.cs-two-col-list,.cs-status-meta-grid) {
     grid-template-columns: 1fr;
   }
 
@@ -3190,8 +3182,7 @@
 }
 
 .campaign-studio-ref .cs-rec2__apply,
-.campaign-studio-ref .cs-rec2__modify,
-.campaign-studio-ref .cs-rec2__dismiss {
+.campaign-studio-ref :is(.cs-rec2__modify,.cs-rec2__dismiss) {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -3368,8 +3359,7 @@
     gap: 7px;
   }
 
-  .campaign-studio-ref .cs-hmk,
-  .campaign-studio-ref .cs-hwd,
+  
   .campaign-studio-ref .cs-hdv {
     display: none;
   }
@@ -3444,10 +3434,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .campaign-studio-ref .cs-mh-btn,
-  .campaign-studio-ref .cs-stp,
-  .campaign-studio-ref .cs-rec2__apply,
-  .campaign-studio-ref .cs-rec2__modify,
-  .campaign-studio-ref .cs-rec2__dismiss {
+  .campaign-studio-ref :is(.cs-stp,.cs-rec2__apply,.cs-rec2__modify,.cs-rec2__dismiss) {
     transition: none;
   }
 }
@@ -3568,8 +3555,7 @@
 }
 .campaign-studio-ref .cs-planning-callout strong { font-weight: 700; }
 
-.campaign-studio-ref .cs-strategy-grid,
-.campaign-studio-ref .cs-package-meta {
+.campaign-studio-ref .cs-strategy-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 10px;

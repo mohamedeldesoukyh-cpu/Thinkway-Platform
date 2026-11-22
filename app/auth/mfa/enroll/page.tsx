@@ -2,9 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { MfaEnrollForm } from "@/features/auth/components/mfa-enroll-form";
-import { roleRequiresMfa } from "@/lib/auth/mfa-policy";
+import { accessRequiresMfa } from "@/lib/auth/mfa-policy";
+import { loadModuleAccess } from "@/lib/auth/module-access";
 import { sanitizeNextPath } from "@/lib/auth/routes";
-import { getRequestAuth } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getRequestAuth } from "@/lib/supabase/server";
 
 type Props = {
   searchParams: Promise<{ next?: string }>;
@@ -19,7 +20,7 @@ export default async function MfaEnrollPage({ searchParams }: Props) {
     redirect(`/login?next=${encodeURIComponent(nextPath)}`);
   }
 
-  if (!roleRequiresMfa(roleSlug)) {
+  if (!accessRequiresMfa(roleSlug,await loadModuleAccess(await createSupabaseServerClient()))) {
     return (
       <main className="flex min-h-svh flex-col items-center justify-center gap-4 px-4">
         <p className="text-sm text-muted-foreground">
@@ -39,8 +40,8 @@ export default async function MfaEnrollPage({ searchParams }: Props) {
           Set up authenticator
         </h1>
         <p className="text-sm text-muted-foreground">
-          Admin, Super Admin, and Finance accounts must enable TOTP before using
-          privileged actions.
+          Administrators, Finance users, and Accounting managers must enable an
+          authenticator before using privileged actions.
         </p>
       </div>
       <MfaEnrollForm nextPath={nextPath} />

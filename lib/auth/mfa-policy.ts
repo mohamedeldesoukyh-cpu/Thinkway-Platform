@@ -9,6 +9,10 @@ export function roleRequiresMfa(roleSlug: string | null | undefined): boolean {
   return Boolean(roleSlug && MFA_REQUIRED_ROLE_SLUGS.has(roleSlug));
 }
 
+export function accessRequiresMfa(roleSlug: string | null | undefined, access: {manage:boolean}): boolean {
+  return roleRequiresMfa(roleSlug) || access.manage;
+}
+
 export function mfaRedirectPath(
   code: "mfa_enroll_required" | "mfa_challenge_required",
   nextPath = "/"

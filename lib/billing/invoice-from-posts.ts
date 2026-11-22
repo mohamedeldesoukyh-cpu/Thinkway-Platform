@@ -1,3 +1,4 @@
+import { invoiceAccountingWeights } from './invoice-accounting-components';
 import { invoicePercentageDescription } from "./selected-invoice-batches";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -14,7 +15,6 @@ import {
 } from "@/lib/billing/deliverable-billing";
 import { resolveClientBillableAmount } from "@/lib/billing/client-billable-amount";
 import {
-  recalculateInvoiceTotals,
   resolveInvoiceLineVatPercent,
 } from "@/lib/billing/invoice-from-deliverables";
 import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-billing";
@@ -215,7 +215,7 @@ export function buildPostInvoiceLinePayload(
     quantity: 1,
     unit_price: beforeVat,
     revenue_before_vat: beforeVat,
-    metadata: { operational_source_amount: beforeVat, operational_fx_refresh: Boolean(options?.forRegeneration) },
+    metadata: { accounting_components: invoiceAccountingWeights(deliverable), operational_source_amount: beforeVat, operational_fx_refresh: Boolean(options?.forRegeneration) },
     revenue_vat_percent: vatExempt ? 0 : vatPercent,
     revenue_vat_exempt: vatExempt,
   };
@@ -620,7 +620,7 @@ export async function lockPostsOnInvoice(
       post.linked_invoice_id === invoiceId;
     let existingOnInvoice = 0;
     let lineItemId = post.invoice_line_item_id;
-    let reuseLineItem = updatingExisting;
+    const reuseLineItem = updatingExisting;
 
     if (reuseLineItem && lineItemId) {
       const { data: existingItem } = await supabase

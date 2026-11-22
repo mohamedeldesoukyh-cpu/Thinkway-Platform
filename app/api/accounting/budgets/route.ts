@@ -1,0 +1,7 @@
+import {NextResponse} from 'next/server';
+import {z} from 'zod';
+import {accountingContext} from '@/features/accounting/setup-server';
+import {assertCsrfRequest} from '@/lib/security/csrf';
+const uuid=z.string().uuid(),reply=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
+export async function GET(request:Request){try{const {db}=await accountingContext(),q=new URL(request.url).searchParams;const r=await db.rpc('tw_accounting_budget_report',{p_company:uuid.parse(q.get('company')),p_year:uuid.parse(q.get('year'))});if(r.error)throw new Error(r.error.message);return reply(r.data);}catch(e){return reply({error:e instanceof Error?e.message:'Budget report failed'},400);}}
+export async function POST(request:Request){const csrf=assertCsrfRequest(request);if(!csrf.ok)return reply({error:csrf.reason},403);try{const {db,access}=await accountingContext();if(!access.manage)return reply({error:'Accounting management access required'},403);const v=z.object({company:uuid,year:uuid,account:z.string().regex(/^\d{6}$/),lines:z.array(z.object({period:uuid,amount:z.string().regex(/^-?\d{1,12}(\.\d{1,2})?$/),version:z.number().int().positive().nullable()})).length(12)}).parse(await request.json());const r=await db.rpc('tw_accounting_budget_save',{p_company:v.company,p_year:v.year,p_account:v.account,p_lines:v.lines});if(r.error)return reply({error:r.error.message},r.error.code==='40001'?409:400);return reply({saved:true});}catch(e){return reply({error:e instanceof Error?e.message:'Budget save failed'},400);}}

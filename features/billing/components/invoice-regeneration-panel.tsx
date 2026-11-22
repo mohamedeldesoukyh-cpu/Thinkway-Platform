@@ -29,20 +29,29 @@ import { hasProtectedInvoiceAmounts } from "@/lib/billing/invoice-amount-protect
 
 type InvoiceRegenerationPanelProps = {
   invoice: InvoiceWorkspace;
+  accountingCorrection?: boolean;
 };
 
-export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelProps) {
+export function InvoiceRegenerationPanel({ invoice,accountingCorrection=false }: InvoiceRegenerationPanelProps) {
   const [mode, setMode] = useState<"ungenerate" | "regenerate" | null>(null);
   const [reason, setReason] = useState("");
   const handledUngenerateRef = useRef<string | null>(null);
   const handledRegenerateRef = useRef<string | null>(null);
 
   const [ungenerateState, ungenerateAction, ungeneratePending] = useActionState(
-    ungenerateInvoiceAction,
+    async (previous:BillingActionState,form:FormData)=>{
+      const next=await ungenerateInvoiceAction(previous,form);
+      if(next.ok){setMode(null);setReason("");}
+      return next;
+    },
     { ok: false } satisfies BillingActionState
   );
   const [regenerateState, regenerateAction, regeneratePending] = useActionState(
-    regenerateInvoiceAction,
+    async (previous:BillingActionState,form:FormData)=>{
+      const next=await regenerateInvoiceAction(previous,form);
+      if(next.ok){setMode(null);setReason("");}
+      return next;
+    },
     { ok: false } satisfies BillingActionState
   );
 
@@ -54,8 +63,6 @@ export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelPr
 
     if (ungenerateState.ok) {
       showSuccessToastOnce(ungenerateState.message, { id: "invoice-ungenerate" });
-      setMode(null);
-      setReason("");
     } else {
       showErrorToastOnce(ungenerateState.message, { id: "invoice-ungenerate" });
     }
@@ -69,8 +76,6 @@ export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelPr
 
     if (regenerateState.ok) {
       showSuccessToastOnce(regenerateState.message, { id: "invoice-regenerate" });
-      setMode(null);
-      setReason("");
     } else {
       showErrorToastOnce(regenerateState.message, { id: "invoice-regenerate" });
     }
@@ -94,7 +99,7 @@ export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelPr
           : "p-g";
 
   const coverage = invoice.regeneration_coverage ?? null;
-  const amountsProtected = hasProtectedInvoiceAmounts(invoice);
+  const amountsProtected = hasProtectedInvoiceAmounts(invoice)&&!accountingCorrection;
   const regenerateBlocked = coverage?.case === "blocked";
 
   return (
@@ -105,8 +110,7 @@ export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelPr
             Finance governance
           </div>
           <div className="tw-gov-hint">
-            Issued invoice amounts are protected. Use a new invoice for remaining
-            work, or a credit/debit note for a correction.
+            {accountingCorrection?'Accounting has unposted this invoice. Un-generate, correct the campaign lines, regenerate and submit again. Invoice and journal numbers are retained.':'Issued invoice amounts are protected. Unpost its Accounting journal before correcting it, or use a credit/debit note.'}
           </div>
         </div>
         <span className={`tw-p ${statusPill}`}>{statusLabel}</span>

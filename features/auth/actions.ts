@@ -8,6 +8,7 @@ import { resolveWorkspaceActor } from "@/lib/security/workspace-actor";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { signInSchema } from "./schemas";
+import { loadModuleAccess, moduleHome, isAccountingPath } from "@/lib/auth/module-access";
 
 export type SignInFormState = {
   error: string | null;
@@ -85,13 +86,19 @@ export async function signInAction(
   }
 
   const actor = await resolveWorkspaceActor(supabase, userId);
-  const next = sanitizeNextPathForActor(
+  let next = sanitizeNextPathForActor(
     typeof formData.get("next") === "string"
       ? (formData.get("next") as string)
       : null,
     actor.kind,
   );
 
+  if (actor.kind === "internal") {
+    try {
+      const access = await loadModuleAccess(supabase);
+      if (next === "/" || next === "/modules" || (isAccountingPath(next) ? !access.accounting : !access.media)) next = moduleHome(access);
+    } catch { return {error:"Module access could not be verified. Please retry."}; }
+  }
   const mfaPath = await resolvePostLoginMfaPath(next);
   redirect(mfaPath ?? next);
 }
