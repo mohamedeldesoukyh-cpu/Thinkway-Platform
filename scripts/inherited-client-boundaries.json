@@ -1312,7 +1312,8 @@
       "features/accounting/auxiliaries.tsx",
       "features/accounting/account-moves.tsx",
       "features/accounting/allocation-controls.tsx",
-      "features/accounting/mapping-desk.tsx"
+      "features/accounting/mapping-desk.tsx",
+      "features/accounting/staff-desk.tsx"
     ]
   },
   {
@@ -1332,7 +1333,8 @@
       "features/accounting/cost-invoice-desk.tsx",
       "features/accounting/invoice-desk.tsx",
       "features/accounting/statement-desk.tsx",
-      "features/accounting/mapping-desk.tsx"
+      "features/accounting/mapping-desk.tsx",
+      "features/accounting/staff-desk.tsx"
     ]
   },
   {
@@ -1427,6 +1429,12 @@
   },
   {
     "file": "features/accounting/pl-closing-desk.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/staff-desk.tsx",
     "parents": [
       "features/accounting/console.tsx"
     ]
