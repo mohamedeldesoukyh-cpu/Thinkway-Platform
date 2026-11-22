@@ -1,3 +1,4 @@
+import { queueCampaignNames } from '@/features/finance/posting-center/queue-campaigns';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { accountingContext } from '@/features/accounting/setup-server';
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
     const page = z.coerce.number().int().min(0).max(2000).parse(q.get('page') ?? 0);
     const results = await Promise.all(types.map(t => db.rpc('tw_accounting_media_queue', { p_company: company, p_type: t, p_from: from, p_to: to, p_posted: q.get('posted') === 'true', p_offset: page * 50 })));
     for (const r of results) if (r.error) throw Error(r.error.message);
-    return reply({ rows: results.flatMap(r => r.data.rows), count: results.reduce((n,r) => n + r.data.count, 0), more: results.some(r => r.data.count > (page + 1) * 50) });
+    return reply({ rows: await queueCampaignNames(db, results.flatMap(r => r.data.rows)), count: results.reduce((n,r) => n + r.data.count, 0), more: results.some(r => r.data.count > (page + 1) * 50) });
   } catch (e) { return error(e); }
 }
 export async function POST(request: Request) {

@@ -24,7 +24,7 @@ const server=http.createServer(async(req,res)=>{try{
  if(req.method==='GET'){
   if(url.searchParams.get('mode')==='allocations')return res.end(JSON.stringify({note:{number:'QA-1',currency:'EGP',total:'1140',version:1,invoice:'inv-1'},invoices:[{id:'inv-1',number:'INV-1',date:'2026-11-20',total:'2000',paid:'100',outstanding:'1900',allocated:'0',locked:false}]}));
   const kind=url.searchParams.get('type');calls.push({method:'GET',kind});
-  const rows=[1,2].map(n=>({id:String(n),type:kind==='cost'?'supplier_invoice':kind,number:'QA-'+n,date:'2026-11-22',party:'Isolated browser fixture',code:'100'+n,currency:'EGP',net:'1000',tax:'140',total:'1140',eligible:true,reason:'',status:posted.has(String(n))?'posted':'unposted',token:'test-preview',version:1,journal:posted.has(String(n))?'22222222-2222-4222-8222-222222222222':null,accruals:[]})).filter(r=>(r.status==='posted')===(url.searchParams.get('posted')==='true'));
+  const rows=[1,2].map(n=>({id:String(n),type:kind==='cost'?'supplier_invoice':kind,number:'QA-'+n,date:'2026-11-22',party:'Isolated browser fixture',campaign:'Summer campaign',code:'100'+n,currency:'EGP',net:'1000',tax:'140',total:'1140',eligible:true,reason:'',status:posted.has(String(n))?'posted':'unposted',token:'test-preview',version:1,journal:posted.has(String(n))?'22222222-2222-4222-8222-222222222222':null,accruals:[]})).filter(r=>(r.status==='posted')===(url.searchParams.get('posted')==='true'));
   return res.end(JSON.stringify({rows,count:rows.length,more:false}));
  }
  let body='';for await(const chunk of req)body+=chunk;const v=JSON.parse(body);calls.push({method:'POST',...v});
@@ -39,7 +39,7 @@ const evidence={method:'Real React component, controlled HTTP responses; Dev SQL
 try{
  await page.goto(`http://127.0.0.1:${server.address().port}`);await page.waitForTimeout(1000);if(errors.length)throw Error(errors.join('; '));
  for(const type of ['client_invoice','cost','client_credit_note','vendor_credit_note','client_debit_note','vendor_debit_note']){await page.getByLabel('Document type').selectOption(type);await page.getByRole('button',{name:'Browse',exact:true}).click();await page.getByRole('status').filter({hasText:'2 unposted'}).waitFor();assert.equal(calls.at(-1).kind,type);}
- evidence.checks.push('All six document filters browse correctly');
+ assert.deepEqual((await page.getByRole('columnheader').allTextContents()).slice(0,5),['Select','Date','Number','Client / vendor','Campaign']);await page.getByRole('cell',{name:'Summer campaign',exact:true}).first().waitFor();await page.getByRole('cell',{name:'22 Nov 2026',exact:true}).first().waitFor();assert.equal(await page.getByRole('cell',{name:/1001.*Isolated browser fixture/}).count(),0);evidence.checks.push('All six document filters, date-first columns, campaign names and hidden party codes');
  await page.getByRole('button',{name:'Select all in period'}).click();await page.getByText('2 selected',{exact:true}).waitFor();
  await page.getByRole('button',{name:'Post selected',exact:true}).click();await page.getByRole('alertdialog').waitFor();await page.getByRole('button',{name:'Cancel',exact:true}).click();assert.equal(calls.filter(c=>c.method==='POST').length,0);
  evidence.checks.push('Cancel sends no posting request');
