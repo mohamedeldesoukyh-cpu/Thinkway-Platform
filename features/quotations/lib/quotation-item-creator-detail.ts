@@ -1,9 +1,9 @@
 import {
   getUnifiedCreatorDetailAction,
-  getUnifiedCreatorCoreDetailAction,
   getUnifiedCreatorsBatchAction,
 } from "@/features/campaigns/creator-discovery-actions";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { loadCreatorProfile } from "@/features/discovery/lib/load-creator-profile";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 
 type QuotationCreatorRef = Pick<
@@ -24,11 +24,13 @@ export async function fetchQuotationItemCreatorDetail(
   item: QuotationCreatorRef,
   options?: { coreOnly?: boolean }
 ): Promise<UnifiedCreatorResult | null> {
+  if (options?.coreOnly) {
+    const ref = quotationItemCreatorRefId(item);
+    return ref ? loadCreatorProfile(ref) : null;
+  }
   const unifiedId = item.unified_id?.trim();
   if (unifiedId) {
-    const direct = await (options?.coreOnly
-      ? getUnifiedCreatorCoreDetailAction(unifiedId)
-      : getUnifiedCreatorDetailAction(unifiedId));
+    const direct = await getUnifiedCreatorDetailAction(unifiedId);
     if (direct) return direct;
   }
 

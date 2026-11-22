@@ -226,21 +226,6 @@
 /* dialogs are CENTRED, never a side drawer */
 
 /* layout chooser */
-.sl-redesign .sl-lay{display:grid;grid-template-columns:repeat(auto-fit,minmax(176px,1fr));gap:10px}
-.sl-redesign .sl-lay label{display:block;background:var(--q-surf);border:1.5px solid var(--q-hair);
- border-radius:var(--q-r);padding:10px;cursor:pointer}
-.sl-redesign .sl-lay label:hover{border-color:rgba(0,87,255,.3)}
-.sl-redesign .sl-lay label:has(input:checked){border-color:var(--q-blue);background:var(--q-lav)}
-.sl-redesign .sl-lay input{position:absolute;opacity:0;pointer-events:none}
-.sl-redesign .sl-lay__p{height:62px;border-radius:7px;background:var(--q-soft);border:1px solid var(--q-hair);
- margin-bottom:8px;position:relative;overflow:hidden}
-.sl-redesign .sl-lay__p s{position:absolute;background:var(--q-line);border-radius:2px;text-decoration:none}
-.sl-redesign .sl-lay b{display:block;font:700 12px var(--q-sans)}
-.sl-redesign .sl-lay u{display:block;text-decoration:none;font-size:10.5px;color:var(--q-mut);
- line-height:1.45;margin-top:2px}
-.sl-redesign .sl-lay__f{display:flex;gap:3px;flex-wrap:wrap;margin-top:6px}
-.sl-redesign .sl-fmt{font:700 8.5px var(--q-mono);background:var(--q-soft);color:var(--q-ink2);
- border-radius:4px;padding:2px 5px}
 
 /* add-creator rows */
 
@@ -254,7 +239,6 @@
 .sl-redesign details.sl-acc>summary small{font:500 11px var(--q-sans);color:var(--q-mut)}
 
 /* states */
-@keyframes slsh{to{background-position:-300% 0}}
 .sl-redesign .sl-ro{display:flex;align-items:center;gap:8px;padding:9px 13px;background:var(--q-wrn-b);
  border:1px solid #EFD9AE;border-radius:var(--q-r);font-size:11.5px;color:var(--q-wrn);
  margin-bottom:11px}

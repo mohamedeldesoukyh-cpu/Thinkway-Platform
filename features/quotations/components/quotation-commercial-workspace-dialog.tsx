@@ -80,10 +80,10 @@ import { quotationOptionLabel } from "@/lib/quotations/quotation-option-label";
 import { buildQuotationItemOptionContext } from "@/lib/quotations/quotation-creator-options";
 
 const CS = {
-  dark: "#0d1220",
-  gray: "#6b7280",
-  muted: "#9aa3b5",
-  line: "#e3e8f2",
+  dark: "var(--ink, #0d1220)",
+  gray: "var(--ink2, #6b7280)",
+  muted: "var(--mut, #9aa3b5)",
+  line: "var(--line, #e3e8f2)",
   panel: "#f6f8fc",
   green: "#1D9E75",
   warn: "#EA580C",
@@ -432,7 +432,7 @@ export function QuotationCommercialWorkspaceDialog({
         showCloseButton
         data-shortcut-save-scope="quotation"
         className="commercial-workspace-dialog qx q-redesign-commercial flex h-auto max-h-[calc(100dvh-44px)] min-h-0 w-[min(calc(100vw-44px),1180px)] max-w-[min(calc(100vw-44px),1180px)] flex-col gap-0 overflow-hidden rounded-xl border-[0.5px] p-0 sm:max-w-[min(calc(100vw-44px),1180px)]"
-        style={{ borderColor: CS.line, backgroundColor: "#fff", color: CS.dark }}
+        style={{ borderColor: CS.line, backgroundColor: "var(--surf, #fff)", color: CS.dark }}
       >
         <div
           className="qx-sh__h q-cw-heading shrink-0"
@@ -450,7 +450,7 @@ export function QuotationCommercialWorkspaceDialog({
         {/* Frozen totals + selection + health */}
         <div
           className="q-cw-controls shrink-0"
-          style={{ borderBottom: `0.5px solid ${CS.line}`, background: "#fff" }}
+          style={{ borderBottom: `0.5px solid ${CS.line}`, background: "var(--surf, #fff)" }}
         >
           <div className="qx-cw__sum">
             <div className="qx-zone qx-zone--int"><div className="qx-zone__h">Internal — never shown to the client</div><div className="qx-zone__g">

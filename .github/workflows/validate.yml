@@ -35,6 +35,7 @@ jobs:
         run: |
           node --test scripts/ui-source-graph.test.cjs
           node scripts/check-retired-styles.cjs
+          node scripts/check-release-css.cjs
 
       - name: Service layer tests
         run: npm run test:services

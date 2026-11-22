@@ -242,57 +242,8 @@
 
 /* Badges */
 .thinkway-platform-v6 .platform-v6-badge {
-  display: inline-flex;
-  align-items: center;
   gap: 3px;
-  padding: 2px 8px;
-  border-radius: 20px;
-  font-size: 10px;
-  font-weight: 600;
   white-space: nowrap;
-}
-
-.thinkway-platform-v6 .platform-v6-badge-green {
-  background: var(--tw-green-bg);
-  color: var(--tw-green-text);
-}
-
-.thinkway-platform-v6 .platform-v6-badge-amber {
-  background: var(--tw-amber-bg);
-  color: var(--tw-amber-text);
-}
-
-.thinkway-platform-v6 .platform-v6-badge-red {
-  background: var(--tw-red-bg);
-  color: var(--tw-red-text);
-}
-
-.thinkway-platform-v6 .platform-v6-badge-blue {
-  background: var(--tw-blue-light);
-  color: var(--tw-blue-text);
-}
-
-.thinkway-platform-v6 .platform-v6-badge-gray {
-  background: var(--tw-surface);
-  color: var(--tw-text-2);
-  border: 1px solid var(--tw-border);
-}
-
-.thinkway-platform-v6 .platform-v6-badge-purple {
-  background: var(--tw-purple-bg);
-  color: var(--tw-purple-text);
-}
-
-.thinkway-platform-v6 .platform-v6-badge-outline-amber {
-  background: transparent;
-  color: var(--tw-amber-text);
-  border: 1px solid var(--tw-amber);
-}
-
-.thinkway-platform-v6 .platform-v6-badge-outline-green {
-  background: transparent;
-  color: var(--tw-green-text);
-  border: 1px solid var(--tw-green);
 }
 
 /* KPI strip — redesign: card flex strip (executive + shared) */
@@ -300,16 +251,10 @@
 /* Section cards + tables */
 .thinkway-platform-v6 .platform-v6-section-wrap {
   background: var(--tw-white);
-  border: 1px solid var(--tw-border);
-  border-radius: var(--tw-rl);
-  overflow: hidden;
   margin-bottom: 16px;
 }
 
 .thinkway-platform-v6 .platform-v6-section-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   margin-bottom: 6px;
 }
 
@@ -325,9 +270,6 @@
 }
 
 .thinkway-platform-v6 .platform-v6-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   margin-bottom: 16px;
   flex-wrap: wrap;
 }
@@ -371,14 +313,7 @@
 }
 
 .thinkway-platform-v6 .platform-v6-link {
-  color: var(--tw-blue);
-  text-decoration: none;
   cursor: pointer;
-  font-size: 12px;
-}
-
-.thinkway-platform-v6 .platform-v6-link:hover {
-  text-decoration: underline;
 }
 
 .thinkway-platform-v6 .platform-v6-section-wrap .platform-v6-link {
@@ -1045,11 +980,9 @@
   gap: 12px;
   margin: 18px 0 10px;
   padding: 0;
-  border-bottom: none;
 }
 
 .thinkway-platform-v6 .platform-v6-section-head h2 {
-  font-size: 14px;
   font-weight: 700;
   color: var(--ink);
 }
@@ -1112,70 +1045,6 @@
 }
 
 /* ─── Home dashboard (v13 immersive) ─── */
-@keyframes platform-v6-hs-aurora-shift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-@keyframes platform-v6-hs-reveal-up {
-  from {
-    opacity: 0;
-    transform: translateY(28px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes platform-v6-hs-reveal-left {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes platform-v6-hs-ticker {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-@keyframes platform-v6-hs-cursor-blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0;
-  }
-}
-
-@keyframes platform-v6-hs-gradient-move {
-  0% {
-    background-position: 0% 0%;
-  }
-  50% {
-    background-position: 100% 100%;
-  }
-  100% {
-    background-position: 0% 0%;
-  }
-}
 
 /* ═══════════════════════════════════════════════════════
    HOME PAGE (/) — REDESIGN
@@ -1208,22 +1077,7 @@
 
 /* ---- Ticker strip ---- */
 
-@keyframes platform-v6-hs-ticker-scroll {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
 /* ---- Main two-column layout ---- */
-
-@keyframes platform-v6-hs-blink {
-  50% {
-    opacity: 0;
-  }
-}
 
 /* ---- KPI cards ---- */
 
@@ -1236,17 +1090,6 @@
 /* ---- PO ring panel ---- */
 
 /* ---- Side panels (Recent campaigns / Top vendors) ---- */
-
-@keyframes platform-v6-hs-pulse {
-  0% {
-    transform: scale(0.6);
-    opacity: 0.5;
-  }
-  100% {
-    transform: scale(2.3);
-    opacity: 0;
-  }
-}
 
 /* ---- Footer strip ---- */
 
@@ -1266,94 +1109,21 @@
 
 /* ---- Animated aurora glow — slow, soft, blue-only (was: static single glow) ---- */
 
-@keyframes platform-v6-hs-aurora-drift {
-  0%,
-  100% {
-    background-position: 0% 0%;
-  }
-  50% {
-    background-position: 100% 60%;
-  }
-}
-
 /* ---- Entrance choreography — page elements arrive in sequence instead of appearing flat ---- */
-
-@keyframes platform-v6-hs-fade-down {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-@keyframes platform-v6-hs-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-@keyframes platform-v6-hs-fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-@keyframes platform-v6-hs-fade-left {
-  from {
-    opacity: 0;
-    transform: translateX(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
 
 /* ---- Micro-interactions ---- */
 
 /* KPI cards lift on hover, not just border/shadow */
 
 /* CTA button gets a slow breathing glow instead of a static shadow */
-@keyframes platform-v6-hs-cta-breathe {
-  0%,
-  100% {
-    box-shadow: 0 6px 16px rgba(0, 87, 255, 0.22);
-  }
-  50% {
-    box-shadow: 0 8px 22px rgba(0, 87, 255, 0.36);
-  }
-}
 
 /* PO ring gradient sweeps gently instead of sitting static */
-@keyframes platform-v6-hs-ring-sweep {
-  to {
-    transform: rotate(360deg);
-  }
-}
 
 /* Ticker: pause the scroll on hover so numbers are readable when someone's presenting */
 
 /* Respect reduced-motion users — disable all of the above, fall back to the static v1 look */
 
 /* ---- AI Insights banner (new — see JSX note below) ---- */
-@keyframes platform-v6-ai-pulse {
-  0% {
-    transform: scale(0.85);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(1.3);
-    opacity: 0;
-  }
-}
 
 /* ═══════════════════════════════════════════════════════
    EXECUTIVE DASHBOARD — CARD SYSTEM V2
@@ -1767,24 +1537,6 @@
  * Sync glow on ::before — CreatorAvatarImage overflow:hidden + border-radius clips
  * box-shadow on the avatar itself, so the ring must live outside that element.
  */
-
-@keyframes shortlist-avatar-sync-pulse {
-  0%,
-  100% {
-    box-shadow:
-      0 4px 12px -3px rgba(16, 24, 40, 0.2),
-      0 0 0 3px rgba(37, 99, 235, 0.2),
-      0 0 14px rgba(37, 99, 235, 0.38),
-      0 0 28px rgba(37, 99, 235, 0.14);
-  }
-  50% {
-    box-shadow:
-      0 4px 12px -3px rgba(16, 24, 40, 0.2),
-      0 0 0 4px rgba(37, 99, 235, 0.32),
-      0 0 20px rgba(37, 99, 235, 0.58),
-      0 0 36px rgba(37, 99, 235, 0.22);
-  }
-}
 
 .discovery-search-exact-row--with-meta .discovery-search-exact-feed-thumbs {
   flex: 0 1 auto;
@@ -3367,10 +3119,6 @@
   height: 2.5px;
   background: #0057ff;
   opacity: 0.4;
-}
-
-.discovery-dialog-form-panel .discovery-dialog-field-label {
-  margin-bottom: 6px;
 }
 
 .discovery-dialog-form-panel > * + * {

@@ -356,8 +356,7 @@
   }
 
   .thinkway-lc-process-rail-step[data-rail="upcoming"] .thinkway-lc-process-rail-label,
-  .thinkway-lc-process-rail-step[data-rail="upcoming"] .thinkway-lc-process-rail-meta,
-  .thinkway-lc-process-rail-step[data-rail="upcoming"] .thinkway-lc-process-rail-owner {
+  .thinkway-lc-process-rail-step[data-rail="upcoming"] :is(.thinkway-lc-process-rail-meta,.thinkway-lc-process-rail-owner) {
     opacity: 0.68;
   }
 
@@ -2606,8 +2605,7 @@
 
   .thinkway-campaign-asgn-child-hdr td[data-child-col="expand"],
   .thinkway-campaign-asgn-child-hdr td[data-child-col="select"],
-  .thinkway-campaign-asgn-child td[data-child-col="expand"],
-  .thinkway-campaign-asgn-child td[data-child-col="select"] {
+  .thinkway-campaign-asgn-child :is(td[data-child-col="expand"],td[data-child-col="select"]) {
     padding: 0;
     border-left: none;
   }
@@ -2647,8 +2645,7 @@
 
   .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child-hdr td[data-child-col="expand"],
   .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child-hdr td[data-child-col="select"],
-  .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child td[data-child-col="expand"],
-  .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child td[data-child-col="select"] {
+  .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child :is(td[data-child-col="expand"],td[data-child-col="select"]) {
     padding: 0;
     border-left: none;
   }
@@ -3022,17 +3019,6 @@
     font-weight: 700;
     color: var(--camp-green);
     font-variant-numeric: tabular-nums;
-  }
-
-  @keyframes thinkway-campaign-sh-pulse {
-    0% {
-      transform: scale(0.7);
-      opacity: 0.5;
-    }
-    100% {
-      transform: scale(2.4);
-      opacity: 0;
-    }
   }
 
   /* Campaign requirements sidebar — thinkway-campaign-requirements_1.html */
@@ -4298,8 +4284,7 @@
 
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child-hdr td[data-child-col="expand"],
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child-hdr td[data-child-col="select"],
-.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child td[data-child-col="expand"],
-.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child td[data-child-col="select"] {
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child :is(td[data-child-col="expand"],td[data-child-col="select"]) {
   padding: 0 !important;
   border-left: none !important;
 }

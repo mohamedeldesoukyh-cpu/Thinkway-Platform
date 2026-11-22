@@ -12,26 +12,25 @@
    its footer can never disagree about column count. */
 .client-detail-suite *,.client-detail-suite *::before,.client-detail-suite *::after{box-sizing:border-box}
 /* ---------- nav ---------- */
-.client-detail-suite .tw-main{min-width:0;padding:18px 22px 40px}
+.client-detail-suite .tw-main{min-width:0}
 /* ---------- head ---------- */
 /* ---------- kpi ---------- */
 /* ---------- card + universal grid ---------- */
-.client-detail-suite .tw-c{background:#fff;border-radius:12px;box-shadow:var(--tw-ring);overflow:hidden;margin-bottom:14px}
-.client-detail-suite .tw-ch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 15px;border-bottom:1px solid var(--tw-line)}
-.client-detail-suite .tw-ct{font-size:13px;font-weight:600}
+.client-detail-suite .tw-c{background:var(--tw-surface, #fff);box-shadow:var(--tw-ring);overflow:hidden}
+.client-detail-suite .tw-ch{display:flex;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--tw-line)}
+.client-detail-suite .tw-ct{font-weight:600}
 .client-detail-suite .tw-cs{font-size:11px;color:var(--tw-mut)}
 /* ---------- cell types ---------- */
 .client-detail-suite .tw-t{font-size:12px;color:var(--tw-ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.client-detail-suite .tw-d{font:500 11.5px 'Geist Mono',monospace;color:var(--tw-ink2);white-space:nowrap}
+.client-detail-suite .tw-d{font:500 11.5px 'Geist Mono',monospace}
 .client-detail-suite .tw-miss{color:#A9B2C3;font-style:italic;font-size:11.5px}
 .client-detail-suite .tw-p{display:inline-block;padding:2px 8px;border-radius:999px;font:600 10px 'Geist',sans-serif;white-space:nowrap}
 .client-detail-suite .p-v{background:var(--tw-viob);color:var(--tw-vio)}
 .client-detail-suite .tw-act{display:flex;align-items:center;gap:4px;justify-content:flex-end}
-@media(prefers-reduced-motion:reduce){.client-detail-suite .tw-b,.client-detail-suite .tw-r{transition:none}}
+@media(prefers-reduced-motion:reduce){.client-detail-suite :is(.tw-b,.tw-r){transition:none}}
 /* ============ Thinkway identity cards " treasury + reports ============ */
 /* the mark: two overlapping rings, the Thinkway "way" cut, drawn in CSS only */
 /* ===== campaign detail additions ===== */
-.client-detail-suite .tw-main{padding:0 22px 40px}
 /* decision center */
 /* commercial band */
 /* workspace tabs */
@@ -48,71 +47,61 @@
 /* activity feed */
 /* jump links */
 /* ===== calmer shell: more air, fewer things at once ===== */
-.client-detail-suite .tw-main{max-width:1240px;margin:0 auto;padding:0 24px 56px}
-.client-detail-suite .tw-c{margin-bottom:16px;border-radius:14px}
-.client-detail-suite .tw-ch{padding:14px 18px;gap:11px}
-.client-detail-suite .tw-ct{font-size:13.5px}
 /* hero */
 /* metrics: roomier */
 /* status strip */
 /* stepper tab bar */
-.client-detail-suite .tw-step2{display:flex;align-items:stretch;background:#fff;border-radius:13px;box-shadow:var(--tw-ring);
- padding:4px;margin-bottom:16px;overflow-x:auto}
-.client-detail-suite .tw-sb{flex:1 1 0;min-width:104px;display:flex;flex-direction:column;align-items:center;gap:7px;
- padding:11px 6px 9px;border:0;border-radius:10px;background:none;cursor:pointer;position:relative}
+.client-detail-suite .tw-step2{display:flex;align-items:stretch;background:var(--tw-surface, #fff);box-shadow:var(--tw-ring);overflow-x:auto}
+.client-detail-suite .tw-sb{flex:1 1 0;display:flex;flex-direction:column;align-items:center;border:0;border-radius:10px;background:none;cursor:pointer;position:relative}
 .client-detail-suite .tw-sb:hover{background:var(--tw-soft)}
 .client-detail-suite .tw-sb[aria-pressed="true"]{background:var(--tw-lav)}
-.client-detail-suite .tw-sb__d{width:11px;height:11px;border-radius:50%;border:2px solid var(--tw-line);background:#fff;z-index:1}
+.client-detail-suite .tw-sb__d{border-radius:50%;border:2px solid var(--tw-line);background:var(--tw-surface, #fff);z-index:1}
 .client-detail-suite .tw-sb[aria-pressed="true"] .tw-sb__d{box-shadow:0 0 0 3px rgba(0,87,255,.18)}
-.client-detail-suite .tw-sb::before{content:"";position:absolute;top:16px;left:0;width:50%;height:2px;background:var(--tw-line)}
-.client-detail-suite .tw-sb::after{content:"";position:absolute;top:16px;right:0;width:50%;height:2px;background:var(--tw-line)}
+.client-detail-suite .tw-sb::before{content:"";position:absolute;left:0;width:50%;height:2px;background:var(--tw-line)}
+.client-detail-suite .tw-sb::after{content:"";position:absolute;right:0;width:50%;height:2px;background:var(--tw-line)}
 .client-detail-suite .tw-sb:first-child::before,.client-detail-suite .tw-sb:last-child::after{display:none}
 .client-detail-suite .tw-sb__l{display:flex;align-items:center;gap:5px;font:600 12px 'Geist',sans-serif;color:var(--tw-mut);
  white-space:nowrap}
 .client-detail-suite .tw-sb[aria-pressed="true"] .tw-sb__l{color:var(--tw-bi)}
-.client-detail-suite .tw-sb__l em{font-style:normal;font:600 10px 'Geist Mono',monospace;padding:1px 5px;border-radius:999px;
+.client-detail-suite .tw-sb__l em{font:600 10px 'Geist Mono',monospace;border-radius:999px;
  background:var(--tw-soft);color:var(--tw-mut)}
 /* dashboard: 2 columns, roomy */
 /* collapsible */
 /* issue list, one place */
 /* full width " no wasted gutters */
-.client-detail-suite .tw-main{max-width:none;margin:0;padding:0 16px 56px}
 /* avatars + platform marks */
 /* child ad-line band */
 /* expandable detail panels */
 /* ============ compact header + one visual language ============ */
-.client-detail-suite .tw-main{padding:0 14px 44px}
 /* ---- masthead: hero + metrics + status in ONE band ---- */
-.client-detail-suite .tw-mast{position:relative;isolation:isolate;overflow:hidden;border-radius:14px;background:#fff;
- box-shadow:var(--tw-ring);margin-bottom:10px}
-.client-detail-suite .tw-mast::before{content:"";position:absolute;z-index:-1;inset:0;
- background:linear-gradient(107deg,#0040CC 0%,#0057FF 30%,#1A6FFF 52%,rgba(26,111,255,0) 72%)}
-.client-detail-suite .tw-mast::after{content:"";position:absolute;z-index:-1;left:308px;top:-88px;width:210px;height:210px;
+.client-detail-suite .tw-mast{position:relative;isolation:isolate;overflow:hidden;border-radius:14px;background:var(--tw-surface, #fff);
+ box-shadow:var(--tw-ring)}
+.client-detail-suite .tw-mast::before{content:"";position:absolute;z-index:-1;inset:0}
+.client-detail-suite .tw-mast::after{content:"";position:absolute;z-index:-1;
  border-radius:50%;border:34px solid rgba(255,255,255,.11)}
-.client-detail-suite .tw-mh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 15px 10px;color:#fff}
+.client-detail-suite .tw-mh{display:flex;align-items:center;flex-wrap:wrap;color:#fff}
 .client-detail-suite .tw-mh .id{font:600 10px 'Geist Mono',monospace;letter-spacing:.2px;padding:2px 7px;border-radius:6px;
  background:rgba(255,255,255,.16);color:#fff}
 .client-detail-suite .tw-mh h1{font:600 19px 'Geist',sans-serif;letter-spacing:-.5px;color:#fff}
 .client-detail-suite .tw-mh .sub{font-size:11.5px;color:rgba(255,255,255,.74)}
 .client-detail-suite .tw-mh .st{padding:3px 9px;border-radius:999px;font:600 10px 'Geist',sans-serif;
  background:rgba(255,255,255,.18);color:#fff}
-.client-detail-suite .tw-mh .st.r{background:#fff;color:var(--tw-bad)}
+.client-detail-suite .tw-mh .st.r{background:var(--tw-surface, #fff);color:var(--tw-bad)}
 /* blocker line inside masthead */
 /* action row on white */
 /* metric + status: one dense strip */
-.client-detail-suite .tw-ms2{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:0;background:#fff;
+.client-detail-suite .tw-ms2{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:0;background:var(--tw-surface, #fff);
  border-top:1px solid var(--tw-hair)}
-.client-detail-suite .tw-ms2 > div{padding:9px 14px;border-right:1px solid var(--tw-hair)}
+.client-detail-suite .tw-ms2 > div{border-right:1px solid var(--tw-hair)}
 .client-detail-suite .tw-ms2 > div:last-child{border-right:0}
-.client-detail-suite .tw-ms2 i{display:block;font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.6px;
+.client-detail-suite .tw-ms2 i{display:block;font-style:normal;font-weight:700;letter-spacing:.6px;
  text-transform:uppercase;color:var(--tw-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.client-detail-suite .tw-ms2 b{display:block;margin-top:3px;font:600 14px 'Geist',sans-serif;letter-spacing:-.35px;white-space:nowrap}
+.client-detail-suite .tw-ms2 b{display:block;font:600 14px 'Geist',sans-serif;white-space:nowrap}
 .client-detail-suite .tw-ms2 b.g{color:var(--tw-ok)}
 .client-detail-suite .tw-ms2 b.r{color:var(--tw-bad)}
-.client-detail-suite .tw-ms2 b.s{font-size:12.5px;font-weight:600}
+.client-detail-suite .tw-ms2 b.s{font-weight:600}
 /* ---- stepper: shorter ---- */
-.client-detail-suite .tw-step2{padding:3px;margin-bottom:10px;border-radius:12px}
-.client-detail-suite .tw-sb{min-width:92px;gap:5px;padding:8px 5px 7px}
+.client-detail-suite .tw-step2{padding:3px;border-radius:12px}
 .client-detail-suite .tw-sb::before,.client-detail-suite .tw-sb::after{top:13px}
 .client-detail-suite .tw-sb__d{width:9px;height:9px}
 .client-detail-suite .tw-sb__l{font-size:11.5px}
@@ -127,7 +116,7 @@
 /* alert state is a thin rail, not a different hue */
 /* masthead ring sits behind text, never over it */
 .client-detail-suite .tw-mast::after{left:auto;right:34%;top:-96px;width:196px;height:196px;border-width:30px}
-.client-detail-suite .tw-mh h1,.client-detail-suite .tw-mh .id,.client-detail-suite .tw-mh .sub,.client-detail-suite .tw-mh .st{position:relative;z-index:1}
+.client-detail-suite .tw-mh h1,.client-detail-suite .tw-mh :is(.id,.sub,.st){position:relative;z-index:1}
 /* ============ lighter cards, wider, frozen header ============ */
 /* wider: 3 across instead of 5 */
 /* light headers " tint + ink text, brand blue only as accent */
@@ -136,21 +125,21 @@
 .client-detail-suite .tw-mast::before{background:linear-gradient(107deg,#0B3DBF 0%,#0F55E8 34%,#3D82FF 62%,#8FB6FF 100%)}
 .client-detail-suite .tw-mast::after{border-color:rgba(255,255,255,.13)}
 /* ---- freeze everything above the tabs ---- */
-.client-detail-suite .tw-frozen{position:sticky;top:0;z-index:60;background:var(--tw-bg);
+.client-detail-suite .tw-frozen{background:var(--tw-bg);
  margin:0 -14px;padding:0 14px 6px;box-shadow:0 6px 16px -12px rgba(11,15,26,.28)}
-.client-detail-suite .tw-frozen .tw-mast,.client-detail-suite .tw-frozen .tw-step2{margin-bottom:8px}
+.client-detail-suite .tw-frozen :is(.tw-mast,.tw-step2){margin-bottom:8px}
 /* compact once scrolled: drop the action row and the blocker detail line */
 
 
-.client-detail-suite .tw-frozen .tw-mast,.client-detail-suite .tw-frozen .tw-step2,.client-detail-suite .tw-frozen .tw-mh,.client-detail-suite .tw-frozen .tw-mb,.client-detail-suite .tw-frozen .tw-ms2 > div,.client-detail-suite .tw-frozen .tw-sb{transition:padding .2s var(--tw-ez),font-size .2s var(--tw-ez)}
+.client-detail-suite .tw-frozen :is(.tw-mast,.tw-step2,.tw-mh,.tw-mb,.tw-sb),.client-detail-suite .tw-frozen .tw-ms2 > div{transition:padding .2s var(--tw-ez),font-size .2s var(--tw-ez)}
 @media(prefers-reduced-motion:reduce){.client-detail-suite .tw-frozen *{transition:none}}
 @media(max-height:720px){
   .client-detail-suite .tw-frozen{padding-bottom:4px}
 }
 /* ---- assignments toolbar + selection bar ---- */
-.client-detail-suite .tw-b.edit{border-color:#F0C4C4;color:var(--tw-bad);background:#fff}
+.client-detail-suite .tw-b.edit{border-color:#F0C4C4;color:var(--tw-bad);background:var(--tw-surface, #fff)}
 .client-detail-suite .tw-b.edit:hover{border-color:var(--tw-bad);background:#FFF7F7}
-.client-detail-suite .tw-b.save{border-color:#BFE6D5;color:var(--tw-ok);background:#fff}
+.client-detail-suite .tw-b.save{border-color:#BFE6D5;color:var(--tw-ok);background:var(--tw-surface, #fff)}
 .client-detail-suite .tw-b.save:hover{border-color:var(--tw-ok);background:#F4FBF8}
 .client-detail-suite .tw-b.on{background:var(--tw-blue);border-color:var(--tw-blue);color:#fff;box-shadow:none}
 .client-detail-suite .tw-b.on:hover{background:var(--tw-bdk);border-color:var(--tw-bdk);color:#fff}
@@ -178,23 +167,21 @@
 /* step 3 " row value */
 .client-detail-suite .tw-ms2 b.s{font-size:12.5px}
 /* step 4 " micro */
-.client-detail-suite .tw-d,.client-detail-suite .tw-delta,.client-detail-suite .tw-id,.client-detail-suite .tw-cc,.client-detail-suite .tw-s{font-size:11.5px}
+.client-detail-suite :is(.tw-d,.tw-delta,.tw-id,.tw-cc,.tw-s){font-size:11.5px}
 /* mono everywhere a number lives, so digits align column to column */
-.client-detail-suite .tw-v,.client-detail-suite .tw-dl b.m,.client-detail-suite .tw-ms2 b,.client-detail-suite .tw-cm__st b,.client-detail-suite .tw-calcp__f b,.client-detail-suite .tw-selbar .sum b,.client-detail-suite .tw-cwin,.client-detail-suite .tw-ed,.client-detail-suite .tw-po b,.client-detail-suite .tw-st b,.client-detail-suite .tw-soc b,.client-detail-suite .tw-k b,.client-detail-suite .tw-mx b{
+.client-detail-suite :is(.tw-v,.tw-cwin,.tw-ed),.client-detail-suite .tw-dl b.m,.client-detail-suite .tw-ms2 b,.client-detail-suite .tw-cm__st b,.client-detail-suite .tw-calcp__f b,.client-detail-suite .tw-selbar .sum b,.client-detail-suite .tw-po b,.client-detail-suite .tw-st b,.client-detail-suite .tw-soc b,.client-detail-suite .tw-k b,.client-detail-suite .tw-mx b{
  font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 /* dates are never mono-bold " they are metadata, not figures */
 .client-detail-suite .tw-d{font-family:'Geist Mono',ui-monospace,monospace;font-weight:500;color:var(--tw-ink2);
  white-space:nowrap;font-variant-numeric:tabular-nums}
 
 /* ===== additive only " everything above is campaign-detail.html verbatim ===== */
-.client-detail-suite .tw-main{max-width:1420px;margin:0 auto;padding:0 22px 48px}
 
 /* identity bar (light surface " the mark keeps its own navy square) */
 
 /* avatar in the masthead */
 
 /* completeness */
-@keyframes tw-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 
 /* readiness */
 
@@ -221,7 +208,7 @@
 
 /* logo shrunk into the title row */
 .client-detail-suite .tw-hmk{position:relative;flex:0 0 24px;width:24px;height:24px;display:block;border-radius:6px;
- background:#fff}
+ background:var(--tw-surface, #fff)}
 .client-detail-suite .tw-hmk i{position:absolute;left:5px;top:5px;width:7px;height:7px;border-radius:50%;
  background:#060810;font-style:normal}
 .client-detail-suite .tw-hmk u{position:absolute;right:3px;bottom:3px;width:9px;height:9px;border-radius:3px;
@@ -235,10 +222,10 @@
 /* ===== smooth compaction " collapse over height, never display:none ===== */
 .client-detail-suite .tw-frozen .tw-ms2{overflow:hidden;max-height:80px;opacity:1;
  transition:max-height .26s var(--tw-ez),opacity .18s var(--tw-ez)}
-.client-detail-suite .tw-frozen .tw-mh,.client-detail-suite .tw-frozen .tw-sb,.client-detail-suite .tw-frozen .tw-step2{
+.client-detail-suite .tw-frozen :is(.tw-mh,.tw-sb,.tw-step2){
  transition:padding .26s var(--tw-ez),font-size .26s var(--tw-ez)}
 @media(prefers-reduced-motion:reduce){
- .client-detail-suite .tw-frozen .tw-ms2,.client-detail-suite .tw-frozen .tw-mh,.client-detail-suite .tw-frozen .tw-sb,.client-detail-suite .tw-frozen .tw-step2{transition:none}}
+ .client-detail-suite .tw-frozen :is(.tw-ms2,.tw-mh,.tw-sb,.tw-step2){transition:none}}
 
 /* ===== clients additions ===== */
 
@@ -259,8 +246,7 @@
 }
 .client-detail-suite .tw-b{font-family:var(--font-geist-sans),'Geist',sans-serif}
 .client-detail-suite .tw-v,
-.client-detail-suite .tw-id,
-.client-detail-suite .tw-d,
+.client-detail-suite :is(.tw-id,.tw-d),
 .client-detail-suite .tw-ms2 b{
   font-family:var(--font-geist-mono),'Geist Mono',ui-monospace,monospace;
 }
@@ -289,7 +275,7 @@
 .client-detail-suite .platform-v6-page-header{display:none !important}
 .client-detail-suite .thinkway-campaign-section-card,
 .client-detail-suite .thinkway-campaign-info-card{
-  background:#fff;border-radius:12px;box-shadow:var(--tw-ring);
+  background:var(--tw-surface, #fff);border-radius:12px;box-shadow:var(--tw-ring);
   overflow:hidden;margin-bottom:11px;border:0 !important;
 }
 .client-detail-suite .thinkway-campaign-section-head{
@@ -305,7 +291,7 @@
   font-size:11px;color:var(--tw-mut);margin:0;max-width:none;line-height:1.45;
 }
 .client-detail-suite .platform-v6-section-wrap{
-  background:#fff;border-radius:12px;box-shadow:var(--tw-ring);overflow:hidden;margin-bottom:11px;border:0 !important;
+  background:var(--tw-surface, #fff);border-radius:12px;box-shadow:var(--tw-ring);overflow:hidden;margin-bottom:11px;border:0 !important;
 }
 .client-detail-suite .platform-v6-section-meta{padding:11px 14px !important;margin:0 !important}
 .client-detail-suite .platform-v6-toolbar{padding:10px 14px !important;background:var(--tw-soft);border-bottom:1px solid var(--tw-hair)}
@@ -321,7 +307,7 @@
 .client-detail-suite .platform-v6-btn-primary{
   border-color:rgba(0,87,255,.55);color:var(--tw-bi);font-weight:700;font-size:12px;
   box-shadow:0 0 0 3px rgba(0,87,255,.08),0 2px 14px -3px rgba(0,87,255,.4);
-  background:#fff;
+  background:var(--tw-surface, #fff);
 }
 
 /* Client profile: full-width content with a single page scroll on small screens. */

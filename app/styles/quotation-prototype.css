@@ -505,3 +505,10 @@
 
 /* the row's dead space is clickable — say so */
 .qx .qx-grip{cursor:grab}
+
+/* Live preview-layout close control, restored from Production. */
+.qx-x{width:30px;height:30px;border-radius:50%;border:1px solid var(--hair);
+  background:var(--surf);color:var(--ink2);cursor:pointer;display:flex;
+  align-items:center;justify-content:center;flex:0 0 auto;position:relative}
+.qx-x::after{content:"";position:absolute;inset:-7px;min-height:44px;min-width:44px}
+.qx-x:hover{background:var(--soft2)}

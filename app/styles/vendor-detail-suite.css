@@ -17,17 +17,16 @@
  -webkit-font-smoothing:antialiased;
  display:flex;flex-direction:column;min-height:0;flex:1 1 auto;overflow:hidden}
 /* ---------- nav ---------- */
-.vendor-detail-suite .tw-main{min-width:0;padding:18px 22px 40px}
+.vendor-detail-suite .tw-main{min-width:0}
 /* ---------- head ---------- */
 /* ---------- kpi ---------- */
 /* ---------- card + universal grid ---------- */
 /* ---------- cell types ---------- */
-@media(prefers-reduced-motion:reduce){.vendor-detail-suite .tw-b,.vendor-detail-suite .tw-r{transition:none}}
+@media(prefers-reduced-motion:reduce){.vendor-detail-suite :is(.tw-b,.tw-r){transition:none}}
 /* ============ Thinkway identity cards â€” treasury + reports ============ */
 /* the mark: two overlapping rings, the Thinkway "way" cut, drawn in CSS only */
 .vendor-detail-suite .tw-tile.soft .tw-tl i,.tw-tile.soft .tw-tl p,.tw-tile.soft .tw-go{color:var(--tw-bi)}
 /* ===== campaign detail additions ===== */
-.vendor-detail-suite .tw-main{padding:0 22px 40px}
 /* decision center */
 /* commercial band */
 /* workspace tabs */
@@ -44,87 +43,60 @@
 /* activity feed */
 /* jump links */
 /* ===== calmer shell: more air, fewer things at once ===== */
-.vendor-detail-suite .tw-main{max-width:1240px;margin:0 auto;padding:0 24px 56px}
 /* hero */
 /* metrics: roomier */
 /* status strip */
 /* stepper tab bar */
-.vendor-detail-suite .tw-step2{display:flex;align-items:stretch;background:#fff;border-radius:13px;box-shadow:var(--tw-ring);
- padding:4px;margin-bottom:16px;overflow-x:auto}
-.vendor-detail-suite .tw-sb{flex:1 1 0;min-width:104px;display:flex;flex-direction:column;align-items:center;gap:7px;
- padding:11px 6px 9px;border:0;border-radius:10px;background:none;cursor:pointer;position:relative}
-.vendor-detail-suite .tw-sb:hover{background:var(--tw-soft)}
-.vendor-detail-suite .tw-sb[aria-pressed="true"]{background:var(--tw-lav)}
-.vendor-detail-suite .tw-sb__d{width:11px;height:11px;border-radius:50%;border:2px solid var(--tw-line);background:#fff;z-index:1}
-.vendor-detail-suite .tw-sb[aria-pressed="true"] .tw-sb__d{box-shadow:0 0 0 3px rgba(0,87,255,.18)}
-.vendor-detail-suite .tw-sb::before{content:"";position:absolute;top:16px;left:0;width:50%;height:2px;background:var(--tw-line)}
-.vendor-detail-suite .tw-sb::after{content:"";position:absolute;top:16px;right:0;width:50%;height:2px;background:var(--tw-line)}
+.vendor-detail-suite .tw-sb{border-radius:10px}
 .vendor-detail-suite .tw-sb:first-child::before,.tw-sb:last-child::after{display:none}
 .vendor-detail-suite .tw-sb.done::before,.tw-sb.done::after{background:var(--tw-blue)}
-.vendor-detail-suite .tw-sb__l{display:flex;align-items:center;gap:5px;font:600 12px 'Geist',sans-serif;color:var(--tw-mut);
- white-space:nowrap}
-.vendor-detail-suite .tw-sb[aria-pressed="true"] .tw-sb__l{color:var(--tw-bi)}
-.vendor-detail-suite .tw-sb__l em{font-style:normal;font:600 10px 'Geist Mono',monospace;padding:1px 5px;border-radius:999px;
- background:var(--tw-soft);color:var(--tw-mut)}
 /* dashboard: 2 columns, roomy */
 /* collapsible */
 /* issue list, one place */
 /* full width â€” no wasted gutters */
-.vendor-detail-suite .tw-main{max-width:none;margin:0;padding:0 16px 56px}
 /* avatars + platform marks */
 /* child ad-line band */
 /* expandable detail panels */
 /* ============ compact header + one visual language ============ */
-.vendor-detail-suite .tw-main{padding:0 14px 44px}
 /* ---- masthead: hero + metrics + status in ONE band ---- */
-.vendor-detail-suite .tw-mast{position:relative;isolation:isolate;overflow:hidden;border-radius:14px;background:#fff;
- box-shadow:var(--tw-ring);margin-bottom:10px}
-.vendor-detail-suite .tw-mast::before{content:"";position:absolute;z-index:-1;inset:0;
- background:linear-gradient(107deg,#0040CC 0%,#0057FF 30%,#1A6FFF 52%,rgba(26,111,255,0) 72%)}
-.vendor-detail-suite .tw-mast::after{content:"";position:absolute;z-index:-1;left:308px;top:-88px;width:210px;height:210px;
+.vendor-detail-suite .tw-mast{position:relative;isolation:isolate;overflow:hidden;border-radius:14px;background:var(--tw-surface, #fff);
+ box-shadow:var(--tw-ring)}
+.vendor-detail-suite .tw-mast::before{content:"";position:absolute;z-index:-1;inset:0}
+.vendor-detail-suite .tw-mast::after{content:"";position:absolute;z-index:-1;
  border-radius:50%;border:34px solid rgba(255,255,255,.11)}
-.vendor-detail-suite .tw-mh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 15px 10px;color:#fff}
+.vendor-detail-suite .tw-mh{display:flex;align-items:center;flex-wrap:wrap;color:#fff}
 .vendor-detail-suite .tw-mh .id{font:600 10px 'Geist Mono',monospace;letter-spacing:.2px;padding:2px 7px;border-radius:6px;
  background:rgba(255,255,255,.16);color:#fff}
 .vendor-detail-suite .tw-mh h1{font:600 19px 'Geist',sans-serif;letter-spacing:-.5px;color:#fff}
 .vendor-detail-suite .tw-mh .sub{font-size:11.5px;color:rgba(255,255,255,.74)}
 .vendor-detail-suite .tw-mh .st{padding:3px 9px;border-radius:999px;font:600 10px 'Geist',sans-serif;
  background:rgba(255,255,255,.18);color:#fff}
-.vendor-detail-suite .tw-mh .st.r{background:#fff;color:var(--tw-bad)}
+.vendor-detail-suite .tw-mh .st.r{background:var(--tw-surface, #fff);color:var(--tw-bad)}
 /* blocker line inside masthead */
 /* action row on white */
 /* metric + status: one dense strip */
-.vendor-detail-suite .tw-ms2{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:0;background:#fff;
+.vendor-detail-suite .tw-ms2{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:0;background:var(--tw-surface, #fff);
  border-top:1px solid var(--tw-hair)}
-.vendor-detail-suite .tw-ms2 > div{padding:9px 14px;border-right:1px solid var(--tw-hair)}
+.vendor-detail-suite .tw-ms2 > div{border-right:1px solid var(--tw-hair)}
 .vendor-detail-suite .tw-ms2 > div:last-child{border-right:0}
-.vendor-detail-suite .tw-ms2 i{display:block;font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.6px;
+.vendor-detail-suite .tw-ms2 i{display:block;font-style:normal;font-weight:700;letter-spacing:.6px;
  text-transform:uppercase;color:var(--tw-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.vendor-detail-suite .tw-ms2 b{display:block;margin-top:3px;font:600 14px 'Geist',sans-serif;letter-spacing:-.35px;white-space:nowrap}
+.vendor-detail-suite .tw-ms2 b{display:block;font:600 14px 'Geist',sans-serif;letter-spacing:-.35px}
 .vendor-detail-suite .tw-ms2 b.g{color:var(--tw-ok)}
 .vendor-detail-suite .tw-ms2 b.r{color:var(--tw-bad)}
-.vendor-detail-suite .tw-ms2 b.s{font-size:12.5px;font-weight:600}
+.vendor-detail-suite .tw-ms2 b.s{font-weight:600}
 /* ---- stepper: shorter ---- */
-.vendor-detail-suite .tw-step2{padding:3px;margin-bottom:10px;border-radius:12px}
-.vendor-detail-suite .tw-sb{min-width:92px;gap:5px;padding:8px 5px 7px}
-.vendor-detail-suite .tw-sb::before,
-.vendor-detail-suite .tw-sb::after{top:13px}
-.vendor-detail-suite .tw-sb__d{width:9px;height:9px}
-.vendor-detail-suite .tw-sb__l{font-size:11.5px}
-.vendor-detail-suite .tw-sb__l em{font-size:9.5px;padding:0 4px}
 /* ---- overview cards: smaller, same identity as masthead ---- */
 /* generic cards a touch tighter */
 /* ---- card headers: gradient on the element itself, so it can never clip ---- */
 .vendor-detail-suite .tw-dc2::before,.tw-dc2::after{display:none}
-.vendor-detail-suite .tw-dc2__h .tw-p,.tw-dc2__h .tw-b,.tw-dc2__h .tw-cs{flex:0 0 auto;align-self:center}
+.vendor-detail-suite .tw-dc2__h .tw-p,.tw-dc2__h :is(.tw-b,.tw-cs){flex:0 0 auto;align-self:center}
 /* two tones only: brand blue by default, navy for neutral/secondary */
 /* alert state is a thin rail, not a different hue */
 /* masthead ring sits behind text, never over it */
 .vendor-detail-suite .tw-mast::after{left:auto;right:34%;top:-96px;width:196px;height:196px;border-width:30px}
 .vendor-detail-suite .tw-mh h1,
-.vendor-detail-suite .tw-mh .id,
-.vendor-detail-suite .tw-mh .sub,
-.vendor-detail-suite .tw-mh .st{position:relative;z-index:1}
+.vendor-detail-suite .tw-mh :is(.id,.sub,.st){position:relative;z-index:1}
 /* ============ lighter cards, wider, frozen header ============ */
 /* wider: 3 across instead of 5 */
 /* light headers â€” tint + ink text, brand blue only as accent */
@@ -138,23 +110,18 @@
 .vendor-detail-suite .tw-mast::before{background:linear-gradient(107deg,#0B3DBF 0%,#0F55E8 34%,#3D82FF 62%,#8FB6FF 100%)}
 .vendor-detail-suite .tw-mast::after{border-color:rgba(255,255,255,.13)}
 /* ---- freeze everything above the tabs ---- */
-.vendor-detail-suite .tw-frozen{position:sticky;top:0;z-index:60;background:var(--tw-bg);
- margin:0 -14px;padding:0 14px 6px;box-shadow:0 6px 16px -12px rgba(11,15,26,.28)}
+.vendor-detail-suite .tw-frozen{box-shadow:0 6px 16px -12px rgba(11,15,26,.28)}
 .vendor-detail-suite .tw-frozen .tw-mast,
 .vendor-detail-suite .tw-frozen .tw-step2{margin-bottom:8px}
 /* compact once scrolled: drop the action row and the blocker detail line */
 .vendor-detail-suite .tw-frozen .tw-mast,
-.vendor-detail-suite .tw-frozen .tw-step2,
-.vendor-detail-suite .tw-frozen .tw-mh,
-.vendor-detail-suite .tw-frozen .tw-mb,
-.vendor-detail-suite .tw-frozen .tw-ms2 > div,
-.vendor-detail-suite .tw-frozen .tw-sb{transition:padding .2s var(--tw-ez),font-size .2s var(--tw-ez)}
+.vendor-detail-suite .tw-frozen :is(.tw-step2,.tw-mh,.tw-mb,.tw-sb),
+.vendor-detail-suite .tw-frozen .tw-ms2 > div{transition:padding .2s var(--tw-ez),font-size .2s var(--tw-ez)}
 @media(prefers-reduced-motion:reduce){.vendor-detail-suite .tw-frozen *{transition:none}}
 @media(max-height:720px){
-  .vendor-detail-suite .tw-frozen{padding-bottom:4px}
 }
 /* ---- assignments toolbar + selection bar ---- */
-.vendor-detail-suite .tw-b.save{border-color:#BFE6D5;color:var(--tw-ok);background:#fff}
+.vendor-detail-suite .tw-b.save{border-color:#BFE6D5;color:var(--tw-ok);background:var(--tw-surface, #fff)}
 .vendor-detail-suite .tw-b.save:hover{border-color:var(--tw-ok);background:#F4FBF8}
 .vendor-detail-suite .tw-b.on{background:var(--tw-blue);border-color:var(--tw-blue);color:#fff;box-shadow:none}
 .vendor-detail-suite .tw-b.on:hover{background:var(--tw-bdk);border-color:var(--tw-bdk);color:#fff}
@@ -211,7 +178,6 @@
 /* dates are never mono-bold â€” they are metadata, not figures */
 
 /* ===== additive only â€” everything above is campaign-detail.html verbatim ===== */
-.vendor-detail-suite .tw-main{max-width:1420px;margin:0 auto;padding:0 22px 48px}
 
 /* identity bar (light surface â€” the mark keeps its own navy square) */
 
@@ -223,9 +189,8 @@
  background:var(--tw-ok);border:2.5px solid #fff;font-style:normal}
 
 /* completeness */
-@keyframes tw-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 .vendor-detail-suite .tw-mchip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;
- font:600 10px 'Geist',sans-serif;background:#fff;border:1px solid #F0D2D2;color:var(--tw-bad)}
+ font:600 10px 'Geist',sans-serif;background:var(--tw-surface, #fff);border:1px solid #F0D2D2;color:var(--tw-bad)}
 .vendor-detail-suite .tw-mchip.w{border-color:#F0DFBE;color:var(--tw-wrn)}
 .vendor-detail-suite .tw-mchip.more{border-color:var(--tw-line);color:var(--tw-ink2);cursor:pointer}
 
@@ -239,8 +204,7 @@
 
 /* live + misc */
 @keyframes tw-ping{0%{transform:scale(1);opacity:.55}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}
-.vendor-detail-suite .tw-vtwo{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,.8fr);gap:14px;
- align-items:start}
+.vendor-detail-suite .tw-vtwo{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,.8fr);gap:14px}
 @media(max-width:1180px){.vendor-detail-suite .tw-vtwo{grid-template-columns:1fr}}
 
 /* ===== compact header =====
@@ -252,12 +216,10 @@
 .vendor-detail-suite .tw-ms2 > div{padding:7px 13px}
 .vendor-detail-suite .tw-ms2 i{font-size:8px}
 .vendor-detail-suite .tw-ms2 b{font-size:13px;margin-top:2px}
-.vendor-detail-suite .tw-step2{margin-bottom:10px}
-.vendor-detail-suite .tw-sb{padding:7px 5px 6px;min-width:88px;gap:4px}
 
 /* logo shrunk into the title row */
 .vendor-detail-suite .tw-hmk{position:relative;flex:0 0 24px;width:24px;height:24px;display:block;border-radius:6px;
- background:#fff}
+ background:var(--tw-surface, #fff)}
 .vendor-detail-suite .tw-hmk i{position:absolute;left:5px;top:5px;width:7px;height:7px;border-radius:50%;
  background:#060810;font-style:normal}
 .vendor-detail-suite .tw-hmk u{position:absolute;right:3px;bottom:3px;width:9px;height:9px;border-radius:3px;
@@ -271,17 +233,16 @@
  background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.2);cursor:pointer;
  color:#fff;font:600 11px 'Geist',sans-serif;transition:background .16s var(--tw-ez)}
 .vendor-detail-suite .tw-cpill:hover{background:rgba(255,255,255,.26)}
-.vendor-detail-suite .tw-cpill__r{position:relative;width:22px;height:22px;flex:0 0 22px;border-radius:50%;
- background:conic-gradient(#FF8A8A 0 29%,rgba(255,255,255,.25) 29% 100%)}
+.vendor-detail-suite .tw-cpill__r{position:relative;width:22px;height:22px;flex:0 0 22px;border-radius:50%}
 .vendor-detail-suite .tw-cpill__r::after{content:"";position:absolute;inset:4px;border-radius:50%;background:#0B52E0}
-.vendor-detail-suite .tw-cpop{position:absolute;right:0;top:calc(100% + 7px);z-index:80;width:390px;background:#fff;
+.vendor-detail-suite .tw-cpop{position:absolute;right:0;top:calc(100% + 7px);z-index:80;width:390px;background:var(--tw-surface, #fff);
  border-radius:13px;padding:13px;text-align:left;
  box-shadow:0 0 0 1px var(--tw-line),0 20px 46px -14px rgba(11,15,26,.32)}
 .vendor-detail-suite .tw-cpop h5{font:700 12px 'Geist',sans-serif;margin-bottom:2px}
 .vendor-detail-suite .tw-cpop p{font-size:11px;color:var(--tw-mut);line-height:1.55;margin-bottom:10px}
 .vendor-detail-suite .tw-cgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:11px}
 .vendor-detail-suite .tw-cgrid > div{padding:7px 9px;border-radius:9px;background:var(--tw-soft)}
-.vendor-detail-suite .tw-cgrid i{display:block;font-style:normal;font:700 8px 'Geist',sans-serif;letter-spacing:.55px;
+.vendor-detail-suite .tw-cgrid i{display:block;font:700 8px 'Geist',sans-serif;letter-spacing:.55px;
  text-transform:uppercase;color:var(--tw-mut)}
 .vendor-detail-suite .tw-cgrid b{display:block;margin-top:3px;font:600 13px 'Geist Mono',monospace}
 .vendor-detail-suite .tw-cgrid b.r{color:var(--tw-bad)}.vendor-detail-suite .tw-cgrid b.y{color:var(--tw-wrn)}.vendor-detail-suite .tw-cgrid b.g{color:var(--tw-ok)}
@@ -296,7 +257,7 @@
   padding:10px 22px 0;max-width:1420px;width:100%;margin:0 auto;
 }
 .vendor-detail-suite .tw-step2{
-  display:flex;align-items:stretch;background:#fff;border-radius:12px;
+  display:flex;align-items:stretch;background:var(--tw-surface, #fff);border-radius:12px;
   box-shadow:var(--tw-ring);overflow-x:auto;padding:3px;margin-bottom:10px;
 }
 .vendor-detail-suite .tw-sb{
@@ -306,7 +267,7 @@
 .vendor-detail-suite .tw-sb:hover{background:var(--tw-soft)}
 .vendor-detail-suite .tw-sb[aria-pressed="true"]{background:var(--tw-lav)}
 .vendor-detail-suite .tw-sb__d{
-  width:9px;height:9px;border-radius:50%;border:2px solid var(--tw-line);background:#fff;z-index:1;
+  width:9px;height:9px;border-radius:50%;border:2px solid var(--tw-line);background:var(--tw-surface, #fff);z-index:1;
 }
 .vendor-detail-suite .tw-sb[aria-pressed="true"] .tw-sb__d{
   box-shadow:0 0 0 3px rgba(0,87,255,.18);border-color:var(--tw-blue);background:var(--tw-blue);
@@ -323,8 +284,7 @@
   white-space:nowrap;
 }
 .vendor-detail-suite .tw-sb[aria-pressed="true"] .tw-sb__l{color:var(--tw-bi)}
-.vendor-detail-suite .tw-sb__l em{
-  font-style:normal;font:600 9.5px var(--font-geist-mono),'Geist Mono',monospace;
+.vendor-detail-suite .tw-sb__l em{font:600 9.5px var(--font-geist-mono),'Geist Mono',monospace;
   padding:0 4px;border-radius:999px;background:var(--tw-soft);color:var(--tw-mut);
 }
 .vendor-detail-suite .tw-sb__l em.r{background:var(--tw-badb);color:var(--tw-bad)}
@@ -370,7 +330,7 @@
 /* Portal / linked-user cards still use CampaignFlatSection — densify to suite cards */
 .vendor-detail-suite .thinkway-campaign-section-card,
 .vendor-detail-suite .thinkway-campaign-info-card{
-  background:#fff;border-radius:12px;box-shadow:var(--tw-ring);
+  background:var(--tw-surface, #fff);border-radius:12px;box-shadow:var(--tw-ring);
   overflow:hidden;margin-bottom:11px;border:0 !important;
 }
 .vendor-detail-suite .thinkway-campaign-section-head{

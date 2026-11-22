@@ -13,6 +13,7 @@
 @import "./styles/chrome-logo.css" layer(components);
 @import "./styles/responsive.css";
 @import "./styles/workspace-actions.css";
+@import "./styles/platform-theme-responsive.css";
 
 @custom-variant dark (&:is(.dark *));
 

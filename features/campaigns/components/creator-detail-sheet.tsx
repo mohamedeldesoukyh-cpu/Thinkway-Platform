@@ -1,6 +1,7 @@
 "use client";
 import { CreatorCategoryEditor } from "@/features/discovery/components/creator-category-editor";
 import { sameCreatorIdentity } from "@/lib/creators/same-creator-identity";
+import { loadCreatorProfile } from "@/features/discovery/lib/load-creator-profile";
 import { useRouter } from "next/navigation";
 import { SimilarCreatorActions, type SimilarCreatorTarget } from "@/features/discovery/components/similar-creator-actions";
 import { stashCompareQueue } from "@/features/discovery/components/creator-compare/compare-storage";
@@ -70,10 +71,8 @@ import {
 } from "@/features/discovery/enrichment/status";
 import {
   addCreatorToCampaignShortlistAction,
-  enrichUnifiedCreatorWithEciAction,
   getCreatorHistoricalMetricsAction,
   getSimilarCreatorsAction,
-  getUnifiedCreatorCoreDetailAction,
 } from "@/features/campaigns/creator-discovery-actions";
 import { startLoadTimer } from "@/lib/performance/progressive-load";
 import { getInfluencerQuotationPriceReferenceAction } from "@/features/quotations/actions";
@@ -894,8 +893,11 @@ export function CreatorDetailSheet({
   const [detail, setDetail] = useState<LoadedDetail | null>(null);
   const [baseCreator, setBaseCreator] = useState<UnifiedCreatorResult | null>(creator);
   const creatorUpdateRevisionRef = useRef(0);
+  const latestCreatorRef = useRef(baseCreator);
+  latestCreatorRef.current = baseCreator;
   const activeIdentityRef = useRef(creator);
   activeIdentityRef.current = open ? creator : null;
+  useEffect(() => () => { activeIdentityRef.current = null; }, []);
   const [selectedPlatformAccountId, setSelectedPlatformAccountId] = useState<string | null>(
     creator?.default_metrics_platform_account_id ?? creator?.platforms[0]?.id ?? null
   );
@@ -986,7 +988,7 @@ export function CreatorDetailSheet({
 
       void (async () => {
         const phase1 = startLoadTimer("creator-detail.sheet.phase1-core");
-        const coreCreator = coreDetailLoaded ? creator : await getUnifiedCreatorCoreDetailAction(unifiedId);
+        const coreCreator = coreDetailLoaded ? creator : await loadCreatorProfile(unifiedId);
         phase1.end({ ok: Boolean(coreCreator) });
         if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
 
@@ -1000,14 +1002,20 @@ export function CreatorDetailSheet({
         });
 
         const phase2 = startLoadTimer("creator-detail.sheet.phase2-eci");
-        const eciPromise = enrichUnifiedCreatorWithEciAction(seed).then((withEci) => {
+        const eciPromise = fetch(`/api/creators/${encodeURIComponent(unifiedId)}/investment`, { cache: "no-store" })
+          .then(async response => {
+            if (!response.ok) throw new Error("Investment unavailable");
+            return response.json() as Promise<Pick<UnifiedCreatorResult, "eci_investment_score" | "eci_investment_recommendation">>;
+          }).then((withEci) => {
           phase2.end({
             ok: Boolean(withEci),
             hasScore: withEci?.eci_investment_score != null,
           });
           if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
-          if (withEci && creatorUpdateRevisionRef.current === updateRevision) setBaseCreator(withEci);
+          setBaseCreator(current => current && sameCreatorIdentity(current, seed) ? { ...current, ...withEci } : current);
           setEciLoading(false);
+        }).catch(() => {
+          if (active && detailFetchGenerationRef.current === fetchGeneration) setEciLoading(false);
         });
 
         const phase3 = startLoadTimer("creator-detail.sheet.phase3-panels");
@@ -1046,7 +1054,12 @@ export function CreatorDetailSheet({
         if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
         setEciLoading(false);
         sessionTimer.end({ unifiedId });
-      })();
+      })().catch(() => {
+        if (active && detailFetchGenerationRef.current === fetchGeneration) {
+          setEciLoading(false);
+          setSimilarLoading(false);
+        }
+      });
     };
 
     // Two rAFs: let the drawer paint the list-row shell first.
@@ -1175,17 +1188,18 @@ export function CreatorDetailSheet({
 
   function handleCreatorUpdated(
     next: UnifiedCreatorResult,
-    options?: CreatorDetailSheetUpdateMeta
+    options?: CreatorDetailSheetUpdateMeta,
+    preserveEnrichment = false
   ) {
     if (!sameCreatorIdentity(activeIdentityRef.current, next)) {
-      onCreatorUpdated?.(next, options);
       return;
     }
     // A slower initial detail/ECI request must not overwrite a completed refresh.
     creatorUpdateRevisionRef.current += 1;
     const previous = baseCreator ?? creator;
+    latestCreatorRef.current = next;
     setBaseCreator(next);
-    setEnrichmentStatus(resolveCreatorEnrichmentStatus(next.enrichment_status));
+    if (!preserveEnrichment) setEnrichmentStatus(resolveCreatorEnrichmentStatus(next.enrichment_status));
 
     if (
       !options?.forceListSync &&
@@ -1205,7 +1219,11 @@ export function CreatorDetailSheet({
     try {
       const result = await updateCreatorCategoriesAction({ influencerId: identityCreator.influencer_id, unifiedId: identityCreator.unified_id, categories });
       if (!result.ok) { toast.error(result.message); return; }
-      if (result.creator) handleCreatorUpdated(result.creator, { forceListSync: true });
+      if (result.creator && sameCreatorIdentity(activeIdentityRef.current, result.creator)) {
+        const { categories, browse_category_tags, categories_manual } = result.creator;
+        const current = latestCreatorRef.current;
+        if (current) handleCreatorUpdated({ ...current, categories, browse_category_tags, categories_manual }, { forceListSync: true }, true);
+      }
       toast.success(result.message);
     } catch { toast.error("Categories could not be saved. Please try again."); }
     finally { setCategoriesBusy(false); }
@@ -1217,7 +1235,11 @@ export function CreatorDetailSheet({
     try {
       const result = await updateCreatorCountryAction({ influencerId: identityCreator.influencer_id, unifiedId: identityCreator.unified_id, country });
       if (!result.ok) { toast.error(result.message); return; }
-      if (result.creator) handleCreatorUpdated(result.creator, { forceListSync: true });
+      if (result.creator && sameCreatorIdentity(activeIdentityRef.current, result.creator)) {
+        const { country_code, country_codes, estimated_country, city } = result.creator;
+        const current = latestCreatorRef.current;
+        if (current) handleCreatorUpdated({ ...current, country_code, country_codes, estimated_country, city }, { forceListSync: true }, true);
+      }
       toast.success(result.message);
     } catch { toast.error("Country could not be saved. Please try again."); }
     finally { setCountryBusy(false); }
@@ -1579,7 +1601,7 @@ export function CreatorDetailSheet({
                 platforms={platforms}
                 enrichmentStatus={enrichmentStatus}
                 onEditContact={() => setEditContactOpen(true)}
-                onEnrichmentStatusChange={setEnrichmentStatus}
+                onEnrichmentStatusChange={(status) => { if (sameCreatorIdentity(activeIdentityRef.current, identityCreator)) setEnrichmentStatus(status); }}
                 onCreatorUpdated={handleCreatorUpdated}
               />
             </TabsContent>
@@ -1793,7 +1815,7 @@ export function CreatorDetailSheet({
           variant="outline"
           className="tw-b sm tw-cp__pack-refresh"
           label="Refresh"
-          onStatusChange={setEnrichmentStatus}
+          onStatusChange={(status) => { if (sameCreatorIdentity(activeIdentityRef.current, identityCreator)) setEnrichmentStatus(status); }}
           onCreatorUpdated={handleCreatorUpdated}
         />
       ) : (
@@ -1937,7 +1959,7 @@ export function CreatorDetailSheet({
                 onShowPublications={() => setActiveTab("publications")}
                 onEditContact={() => setEditContactOpen(true)}
                 onEditAveragePrice={() => setEditAveragePriceOpen(true)}
-                onEnrichmentStatusChange={setEnrichmentStatus}
+                onEnrichmentStatusChange={(status) => { if (sameCreatorIdentity(activeIdentityRef.current, identityCreator)) setEnrichmentStatus(status); }}
                   onCreatorUpdated={handleCreatorUpdated}
                 />
               )
@@ -2025,7 +2047,7 @@ export function CreatorDetailSheet({
                     size="sm"
                     variant="outline"
                     className="creator-detail-sheet-action-btn"
-                    onStatusChange={setEnrichmentStatus}
+                    onStatusChange={(status) => { if (sameCreatorIdentity(activeIdentityRef.current, identityCreator)) setEnrichmentStatus(status); }}
                     onCreatorUpdated={handleCreatorUpdated}
                   />
                 ) : (

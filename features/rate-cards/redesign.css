@@ -8,8 +8,7 @@
  --rx-blue:#0057FF; --rx-blue-i:#0B52E0; --rx-blue-d:#0040CC; --rx-blue-l:#1A6FFF;
  --rx-lav:#EFF4FF; --rx-grad:linear-gradient(135deg,#0040CC 0%,#0057FF 45%,#1A6FFF 100%);
  /* ink */
- --rx-ink:#0B0F1A; --rx-ink2:#41495A; --rx-mut:#64748B; --rx-faint:#94A0B4;
- --rx-zero:#B6BECD;
+ --rx-ink:#0B0F1A; --rx-ink2:#41495A; --rx-mut:#64748B;
  /* surface */
  --rx-bg:#F7F9FC; --rx-surf:#FFFFFF; --rx-soft:#F4F7FB; --rx-hair:#E8EDF5;
  --rx-line:#DCE4F0;
@@ -41,7 +40,7 @@
 .rx :focus-visible{outline:2px solid var(--rx-blue);outline-offset:2px;border-radius:4px}
 
 /* ---------------- primitives ---------------- */
-.rx .rx-b{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;
+.rx .rx-b{display:inline-flex;align-items:center;justify-content:center;gap:6px;
  padding:0 13px;border-radius:var(--rx-r-sm);border:1px solid var(--rx-line);
  background:var(--rx-surf);color:var(--rx-ink2);cursor:pointer;
  font:600 12.5px var(--rx-sans);letter-spacing:-.1px;white-space:nowrap;
@@ -71,7 +70,7 @@
 
 /* avatars & platform marks */
 .rx .rx-pf{display:inline-flex;gap:3px}
-.rx .rx-pf i{display:flex;align-items:center;justify-content:center;width:19px;height:19px;
+.rx .rx-pf i{display:flex;align-items:center;justify-content:center;
  border-radius:6px;font:800 7.5px var(--rx-sans);color:#fff;font-style:normal;letter-spacing:-.2px}
 .rx .rx-pf .ig{background:linear-gradient(135deg,#F58529,#DD2A7B,#8134AF)}
 .rx .rx-pf .tt{background:#0B0F1A}
@@ -79,17 +78,16 @@
 .rx .rx-pf .yt{background:#E5322D}
 
 /* ================= app shell ================= */
-.rx .rx-wrap{max-width:1680px;margin:0 auto;padding:0 20px 56px}
+.rx .rx-wrap{margin:0 auto}
 
 /* page header — slim, one line of context, actions grouped by weight */
-.rx .rx-ph{position:sticky;top:0;z-index:40;background:var(--rx-grad);color:#fff;
- margin:0 -20px 16px;padding:13px 20px;overflow:hidden}
+.rx .rx-ph{z-index:40;background:var(--rx-grad);color:#fff;overflow:hidden}
 .rx .rx-ph::after{content:"";position:absolute;inset-inline-end:-70px;top:-110px;width:250px;
  height:250px;border-radius:50%;border:42px solid rgba(255,255,255,.07);
  pointer-events:none;z-index:0}
-.rx .rx-ph__in{position:relative;z-index:1;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.rx .rx-ph__in{position:relative;z-index:1;display:flex;align-items:center;flex-wrap:wrap}
 .rx .rx-ph h1{font:800 19px var(--rx-sans);letter-spacing:-.6px;margin:0}
-.rx .rx-ph p{margin:2px 0 0;font-size:11.5px;color:rgba(255,255,255,.8);max-width:62ch}
+.rx .rx-ph p{margin:2px 0 0;color:rgba(255,255,255,.8)}
 .rx .rx-ph .rx-b{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.26);color:#fff}
 .rx .rx-ph .rx-b:hover:not(:disabled){background:rgba(255,255,255,.26);
  border-color:rgba(255,255,255,.45);color:#fff}
@@ -144,7 +142,7 @@
    without the overflow:hidden + max-width pair below */
 .rx .rx-id{display:flex;flex-direction:column;gap:1px;min-width:0;max-width:100%;
  overflow:hidden;justify-content:center}
-.rx .rx-id b,.rx .rx-id u{display:block;min-width:0;max-width:100%;overflow:hidden;
+.rx .rx-id :is(b,u){display:block;min-width:0;max-width:100%;overflow:hidden;
  text-overflow:ellipsis;white-space:nowrap}
 .rx .rx-id b{font:600 12.5px var(--rx-sans);letter-spacing:-.2px}
 .rx .rx-id u{text-decoration:none;font-size:10.5px;color:var(--rx-mut)}
@@ -176,9 +174,8 @@
  background:var(--rx-surf);border:1px solid var(--rx-hair);border-radius:var(--rx-r-lg);
  box-shadow:var(--rx-e1);margin-bottom:12px}
 .rx .rx-idbar h2{font:800 16px var(--rx-sans);letter-spacing:-.5px;margin:0}
-.rx .rx-crumb{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--rx-mut);
- margin-bottom:3px}
-.rx .rx-crumb button{border:0;background:none;color:var(--rx-blue-i);cursor:pointer;
+.rx .rx-crumb{display:flex;align-items:center;gap:6px;color:var(--rx-mut)}
+.rx .rx-crumb button{border:0;background:none;cursor:pointer;
  font:600 11.5px var(--rx-sans);padding:0}
 .rx .rx-crumb button:hover{text-decoration:underline}
 .rx .rx-dates{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--rx-mut)}
@@ -216,7 +213,7 @@
 .rx .rx-offer{display:flex;align-items:center;gap:9px;min-width:0}
 .rx .rx-offer__t{min-width:0;display:flex;flex-direction:column;gap:1px}
 .rx .rx-offer__t{overflow:hidden;max-width:100%}
-.rx .rx-offer__t b,.rx .rx-offer__t u{display:block;min-width:0;max-width:100%;overflow:hidden;
+.rx .rx-offer__t :is(b,u){display:block;min-width:0;max-width:100%;overflow:hidden;
  text-overflow:ellipsis;white-space:nowrap}
 .rx .rx-offer__t b{font:600 12.5px var(--rx-sans);letter-spacing:-.2px}
 .rx .rx-offer__t u{text-decoration:none;font-size:10.5px;color:var(--rx-mut)}
@@ -237,8 +234,7 @@
 
 /* expandable detail panel */
 .rx .rx-exp{grid-column:1/-1;background:var(--rx-soft);border-bottom:1px solid var(--rx-hair);
- padding:14px 16px;display:grid;gap:12px;
- grid-template-columns:repeat(auto-fit,minmax(272px,1fr))}
+ padding:14px 16px;display:grid;gap:12px}
 .rx .rx-sec{background:var(--rx-surf);border:1px solid var(--rx-hair);border-radius:var(--rx-r);
  padding:11px 12px}
 .rx .rx-sec__h{display:flex;align-items:center;gap:7px;margin-bottom:9px}
@@ -306,19 +302,12 @@
 /* demo switcher — PREVIEW ONLY, do not port */
 
 /* ---------------- responsive ---------------- */
-@media (max-width:1280px){
- .rx .rx-wrap{padding:0 14px 48px}
- .rx .rx-ph{margin:0 -14px 14px;padding:12px 14px}
-}
 @media (max-width:980px){
  .rx .rx-scroll{overflow-x:auto}
 .rx .rx-scroll>div{min-width:1060px}
- .rx .rx-exp{grid-template-columns:1fr}
 }
 @media (max-width:720px){
- .rx .rx-ph__in{gap:9px}
- .rx .rx-ph h1{font-size:17px}
- .rx .rx-stat{flex:1 1 50%;min-width:140px}
+ .rx .rx-stat{flex:1 1 50%}
  .rx .rx-selbar{inset-block-end:0;border-radius:var(--rx-r-lg) var(--rx-r-lg) 0 0}
 }
 @media (prefers-reduced-motion:reduce){
@@ -329,19 +318,17 @@
 
 /* Application port: semantic tables and existing accessible controls. */
 .rx{--rx-zero:#68758a;--rx-faint:#64748b;min-width:0;font-size:13px}
-.rx .rx-ph{margin:0 0 16px;padding:14px 20px;position:sticky}
-.rx .rx-wrap{max-width:1680px;padding:0 20px 32px}
+.rx .rx-wrap{padding:0 20px 32px}
 .rx .rx-scope-name{font:600 14px var(--rx-sans);overflow-wrap:anywhere}
 .rx .rx-formbar{align-items:end;margin-bottom:12px}
 .rx .rx-formbar>label{flex:1 1 140px;min-width:120px;font-size:11px;color:var(--rx-mut)}
-.rx .rx-formbar input,.rx .rx-formbar select{height:36px;font-size:12px;background:#fff}
+.rx .rx-formbar :is(input,select){font-size:12px;background:#fff}
 .rx .rx-adv label{font-size:11px;color:var(--rx-mut)}
-.rx .rx-adv input,.rx .rx-adv select{height:36px;font-size:12px}
-.rx .rx-b{min-height:36px;height:auto;padding-block:7px}
-.rx .rx-lang button{min-height:36px}
+.rx .rx-adv :is(input,select){height:36px;font-size:12px}
+.rx .rx-b{height:auto}
 .rx .rx-register-table,.rx .rx-pricing-table{border-collapse:collapse;width:100%;min-width:1060px;table-layout:fixed}
 .rx .rx-register-table th,.rx .rx-pricing-table th{background:var(--rx-soft);font-size:10px;color:var(--rx-mut);text-align:start;padding:10px;border-bottom:1px solid var(--rx-line)}
-.rx .rx-register-table td,.rx .rx-pricing-table td{padding:12px 10px;border-bottom:1px solid var(--rx-hair);font-size:12px;vertical-align:middle;overflow-wrap:anywhere}
+.rx .rx-register-table td,.rx .rx-pricing-table td{border-bottom:1px solid var(--rx-hair);font-size:12px;vertical-align:middle;overflow-wrap:anywhere}
 .rx .rx-register-table th:nth-child(1){width:20%}.rx .rx-register-table th:nth-child(2){width:18%}.rx .rx-register-table th:nth-child(3){width:15%}.rx .rx-register-table th:nth-child(4){width:6%}.rx .rx-register-table th:last-child{width:115px}
 .rx .rx-register-table td:nth-child(1),.rx .rx-register-table td:nth-child(2){overflow:hidden}
 .rx .rx-register-table small{display:block;color:var(--rx-mut);font-size:10px;margin-block-start:4px}
@@ -358,11 +345,10 @@
 .rx .rx-pf{flex-wrap:wrap}.rx .rx-pf i{min-width:22px;width:auto;padding:4px;height:24px;font-size:9px}
 .rx .rx-pricing-table tr.is-sel td{background:var(--rx-lav)}
 .rx .rx-pricing-table input[type=checkbox]{width:18px;height:18px;accent-color:var(--rx-blue);cursor:pointer}
-.rx .rx-exp{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
 .rx .rx-kv small{display:block;font-size:10px;color:var(--rx-priv-ink)}
 .rx .rx-caption{font-size:11px;color:var(--rx-mut);margin:-5px 0 12px}
 .rx .rx-idbar>.rx-id{flex:1 1 240px;max-width:500px}
-.rx .rx-crumb button{color:inherit;min-height:28px}
+.rx .rx-crumb button{color:inherit}
 .rx .rx-offer-filter{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-block:12px;flex-wrap:wrap}
 .rx .rx-offer-filter small{color:var(--rx-mut)}
 .rx .rx-tabs{flex-wrap:wrap}.rx .rx-tabs button{min-height:36px}.rx .rx-tabs button[aria-pressed=true]{background:var(--rx-surf);color:var(--rx-blue-i);box-shadow:var(--rx-e1)}
@@ -374,15 +360,15 @@
 .rx.rx-dialog .rx-dr__h{flex-shrink:0}.rx.rx-dialog .rx-dr__h h2{font-size:17px}.rx.rx-dialog .rx-dr__h p{font-size:12px;color:var(--rx-mut);margin-block-start:6px}
 .rx.rx-dialog .rx-dr__b{min-height:0;display:flex;flex-direction:column;gap:14px}
 .rx.rx-dialog .rx-dr__f{flex-shrink:0}
-.rx.rx-dialog label{font-size:12px}.rx.rx-dialog input,.rx.rx-dialog select{background:#fff}
+.rx.rx-dialog label{font-size:12px}.rx.rx-dialog :is(input,select){background:#fff}
 .rx.rx-dialog .rc-selection{display:flex;align-items:center;justify-content:space-between;gap:12px}.rx.rx-dialog .rc-selection span{display:block;color:var(--rx-mut)}
 .rx .rx-pg>div{flex-wrap:wrap}
 .rx .rx-pg{margin-block-start:0}.rx .rx-pg button{min-height:36px}
 .rx .rx-travel small{font-size:10px;color:var(--rx-mut)}
 .rx.rx-preview-dialog{width:calc(100vw - 32px);max-width:1800px;height:94dvh;max-height:94dvh}
 .rx.rx-preview-dialog iframe{border:0;width:100%;flex:1;min-height:0;background:#fff}
-@media(max-width:720px){.rx .rx-wrap{padding-inline:10px}.rx .rx-ph{padding:12px 10px}.rx .rx-formbar>label{flex-basis:40%;min-width:110px}.rx .rx-ph__in>div:first-child{flex-basis:100%}.rx .rx-b{white-space:normal}.rx .rx-pg{padding:8px;gap:6px}.rx .rx-exp{grid-template-columns:1fr}.rx .rx-stat{min-width:120px}.rx .rx-idbar>.rx-id{max-width:100%}.rx .rx-chips{max-width:100%}.rx .rx-chip{max-width:100%;overflow-wrap:anywhere}.rx.rx-dialog .rx-dr__b{padding:12px}}
-@media(pointer:coarse){.rx button,.rx a,.rx select{min-height:44px}.rx input[type=checkbox]{min-width:22px;min-height:22px}}
+@media(max-width:720px){.rx .rx-formbar>label{flex-basis:40%;min-width:110px}.rx .rx-ph__in>div:first-child{flex-basis:100%}.rx .rx-b{white-space:normal}.rx .rx-pg{padding:8px;gap:6px}.rx .rx-stat{min-width:120px}.rx .rx-idbar>.rx-id{max-width:100%}.rx .rx-chips{max-width:100%}.rx .rx-chip{max-width:100%;overflow-wrap:anywhere}.rx.rx-dialog .rx-dr__b{padding:12px}}
+@media(pointer:coarse){.rx :is(button,a,select){min-height:44px}.rx input[type=checkbox]{min-width:22px;min-height:22px}}
 
 
 .rx .rx-ph .rx-crumb{color:#fff}.rx .rx-pricing-table{min-width:1133px}.rx .rx-pricing-table th{overflow-wrap:normal}.rx .rx-pricing-table .rx-privacy th{width:auto}
@@ -399,7 +385,7 @@
 .rx .rx-b{min-height:32px;padding-block:5px}
 .rx .rx-b--sm{min-height:27px;padding-block:3px}
 .rx .rx-lang button{min-height:30px}
-.rx .rx-formbar input,.rx .rx-formbar select{height:32px}
+.rx .rx-formbar :is(input,select){height:32px}
 .rx .rx-register-table td,.rx .rx-pricing-table td{padding:9px 10px}
 .rx .rx-offer__t .rx-creator-link{color:var(--rx-ink);font-size:12.5px;font-weight:600;text-align:start}
 .rx .rx-offer__t .rx-creator-link:hover{color:var(--rx-blue-i)}
