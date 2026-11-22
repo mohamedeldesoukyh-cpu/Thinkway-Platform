@@ -1424,5 +1424,11 @@
     "parents": [
       "features/accounting/journal-desk.tsx"
     ]
+  },
+  {
+    "file": "features/accounting/pl-closing-desk.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
   }
 ]

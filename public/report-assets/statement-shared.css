@@ -1,0 +1,113 @@
+/* =====================================================================
+   STATEMENT OF ACCOUNT — A4 document styles (Thinkway)
+   Values are literal (no CSS variables) so every PDF engine renders them
+   identically; README §2 lists each value with its role.
+   ===================================================================== */
+@font-face{font-family:'Geist';src:url(/report-assets/statement-font-1.woff2) format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:'Geist';src:url(/report-assets/statement-font-2.woff2) format('woff2');font-weight:600;font-display:block}
+@font-face{font-family:'Geist';src:url(/report-assets/statement-font-3.woff2) format('woff2');font-weight:700;font-display:block}
+@font-face{font-family:'Geist';src:url(/report-assets/statement-font-4.woff2) format('woff2');font-weight:800;font-display:block}
+@font-face{font-family:'Geist Mono';src:url(/report-assets/statement-font-5.woff2) format('woff2');font-weight:500;font-display:block}
+@font-face{font-family:'Geist Mono';src:url(/report-assets/statement-font-6.woff2) format('woff2');font-weight:700;font-display:block}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:#e9e8f0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:794px;height:1123px;margin:0 auto;position:relative;overflow:hidden;background:#ffffff;color:#080642;font-family:'Geist','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.k{font-size:8.5px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:#6c6a82}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* header band */
+.band{background:#050443;color:#ffffff;padding:28px 40px 26px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
+.brand{display:flex;flex-direction:column;gap:8px}
+.brand img{height:24px;width:119px;display:block}
+.brand span{font-size:8.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#aaa6cf}
+.doc{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.doc h1{margin:0;font-size:24px;line-height:1;font-weight:800;letter-spacing:-.6px}
+.doc .ref{font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;color:#c4c1d6}
+.doc .ref b{color:#ff7cc4;font-weight:700}
+
+.body{padding:26px 40px 0}
+
+/* parties */
+.parties{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:28px}
+.to h2{margin:6px 0 4px;font-size:18px;line-height:1.2;font-weight:800;letter-spacing:-.3px}
+.to p{margin:0;font-size:11.5px;line-height:1.6;color:#3f3c63}
+.meta{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 16px;margin:0;font-size:11px;align-self:start;padding:12px 14px;border:1px solid #e7e5f0;border-radius:10px}
+.meta dt{color:#6c6a82}
+.meta dd{margin:0;text-align:right;font-weight:600;color:#080642}
+
+/* summary */
+.sum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:22px}
+.tile{border:1px solid #e7e5f0;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:7px}
+.tile b{font-size:17px;line-height:1;font-weight:800;letter-spacing:-.3px}
+.tile small{font-size:10px;color:#6c6a82}
+.tile--due{background:#050443;border-color:#050443;color:#ffffff}
+.tile--due .k{color:#ff7cc4}
+.tile--due b{font-size:19px}
+.tile--due small{color:#c4c1d6}
+.tile b i{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.4px;margin-right:4px;opacity:.8}
+
+/* section heading */
+.sh{display:flex;align-items:baseline;justify-content:space-between;margin:26px 0 8px}
+.sh h3{margin:0;font-size:12px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase}
+.sh span{font-size:10.5px;color:#6c6a82}
+
+/* ledger */
+table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
+col.c-date{width:84px}col.c-doc{width:122px}col.c-type{width:86px}col.c-debit,col.c-credit{width:96px}col.c-bal{width:104px}
+td .doc-no{white-space:nowrap}
+tbody td{overflow-wrap:anywhere}
+thead th{background:#f2f1f9;color:#3f3c63;font-size:8.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;text-align:left;padding:9px 10px;white-space:nowrap}
+thead th:first-child{border-radius:8px 0 0 8px}
+thead th:last-child{border-radius:0 8px 8px 0}
+th.r,td.r{text-align:right}
+tbody td{padding:10px;border-bottom:1px solid #efedf5;vertical-align:top;color:#080642}
+tbody tr.open td{color:#6c6a82;font-style:italic}
+td .doc-no{font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;font-weight:700}
+.type{display:inline-block;font-size:8px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;border-radius:20px;padding:3px 7px;white-space:nowrap}
+.type--inv{background:#ffe0f1;color:#a3005f}
+.type--pay{background:#d9f2ea;color:#0c6650}
+.type--cn{background:#fdecc8;color:#7d4a00}
+td.muted{color:#a9a7bd}
+tfoot td{padding:10px;font-weight:800;border-top:2px solid #080642}
+tfoot tr.close td{border-top:0;padding-top:0;font-weight:600;color:#3f3c63}
+
+/* lower grid */
+.lower{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:24px}
+.box{border:1px solid #e7e5f0;border-radius:10px;padding:14px 16px}
+.box h3{margin:0 0 10px;font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase}
+.aging{display:flex;flex-direction:column}
+.ag{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 10px;border-radius:7px;font-size:11px}
+.ag span{color:#3f3c63}
+.ag b{font-weight:700;color:#080642}
+.ag--hot{background:#050443}
+.ag--hot span{color:#c4c1d6}
+.ag--hot b{color:#ffffff}
+.box .note{margin:10px 0 0;font-size:9.5px;color:#6c6a82;line-height:1.5}
+.pay{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 14px;margin:0;font-size:11px}
+.pay dt{color:#6c6a82}
+.pay dd{margin:0;font-weight:600}
+.ph{color:#a3005f;font-weight:600}
+
+.terms{margin:20px 0 0;font-size:9.5px;line-height:1.6;color:#6c6a82}
+.terms b{color:#3f3c63}
+
+.foot{position:absolute;left:40px;right:40px;bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:10px;border-top:1px solid #e7e5f0;font-size:9.5px;color:#6c6a82}
+.foot b{color:#080642;font-weight:700}
+
+@page{size:A4;margin:0}
+/* continuation pages */
+.page+.page{margin-top:24px}
+.band--compact{padding:16px 40px;align-items:center}
+.band--compact .brand img{height:20px;width:99px}
+.band--compact .doc h1{font-size:15px}
+.cont{font-size:10.5px;color:#6c6a82;margin:0 0 10px}
+tr.carry td{color:#6c6a82;font-style:italic;background:#fbfbfd}
+.empty td{text-align:center;color:#6c6a82;padding:22px 10px}
+.agency-logo{height:22px;width:auto;display:block}
+@media print{
+  html,body{width:210mm;background:#ffffff}
+  .page{margin:0 !important;width:210mm;height:297mm;break-after:page}
+  .page:last-child{break-after:auto}
+}
