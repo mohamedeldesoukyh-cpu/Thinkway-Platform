@@ -22,6 +22,6 @@ A unique schedule/date run record and company serialization prevent duplicate ge
 
 ## Validation
 
-`scripts/test-tw-accounting-workflows.sql` runs rollback-only development fixtures: recurring generation, month-end anchoring, duplicate retries, paused schedules, scheduled reversal, transfer destinations, opening dates/account types, generated-draft approval, read-only denial and MFA. The existing ten accounting SQL regressions also run after the migration. Application CI includes build, types, security/workspace boundaries, unit tests and unchanged performance budgets.
+`scripts/test-tw-accounting-workflows.sql` runs rollback-only development fixtures: recurring generation, month-end anchoring, duplicate retries, paused schedules, scheduled reversal, transfer destinations, opening dates/account types, generated-draft approval, USD/EGP revaluation at the due date, atomic closed-period failure, read-only denial and MFA. The existing ten accounting SQL regressions also run after the migration. Application CI includes build, types, security/workspace boundaries, unit tests and unchanged performance budgets.
 
 Migration: `20261126020000_tw_accounting_workflows.sql`. Development release only; no production migration or test records.

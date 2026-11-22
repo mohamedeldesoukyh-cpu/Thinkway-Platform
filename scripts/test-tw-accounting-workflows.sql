@@ -9,6 +9,8 @@ BEGIN
  IF actor IS NULL OR reviewer IS NULL THEN RAISE EXCEPTION 'Dev actors missing'; END IF;
  PERFORM set_config('request.jwt.claim.sub',actor::text,true);
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal2')::text,true);
+ INSERT INTO md_exchange_rates(from_currency,to_currency,exchange_rate,effective_start_date,effective_end_date,is_active,source)
+ VALUES('USD','EGP',50,'2026-04-01','2026-04-01',true,'QA workflow rollback'),('USD','EGP',51,'2026-05-01','2026-05-01',true,'QA workflow rollback');
  SET LOCAL ROLE authenticated;
 
  c:=tw_accounting_create_company('QA rollback transaction controls','EG','EGP','2026-01-01','[
@@ -47,6 +49,19 @@ BEGIN
  IF (SELECT workflow FROM tw_accounting_journals WHERE id=j)<>'transfer' THEN RAISE EXCEPTION 'Transfer missing';END IF;
  blocked:=false;BEGIN PERFORM tw_accounting_save_workflow(jsonb_build_object('id',gen_random_uuid(),'company',c,'date','2026-02-01','reference','','memo','Self transfer','workflow','transfer','lines','[{"account":"111001","description":"Destination","debit":"100","credit":"0"},{"account":"111001","description":"Source","debit":"0","credit":"100"}]'::jsonb));EXCEPTION WHEN OTHERS THEN blocked:=true;END;
  IF NOT blocked THEN RAISE EXCEPTION 'Self transfer accepted';END IF;
+ -- Foreign amounts are preserved while a recurring draft uses its own date's rate.
+ UPDATE tw_accounting_companies SET currencies=ARRAY['EGP','USD'] WHERE id=c;
+ j:=gen_random_uuid();s:=gen_random_uuid();
+ PERFORM tw_accounting_save_journal(j,c,'2026-04-01','','USD source',NULL,'[{"account":"633001","description":"USD expense","debit":"5000","credit":"0","foreignDebit":"100","foreignCredit":"0","lineCurrency":"USD","lineRate":"50"},{"account":"111001","description":"USD cash","debit":"0","credit":"5000","foreignDebit":"0","foreignCredit":"100","lineCurrency":"USD","lineRate":"50"}]');
+ PERFORM tw_accounting_schedule_action(c,'create',jsonb_build_object('id',s,'kind','recurring','source',j,'sourceVersion',1,'name','USD recurring','date','2026-05-01'));
+ r:=tw_accounting_schedule_action(c,'run',jsonb_build_object('id',s,'version',1,'date','2026-05-01'));
+ IF NOT EXISTS(SELECT 1 FROM tw_accounting_journal_lines WHERE journal_id=r AND foreign_debit=100 AND debit=5100 AND line_rate=51 AND line_currency='USD') THEN RAISE EXCEPTION 'Recurring FX conversion failed';END IF;
+ -- Closed periods fail without advancing the schedule or leaving a draft.
+ s:=gen_random_uuid();
+ PERFORM tw_accounting_schedule_action(c,'create',jsonb_build_object('id',s,'kind','recurring','source',j,'sourceVersion',1,'name','Closed-period recurrence','date','2026-05-01'));
+ PERFORM tw_accounting_set_period(c,(SELECT p.id FROM tw_accounting_periods p JOIN tw_accounting_years y ON y.id=p.year_id WHERE y.company_id=c AND p.start_date='2026-05-01'),true,'Regression period lock',1);
+ blocked:=false;BEGIN PERFORM tw_accounting_schedule_action(c,'run',jsonb_build_object('id',s,'version',1,'date','2026-05-01'));EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked OR EXISTS(SELECT 1 FROM tw_accounting_schedule_runs WHERE schedule_id=s) OR (SELECT version FROM tw_accounting_schedules WHERE id=s)<>1 THEN RAISE EXCEPTION 'Closed period occurrence was not atomic';END IF;
  -- Generated drafts retain the company approval policy.
  PERFORM tw_accounting_approval_policy(c,true,(SELECT version FROM tw_accounting_companies WHERE id=c),'Enable schedule review');
  s:=gen_random_uuid();j:=gen_random_uuid();
