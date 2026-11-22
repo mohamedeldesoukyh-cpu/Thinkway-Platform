@@ -14,6 +14,7 @@ import { SettlementDesk } from "./settlement-desk";
 import { StatementDesk } from "./statement-desk";
 import { CostInvoiceDesk } from "./cost-invoice-desk";
 import { InvoiceDesk } from "./invoice-desk";
+import { JournalSchedules } from './journal-schedules';
 import { JournalDesk, type LedgerView } from "./journal-desk";
 import type { AccountingSetup, SavedAccount } from "./setup-types";
 
@@ -69,6 +70,8 @@ export function AccountingConsole({initial}:{initial:AccountingSetup}) {
     {company && (view==='approvals'||view==='transaction-locks'||view==='approval-policy') && <TransactionControls key={`${company.id}-${view}`} setup={data} mode={view} onBusyChange={setJournalBusy} onSaved={()=>refresh()}/>}
     {company && view==='mapping' && <MappingDesk setup={data} onBusyChange={setJournalBusy} onSaved={()=>refresh()}/>}
     {company && view==='auxiliaries' && <AuxiliaryDesk accountEditorOpen={!!editing} key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy} onOpenAccount={account=>{setError('');setEditing(account);}}/>}
+    {company && (view==='recurring'||view==='scheduled-reversal') && <JournalSchedules key={company.id+view} setup={data} kind={view==='recurring'?'recurring':'reversal'} onBusyChange={setJournalBusy}/>}
+    {company && (view==='transfers'||view==='opening') && <JournalDesk key={company.id+view} setup={data} mode="journals" workflow={view==='transfers'?'transfer':'opening'} onDirtyChange={setJournalDirty} onBusyChange={setJournalBusy}/>}
     {company && view==='moves' && <AccountMoves key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy}/>}
     {company && view==='statements' && <StatementDesk key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy}/>}
     {company && view==='invoices' && <InvoiceDesk key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy}/>}
