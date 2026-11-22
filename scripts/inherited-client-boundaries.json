@@ -1409,7 +1409,14 @@
       "features/accounting/voucher-preview.tsx",
       "features/accounting/financial-reports.tsx",
       "features/accounting/budget-desk.tsx",
-      "features/accounting/journal-desk.tsx"
+      "features/accounting/journal-desk.tsx",
+      "features/accounting/financial-statement.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/financial-statement.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
     ]
   }
 ]
