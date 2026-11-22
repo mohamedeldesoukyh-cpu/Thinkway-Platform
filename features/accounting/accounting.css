@@ -24,3 +24,5 @@
 .tw-ac-entry-body{border:0;padding:0;margin:0;min-width:0}.tw-accounting .tw-ac-entry-summary .tw-ac-form-grid{grid-template-columns:1fr 1fr}.tw-accounting .tw-ac-entry-body>fieldset{min-width:0}
 @media(pointer:coarse){.tw-accounting :is(button,input,select,a){min-height:44px}}
 .tw-ac-journal-table tr[data-side=D]:focus-within{background:#edf6fc}.tw-ac-journal-table tr[data-side=C]:focus-within{background:#fff5e5}
+
+.tw-accounting .tw-ac-journal-status.pending{background:#fff4d6;color:#875b05}
