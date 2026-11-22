@@ -8,8 +8,8 @@ User authorization: implement sequentially, test and resolve blockers, deploy ea
 | 7 | Optional independent journal approval, transaction locks, control history | Delivered and browser verified; PRs 38/39, develop `1a0100f8` |
 | 8 | Transfers, opening balances, recurring journals and scheduled reversals | Delivered and browser verified; PRs 40/41, develop `199665a5` |
 | 9 | Bank accounts, movements, reconciliation and payment preparation | Delivered on dev; matching/closing browser verified and fixtures removed; CSV chooser verification incomplete |
-| 10 | Financial statements and Third Party aging | Implemented; dev verification in progress |
-| 11 | Budgets, allocation and variance | Pending |
+| 10 | Financial statements and Third Party aging | Delivered and browser verified; PRs 43/44, develop c2766138 |
+| 11 | Budgets, allocation and variance | Implemented; dev validation in progress |
 | 12 | Fiscal closing and final regression/review | Pending |
 
 Stage 7: build, typecheck, unit/security/performance checks and ten development SQL regression scripts passed. Browser checks covered submission, self-approval prevention, batch lock/unlock, locked editor, history and mobile layout. The isolated dev company and both unnumbered drafts were removed. Thinkway retains approval policy off. No production data or business document numbers were used for testing.
