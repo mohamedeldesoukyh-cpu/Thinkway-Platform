@@ -98,7 +98,6 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/collections", label: "Collections", icon: "coll" },
       { href: "/treasury", label: "Treasury", icon: "trez" },
-      { href: "/finance/posting-center", label: "Posting center", icon: "post" },
       { href: "/finance/post-to-accounting", label: "Post to Accounting", icon: "post" },
     ],
   },

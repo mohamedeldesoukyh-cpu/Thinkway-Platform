@@ -92,7 +92,6 @@ const navItems: NavItem[] = [
       { href: "/finance/vendor-credit-notes", label: "Vendor credit notes" },
       { href: "/finance/client-debit-notes", label: "Client debit notes" },
       { href: "/finance/vendor-debit-notes", label: "Vendor debit notes" },
-      { href: "/finance/posting-center", label: "Posting center" },
       { href: "/finance/post-to-accounting", label: "Post to Accounting" },
       { href: "/collections", label: "Collections" },
       { href: "/treasury", label: "Treasury" },
