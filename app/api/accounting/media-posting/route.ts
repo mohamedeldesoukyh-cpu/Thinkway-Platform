@@ -15,6 +15,11 @@ export async function GET(request: Request) {
     if (!access.media || 'error' in permission) return reply({ error: 'Media Finance access required' }, 403);
     const q = new URL(request.url).searchParams;
     const company = z.string().uuid().parse(q.get('company'));
+    if (q.get('mode') === 'allocations') {
+      const r = await db.rpc('tw_accounting_note_allocation_read', { p_company: company, p_type: type.parse(q.get('type')), p_id: z.string().uuid().parse(q.get('id')) });
+      if (r.error) throw Error(r.error.message);
+      return reply(r.data);
+    }
     const types = q.get('type') === 'cost' ? ['supplier_invoice','internal_cost'] : [type.parse(q.get('type'))];
     const from = isoDate.parse(q.get('from')), to = isoDate.parse(q.get('to'));
     const page = z.coerce.number().int().min(0).max(2000).parse(q.get('page') ?? 0);
@@ -30,8 +35,14 @@ export async function POST(request: Request) {
     const { db, access } = await accountingContext();
     const permission = await requireFinancePermission(db, 'finance.write');
     if (!access.media || !access.manage || 'error' in permission) return reply({ error: 'Media Finance and Accounting management access required' }, 403);
-    const v = z.object({ company: z.string().uuid(), type, id: z.string().uuid(), operation: z.enum(['post','unpost']), token: z.string().max(64).optional(), version: z.number().int().positive().optional(), reason: z.string().trim().min(3).max(500).optional() }).parse(await request.json());
+    const v = z.object({ company: z.string().uuid(), type, id: z.string().uuid(), operation: z.enum(['post','unpost','allocate']), lines: z.array(z.object({ id: z.string().uuid(), amount: z.string().regex(/^\d{1,16}(\.\d{1,2})?$/) })).max(200).optional(), token: z.string().max(64).optional(), version: z.number().int().positive().optional(), reason: z.string().trim().min(3).max(500).optional() }).parse(await request.json());
     if (v.operation === 'post' && !v.token || v.operation === 'unpost' && (!v.version || !v.reason)) throw Error('Browse again and supply the required confirmation');
+    if (v.operation === 'allocate') {
+      if (!v.version || !v.lines) throw Error('Reload the note allocation');
+      const r = await db.rpc('tw_accounting_note_allocate', { p_company: v.company, p_type: v.type, p_id: v.id, p_version: v.version, p_lines: v.lines });
+      if (r.error) return reply({ error: r.error.message }, r.error.code === '42501' ? 403 : r.error.code === '40001' ? 409 : 400);
+      return reply({ saved: true });
+    }
     const r = v.operation === 'post'
       ? await db.rpc('tw_accounting_media_post', { p_company: v.company, p_type: v.type, p_id: v.id, p_token: v.token })
       : await db.rpc('tw_accounting_media_unpost', { p_company: v.company, p_type: v.type, p_id: v.id, p_version: v.version, p_reason: v.reason });

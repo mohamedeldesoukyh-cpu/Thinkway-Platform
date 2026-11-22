@@ -32,7 +32,7 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { href: "/", label: "Home", icon: LayoutDashboardIcon },
+  { href: "/media", label: "Home", icon: LayoutDashboardIcon },
   { href: "/dashboard", label: "Executive", icon: LayoutDashboardIcon },
   { href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon,
     children: [

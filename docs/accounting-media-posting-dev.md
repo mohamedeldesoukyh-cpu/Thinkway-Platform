@@ -81,3 +81,59 @@ posting depends on them. Production is excluded from this release.
   independently verified by the Dev SQL tests, not claimed from this UI harness.
 - Standard typecheck, build, security, Accounting/Media regression and unchanged
   performance gates are required before the Dev alias changes.
+
+
+## Invoice allocation of credit and debit notes
+
+In Media → Finance → Post to Accounting, choose a Client/Supplier CN or DN,
+browse **Posted**, and open **Invoice allocations**. The table shows related-party
+posted invoices in the note currency, original amounts, cash settled and current
+outstanding. The original client invoice is marked. Enter full or partial amounts
+and confirm Save allocations. Unallocated note balances remain separate in aging.
+
+Credits reduce the invoice outstanding; debits increase it. Cash paid/received
+remains unchanged. Receipts, payments and advances use the adjusted balance and
+carrying amount. Statement descriptions include allocated invoice references and
+amounts; the original note journal supplies the financial movement only once.
+VAT remains in that original journal and is never added to accruals or reposted
+by allocation.
+
+To correct a linked document, clear and save its allocations first, then unpost,
+edit, repost and allocate again. Removal of a debit allocation is blocked if
+existing cash settlements/credits depend on it. Locks, closed periods, MFA,
+company, party, currency, date, control account and version checks apply.
+No historical invoices or note allocations are guessed or backfilled.
+
+Current scope: same-currency invoices with compatible booked FX rates. Cross-
+currency or different-rate allocation requires an explicit FX adjustment workflow;
+this release rejects it rather than leaving an unexplained local balance.
+Allocation is a current-balance linkage, not a new cash receipt or payment.
+
+Migration: `20261128030000_tw_accounting_note_allocations.sql`, after the two
+Media posting/accrual migrations. Additive allocation table with RLS, read-only
+user table access, controlled write RPC and audit logging. Existing calculations
+are extended in place; no business records, serials or balances are imported.
+Recovery: withdraw the allocation UI and restore the backed-up function definitions
+from the pre-install Dev snapshot; retain the allocation table and audit history.
+If real allocations exist, stop and reconcile affected invoice balances before
+reverting calculation functions. Do not drop or silently discard allocations.
+
+Verification: `scripts/test-tw-accounting-note-allocations.sql` creates an isolated
+company and rolls back all fixtures. Tests cover all four types, partial/full
+allocation, aging residuals, note limits, MFA, locking, unposting dependencies,
+full cash settlement and reversal, debit removal protection and statement refs.
+`scripts/test-tw-media-posting-ui.mjs` tests the actual React components with
+controlled HTTP responses; it is browser UI evidence, not a live authenticated
+Dev end-to-end test.
+
+
+## Platform entry and Accounting landing
+
+The root URL opens the existing module chooser. The Media home dashboard is now
+at `/media`; its navigation links and single-module login destination follow that
+route. Existing module permissions and portal destinations are retained. Users
+assigned only one module continue directly into their assigned module.
+Accounting without a section hash opens a centered TW welcome screen. Toolbar
+navigation chooses the workspace; explicit section links and refresh retain the
+requested section. The posting queue uses existing Finance cards, controls and
+table styling, with unused generic Export/Actions buttons hidden.

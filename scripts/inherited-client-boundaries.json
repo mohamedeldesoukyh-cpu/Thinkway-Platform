@@ -1438,5 +1438,11 @@
     "parents": [
       "features/accounting/console.tsx"
     ]
+  },
+  {
+    "file": "features/finance/posting-center/components/note-allocations.tsx",
+    "parents": [
+      "features/finance/posting-center/components/accounting-posting-queue.tsx"
+    ]
   }
 ]
