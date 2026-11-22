@@ -18,9 +18,9 @@
 .collections-suite .tw-k.bad{box-shadow:0 0 0 1px #EFB6B6,0 8px 24px rgba(200,33,33,.07)}
 .collections-suite .tw-k.bad b,
 .collections-suite .tw-k.bad u{color:var(--tw-bad)}
-.collections-suite .tw-c{background:#fff;border-radius:12px;box-shadow:var(--tw-ring);overflow:hidden;margin-bottom:14px}
-.collections-suite .tw-ch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 15px;border-bottom:1px solid var(--tw-line)}
-.collections-suite .tw-ct{font-size:13px;font-weight:600}
+.collections-suite .tw-c{background:#fff;box-shadow:var(--tw-ring);overflow:hidden}
+.collections-suite .tw-ch{display:flex;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--tw-line)}
+.collections-suite .tw-ct{font-weight:600}
 .collections-suite .tw-cs{font-size:11px;color:var(--tw-mut)}
 .collections-suite .tw-sc{overflow-x:auto}
 .collections-suite .tw-g{display:grid;grid-template-columns:var(--cols);align-items:center}
@@ -46,8 +46,7 @@
 .collections-suite .tw-in{width:100%;height:30px;padding:0 9px;border:1px solid var(--tw-line);border-radius:8px;background:#fff;font:500 12.5px 'Geist',sans-serif;color:var(--tw-ink)}
 .collections-suite .tw-in:focus{outline:none;border-color:var(--tw-blue);box-shadow:0 0 0 3px rgba(0,87,255,.12)}
 .collections-suite .tw-lbl{display:block;font-size:10px;font-weight:700;letter-spacing:.55px;text-transform:uppercase;color:var(--tw-mut);margin-bottom:5px}
-.collections-suite .tw-pad{padding:14px 15px}
-.collections-suite .tw-note{margin:13px 15px;padding:11px 13px;border-radius:9px;background:var(--tw-soft);font-size:11.5px;color:var(--tw-ink2);line-height:1.55}
+.collections-suite .tw-note{border-radius:9px;background:var(--tw-soft);color:var(--tw-ink2)}
 .collections-suite .tw-note.bad{background:var(--tw-badb);color:var(--tw-bad)}
 .collections-suite .tw-note.wrn{background:var(--tw-wrnb);color:var(--tw-wrn)}
 .collections-suite .tw-st{display:flex;gap:26px;flex-wrap:wrap}
@@ -60,15 +59,8 @@
 .collections-suite .tw-r{transition:none}
 }
 .collections-suite .tw-code{font:600 12px 'Geist Mono',monospace;color:var(--tw-mut);letter-spacing:-.2px}
-.collections-suite .tw-c{margin-bottom:16px;border-radius:14px}
-.collections-suite .tw-ch{padding:14px 18px;gap:11px}
-.collections-suite .tw-ct{font-size:13.5px}
-.collections-suite .tw-pad{padding:18px}
-.collections-suite .tw-note{margin:0 18px 16px;padding:13px 15px;font-size:12px;line-height:1.6}
-.collections-suite .tw-dc2{background:#fff;border-radius:13px;box-shadow:var(--tw-ring);overflow:hidden}
-.collections-suite .tw-dc2__h{display:flex;align-items:center;gap:10px;padding:14px 17px 12px}
-.collections-suite .tw-dc2__h b{font-size:14px;font-weight:600}
-.collections-suite .tw-dc2__h u{display:block;text-decoration:none;font-size:11px;color:var(--tw-mut);margin-top:2px}
+.collections-suite .tw-note{line-height:1.6}
+.collections-suite .tw-dc2{background:#fff;box-shadow:var(--tw-ring)}
 .collections-suite .tw-ad{background:#F4F7FC;border-left:3px solid var(--tw-blue)}
 .collections-suite .tw-adh{background:#E7EDF7;padding:7px 8px}
 .collections-suite .tw-adh > *{font-size:8.5px;font-weight:700;letter-spacing:.55px;text-transform:uppercase;color:#7C879A;
@@ -79,9 +71,8 @@
 .collections-suite .tw-adf > *{font-size:11px}
 .collections-suite .tw-mast{position:relative;isolation:isolate;overflow:hidden;border-radius:14px;background:#fff;
  box-shadow:var(--tw-ring);margin-bottom:10px}
-.collections-suite .tw-mast::before{content:"";position:absolute;z-index:-1;inset:0;
- background:linear-gradient(107deg,#0040CC 0%,#0057FF 30%,#1A6FFF 52%,rgba(26,111,255,0) 72%)}
-.collections-suite .tw-mast::after{content:"";position:absolute;z-index:-1;left:308px;top:-88px;width:210px;height:210px;
+.collections-suite .tw-mast::before{content:"";position:absolute;z-index:-1;inset:0}
+.collections-suite .tw-mast::after{content:"";position:absolute;z-index:-1;
  border-radius:50%;border:34px solid rgba(255,255,255,.11)}
 .collections-suite .tw-mh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 15px 10px;color:#fff}
 .collections-suite .tw-mh .id{font:600 10px 'Geist Mono',monospace;letter-spacing:.2px;padding:2px 7px;border-radius:6px;
@@ -106,22 +97,17 @@
 .collections-suite .tw-ms2 > div:last-child{border-right:0}
 .collections-suite .tw-ms2 i{display:block;font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.6px;
  text-transform:uppercase;color:var(--tw-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.collections-suite .tw-ms2 b{display:block;margin-top:3px;font:600 14px 'Geist',sans-serif;letter-spacing:-.35px;white-space:nowrap}
+.collections-suite .tw-ms2 b{display:block;margin-top:3px;font:600 14px 'Geist',sans-serif;white-space:nowrap}
 .collections-suite .tw-ms2 b.g{color:var(--tw-ok)}
 .collections-suite .tw-ms2 b.r{color:var(--tw-bad)}
-.collections-suite .tw-ms2 b.s{font-size:12.5px;font-weight:600}
+.collections-suite .tw-ms2 b.s{font-weight:600}
 .collections-suite .tw-dc2{position:relative;isolation:isolate;overflow:hidden;border-radius:12px}
 .collections-suite .tw-dc2::before{content:"";position:absolute;z-index:-1;left:0;right:0;top:0;height:44px;
  background:linear-gradient(107deg,#0040CC 0%,#0057FF 42%,#1A6FFF 100%)}
 .collections-suite .tw-dc2::after{content:"";position:absolute;z-index:-1;right:-30px;top:-46px;width:104px;height:104px;
  border-radius:50%;border:17px solid rgba(255,255,255,.13)}
-.collections-suite .tw-dc2__h{padding:11px 13px 12px;color:#fff;gap:8px}
-.collections-suite .tw-dc2__h b{font-size:12.5px;font-weight:600;color:#fff}
-.collections-suite .tw-dc2__h u{font-size:10px;color:rgba(255,255,255,.72);margin-top:1px}
-.collections-suite .tw-dc2__h .tw-b{height:23px;padding:0 9px;font-size:10.5px;border-radius:7px;
- background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.24);color:#fff}
-.collections-suite .tw-dc2__h .tw-b:hover{background:rgba(255,255,255,.26);border-color:rgba(255,255,255,.4);color:#fff}
-.collections-suite .tw-dc2__h .tw-p{background:rgba(255,255,255,.2);color:#fff}
+.collections-suite .tw-dc2__h{gap:8px}
+.collections-suite .tw-dc2__h .tw-b{height:23px;padding:0 9px;font-size:10.5px;border-radius:7px}
 .collections-suite .tw-c{margin-bottom:11px;border-radius:12px}
 .collections-suite .tw-ch{padding:11px 14px;gap:9px}
 .collections-suite .tw-ct{font-size:12.5px}
@@ -130,20 +116,19 @@
 .collections-suite .tw-dc2::before,
 .collections-suite .tw-dc2::after{display:none}
 .collections-suite .tw-dc2__h{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:flex-start;
- flex-wrap:wrap;padding:11px 13px}
+ flex-wrap:wrap}
 .collections-suite .tw-dc2__h::after{content:"";position:absolute;z-index:-1;right:-28px;top:-40px;width:96px;height:96px;
  border-radius:50%;border:16px solid rgba(255,255,255,.12)}
 .collections-suite .tw-dc2__h > span:first-child{min-width:0;flex:1 1 auto}
-.collections-suite .tw-dc2__h b{display:block;font-size:12.5px;font-weight:600;color:#fff;line-height:1.25;
+.collections-suite .tw-dc2__h b{display:block;font-size:12.5px;font-weight:600;line-height:1.25;
  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.collections-suite .tw-dc2__h u{display:block;text-decoration:none;font-size:10px;color:rgba(255,255,255,.74);
+.collections-suite .tw-dc2__h u{display:block;text-decoration:none;font-size:10px;
  margin-top:2px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .collections-suite .tw-dc2__h .tw-sp{flex:0 0 auto;width:8px}
 .collections-suite .tw-dc2__h .tw-p,
 .collections-suite .tw-dc2__h .tw-b,
 .collections-suite .tw-dc2__h .tw-cs{flex:0 0 auto;align-self:center}
-.collections-suite .tw-dc2__h .tw-cs{color:rgba(255,255,255,.74);font-size:10px}
-.collections-suite .tw-dc2.alert{box-shadow:0 0 0 1px #EFB6B6,0 8px 24px rgba(200,33,33,.07)}
+.collections-suite .tw-dc2__h .tw-cs{font-size:10px}
 .collections-suite .tw-mast::after{left:auto;right:34%;top:-96px;width:196px;height:196px;border-width:30px}
 .collections-suite .tw-mh h1,
 .collections-suite .tw-mh .id,
@@ -198,7 +183,6 @@
 .collections-suite .tw-adf > *,
 .collections-suite .tw-ft > *{font-size:12.5px}
 .collections-suite .tw-ms2 b.s{font-size:12.5px}
-.collections-suite .tw-cc{font-size:11.5px}
 .collections-suite .tw-cc{font-size:9.5px}
 .collections-suite .tw-v,
 .collections-suite .tw-ms2 b,

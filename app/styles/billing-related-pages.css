@@ -1,8 +1,7 @@
 .tw-billing-v3.billing-related .bq-hd { flex-wrap: wrap; gap: 16px; }
 .tw-billing-v3.billing-related .billing-related-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--bq-line); }
-.tw-billing-v3.billing-related .billing-related-nav > a { border: 1px solid var(--bq-line); border-radius: 8px; padding: 6px 11px; background: var(--bq-soft); color: var(--bq-ink2); font-size: 13px; font-weight: 500; }
+.tw-billing-v3.billing-related .billing-related-nav > a { border: 1px solid var(--bq-line); border-radius: 8px; padding: 6px 11px; color: var(--bq-ink2); font-size: 13px; font-weight: 500; }
 .tw-billing-v3.billing-related .billing-related-nav > a:hover { background: var(--bq-lav); color: var(--bq-ok); }
-.tw-billing-v3.billing-related .billing-related-nav > a[aria-current="page"] { background: var(--bq-lav); color: var(--bq-ok); border-color: var(--bq-blue); }
 .tw-billing-v3.billing-related .bq-k.ok .bq-k__v { color: var(--bq-ok); }
 .tw-billing-v3.billing-related .bq-k.warn .bq-k__v { color: var(--bq-wrn); }
 .tw-billing-v3.billing-related .bq-kwrap { grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); }
@@ -41,16 +40,16 @@
 .tw-billing-v3.billing-related .bq-card { box-shadow: var(--tw-ring); }
 
 /* Inner workspaces: all tab bodies share the Collections card rhythm. */
-.tw-billing-v3.billing-related [data-sticky="operational-workspace-tabs"] { background: var(--bq-surface, #fff); border: 1px solid #e0e9ff; border-radius: 12px; padding: 12px; margin-bottom: 14px; }
+.tw-billing-v3.billing-related [data-sticky="operational-workspace-tabs"] { background: var(--bq-surface, #fff); border: 1px solid #e0e9ff; border-radius: 12px; }
 .tw-billing-v3.billing-related [role="tablist"] { background: var(--bq-surface, #fff); gap: 6px; }
-.tw-billing-v3.billing-related [role="tab"] { border: 1px solid #dce6ff; border-radius: 8px; background: var(--bq-surface, #fff); color: #41495a; padding: 8px 12px; }
+.tw-billing-v3.billing-related [role="tab"] { border: 1px solid #dce6ff; border-radius: 8px; background: var(--bq-surface, #fff); color: #41495a; }
 .tw-billing-v3.billing-related [role="tab"][data-state="active"] { color: #0057ff; border-color: #80aaff; background: #f3f7ff; box-shadow: 0 0 0 3px rgba(0,87,255,.06); }
 .tw-billing-v3.billing-related [role="tabpanel"] { margin-top: 0; padding-bottom: 16px; }
-.tw-billing-v3.billing-related .thinkway-campaign-section-card { border: 1px solid #e0e9ff; border-radius: 13px; background: var(--bq-surface, #fff); box-shadow: 0 8px 24px rgba(0,87,255,.04); overflow: hidden; }
+.tw-billing-v3.billing-related .thinkway-campaign-section-card { border: 1px solid #e0e9ff; background: var(--bq-surface, #fff); box-shadow: 0 8px 24px rgba(0,87,255,.04); overflow: hidden; }
 .tw-billing-v3.billing-related .thinkway-campaign-section-head { background: linear-gradient(107deg,#e9f0ff,#f7faff); border-bottom: 1px solid #dde7fa; padding: 10px 14px; flex-wrap: wrap; }
 .tw-billing-v3.billing-related .thinkway-campaign-section-head h2 { font-size: 12.5px; font-weight: 600; color: #0b0f1a; }
 .tw-billing-v3.billing-related .thinkway-campaign-section-body { padding: 10px 14px; }
-.tw-billing-v3.billing-related .thinkway-campaign-section-body > .justify-between { display: grid; grid-template-columns: minmax(120px,1fr) minmax(0,1.3fr); gap: 12px; }
+.tw-billing-v3.billing-related .thinkway-campaign-section-body > .justify-between { display: grid; grid-template-columns: minmax(120px,1fr) minmax(0,1.3fr); }
 .tw-billing-v3.billing-related .thinkway-campaign-section-body .text-right { text-align: left; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .tw-billing-v3.billing-related .related-inner-panel { padding: 12px; border: 1px solid #e0e9ff; border-radius: 13px; background: var(--bq-surface, #fff); box-shadow: var(--tw-ring); }
 .tw-billing-v3.billing-related .related-inner-panel > h3 { font-size: 13px; color: #0b0f1a; }
@@ -79,16 +78,13 @@
 .tw-billing-v3.billing-related [data-sticky="operational-workspace-tabs"] { padding: 8px 12px; margin-bottom: 10px; }
 .tw-billing-v3.billing-related [role="tab"] { min-height: 32px; height: 32px; padding: 5px 10px; font-size: 12.5px; line-height: 1.4; }
 .tw-billing-v3.billing-related .bq-main [data-slot="button"],
-.tw-billing-v3.billing-related .bq-main [data-slot="select-trigger"],
-.tw-billing-v3.billing-related .bq-main [data-slot="input"] { min-height: 30px; height: 32px; font-size: 12.5px; line-height: 1.4; }
+.tw-billing-v3.billing-related .bq-main :is([data-slot="select-trigger"],[data-slot="input"]) { min-height: 30px; height: 32px; font-size: 12.5px; line-height: 1.4; }
 .tw-billing-v3.billing-related .bq-main [data-slot="button"] { padding-block: 5px; }
 .tw-billing-v3.billing-related .thinkway-campaign-section-card { border-radius: 12px; }
 .tw-billing-v3.billing-related [data-slot="table-head"] { text-align: left !important; }
 @media (pointer: coarse) {
   .tw-billing-v3.billing-related [role="tab"],
-  .tw-billing-v3.billing-related .bq-main [data-slot="button"],
-  .tw-billing-v3.billing-related .bq-main [data-slot="select-trigger"],
-  .tw-billing-v3.billing-related .bq-main [data-slot="input"] { min-height: 44px; }
+  .tw-billing-v3.billing-related .bq-main :is([data-slot="button"],[data-slot="select-trigger"],[data-slot="input"]) { min-height: 44px; }
 }
 
 /* PO tracker: fixed workspace, independently scrolling list and details pane. */

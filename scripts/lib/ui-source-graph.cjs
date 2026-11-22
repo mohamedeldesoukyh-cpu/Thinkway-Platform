@@ -7,7 +7,7 @@ const ts = require('typescript');
  * Actions and server-only .ts services do not render the application's stylesheet.
  * Keep all application entry components and follow static imports/re-exports/lazy imports.
  */
-function uiSources(root) {
+function uiSources(root, entries = ['app']) {
   const config = ts.readConfigFile(path.join(root, 'tsconfig.json'), ts.sys.readFile);
   if (config.error) throw new Error('Cannot read tsconfig for the UI style graph');
   const options = ts.parseJsonConfigFileContent(config.config, ts.sys, root).options;
@@ -57,7 +57,11 @@ function uiSources(root) {
       else if (/\.(tsx|jsx)$/.test(entry.name) && !/\.(test|spec)\./.test(entry.name)) visit(file);
     }
   }
-  walk(path.join(root, 'app'));
+  for (const entry of entries) {
+    const file = path.join(root, entry);
+    if (fs.statSync(file).isDirectory()) walk(file);
+    else visit(file);
+  }
   return sources.sort();
 }
 module.exports = { uiSources };

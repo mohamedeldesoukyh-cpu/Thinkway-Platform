@@ -129,8 +129,7 @@
 
 .campaign-detail-suite .tw-b.sm,
 .campaign-detail-suite .tw-mr .thinkway-campaign-btn,
-.campaign-detail-suite .tw-mr button,
-.campaign-detail-suite .tw-mr a {
+.campaign-detail-suite .tw-mr :is(button,a) {
   height: 27px;
   padding: 0 10px;
   font-size: 11.5px;
@@ -565,12 +564,7 @@
 }
 
 .campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting"],
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting_internal"],
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting_client"],
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting_vendor"],
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="attention_required"],
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="blocked"],
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="upcoming"] {
+.campaign-detail-suite .tw-step2 :is(.enterprise-tab[data-process-state="waiting_internal"],.enterprise-tab[data-process-state="waiting_client"],.enterprise-tab[data-process-state="waiting_vendor"],.enterprise-tab[data-process-state="attention_required"],.enterprise-tab[data-process-state="blocked"],.enterprise-tab[data-process-state="upcoming"]) {
   box-shadow: none !important;
   opacity: 1 !important;
 }
@@ -798,10 +792,6 @@
   text-align: left !important;
 }
 
-.campaign-detail-suite .thinkway-aurora-ws-head {
-  padding: 0 0 8px;
-}
-
 .campaign-detail-suite .thinkway-aurora-ws {
   margin: 0;
 }
@@ -889,17 +879,13 @@
 }
 
 .campaign-detail-suite .tw-frozen .tw-mast,
-.campaign-detail-suite .tw-frozen .tw-step2,
-.campaign-detail-suite .tw-frozen .tw-mh,
-.campaign-detail-suite .tw-frozen .tw-mb,
-.campaign-detail-suite .tw-frozen .tw-ms2 > div,
-.campaign-detail-suite .tw-frozen .enterprise-tab {
+.campaign-detail-suite .tw-frozen :is(.tw-step2,.tw-mh,.tw-mb,.enterprise-tab),
+.campaign-detail-suite .tw-frozen .tw-ms2 > div {
   transition: padding 0.2s var(--tw-ez), font-size 0.2s var(--tw-ez);
 }
 
 .campaign-detail-suite .tw-frozen.is-mini .tw-mr,
-.campaign-detail-suite .tw-frozen.is-mini .tw-jump,
-.campaign-detail-suite .tw-frozen.is-mini .tw-top {
+.campaign-detail-suite .tw-frozen.is-mini :is(.tw-jump,.tw-top) {
   display: none;
 }
 
@@ -1269,8 +1255,7 @@
 /* Design money cells — plain mono values, no tint chips on parent rows */
 
 .campaign-detail-suite .thinkway-campaign-asgn-table .thinkway-campaign-cell-rev,
-.campaign-detail-suite .thinkway-campaign-asgn-table .thinkway-campaign-cell-billing-total,
-.campaign-detail-suite .thinkway-campaign-asgn-table .thinkway-campaign-cell-cost {
+.campaign-detail-suite .thinkway-campaign-asgn-table :is(.thinkway-campaign-cell-billing-total,.thinkway-campaign-cell-cost) {
   color: var(--tw-ink) !important;
   font-weight: 600;
   background: transparent !important;
@@ -1307,10 +1292,6 @@
 }
 
 /* Flying selection bar — campaign-detail.html `.tw-selbar` */
-.campaign-detail-suite .tw-selbar > div {
-  max-width: calc(100vw - 32px) !important;
-  width: max-content !important;
-}
 
 .campaign-detail-suite .platform-floating-bar.tw-selbar,
 .campaign-detail-suite .platform-floating-bar {
@@ -1487,29 +1468,8 @@
 }
 
 .campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="revenue"],
-.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="revenue"],
-.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="usageRights"],
-.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="usageRights"],
-.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="agencyFeePercent"],
-.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="agencyFeePercent"],
-.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="agencyFee"],
-.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="agencyFee"],
-.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="cost"],
-.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="cost"],
-.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="usageRightsCost"],
-.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="usageRightsCost"],
-.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="vat"],
-.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="vat"],
-.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="totalBilling"],
-.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="totalBilling"],
-.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="gp"],
-.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="gp"],
-.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="margin"],
-.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="margin"],
-.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="deliverables"],
-.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="deliverables"],
-.campaign-detail-suite .thinkway-campaign-asgn-table td.tabular-nums,
-.campaign-detail-suite .thinkway-campaign-asgn-table input.tabular-nums {
+.campaign-detail-suite .thinkway-campaign-asgn-table :is(th[data-assignment-col="revenue"],td[data-assignment-col="usageRights"],th[data-assignment-col="usageRights"],td[data-assignment-col="agencyFeePercent"],th[data-assignment-col="agencyFeePercent"],td[data-assignment-col="agencyFee"],th[data-assignment-col="agencyFee"],td[data-assignment-col="cost"],th[data-assignment-col="cost"],td[data-assignment-col="usageRightsCost"],th[data-assignment-col="usageRightsCost"],td[data-assignment-col="vat"],th[data-assignment-col="vat"],td[data-assignment-col="totalBilling"],th[data-assignment-col="totalBilling"],td[data-assignment-col="gp"],th[data-assignment-col="gp"],td[data-assignment-col="margin"],th[data-assignment-col="margin"],td[data-assignment-col="deliverables"],th[data-assignment-col="deliverables"]),
+.campaign-detail-suite .thinkway-campaign-asgn-table :is(td.tabular-nums,input.tabular-nums) {
   text-align: right !important;
   font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
@@ -2126,9 +2086,7 @@
 
 @media (pointer: coarse) {
   .campaign-detail-suite .tw-b,
-  .campaign-detail-suite .tw-selbar-btn,
-  .campaign-detail-suite .tw-mode,
-  .campaign-detail-suite .tw-chip {
+  .campaign-detail-suite :is(.tw-selbar-btn,.tw-mode,.tw-chip) {
     min-height: 44px;
   }
 }
@@ -2459,8 +2417,7 @@
   }
   .campaign-detail-suite .tw-selbar .tw-selbar-acts { gap: 8px; }
   .campaign-detail-suite .tw-selbar .tw-selbar-btn,
-  .campaign-detail-suite .tw-selbar .tw-selbar-x,
-  .campaign-detail-suite .tw-selbar .tw-selbar-all {
+  .campaign-detail-suite .tw-selbar :is(.tw-selbar-x,.tw-selbar-all) {
     min-height: 44px !important;
     min-width: 44px;
   }

@@ -949,20 +949,13 @@
 }
 
 .dark .tw-billing-v3 .bq-k,
-.dark .tw-billing-v3 .bq-m,
-.dark .tw-billing-v3 .thinkway-campaign-section-card,
-.dark .tw-billing-v3 .bq-card {
+.dark .tw-billing-v3 :is(.bq-m,.thinkway-campaign-section-card,.bq-card) {
   background: hsl(var(--card));
 }
 
 .dark .tw-billing-v3 .bq-khd,
 .dark .tw-billing-v3 .bq-agrp td,
-.dark .tw-billing-v3 .bq-kw,
-.dark .tw-billing-v3 .bq-krow,
-.dark .tw-billing-v3 .bq-ktot,
-.dark .tw-billing-v3 .bq-foot,
-.dark .tw-billing-v3 .bq-vhd,
-.dark .tw-billing-v3 .bq-vgrp {
+.dark .tw-billing-v3 :is(.bq-kw,.bq-krow,.bq-ktot,.bq-foot,.bq-vhd,.bq-vgrp) {
   background: hsl(var(--muted) / 0.5);
 }
 
@@ -1041,7 +1034,6 @@
 .tw-billing-v3 table tbody td button,
 .tw-billing-v3 .bq-r button,
 .tw-billing-v3 .bq-vrow button,
-.tw-billing-v3 .bq-b,
-.tw-billing-v3 .bq-x {
+.tw-billing-v3 :is(.bq-b,.bq-x) {
   font-family: inherit;
 }

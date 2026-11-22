@@ -1,0 +1,133 @@
+{
+  "classes": [
+    {
+      "file": "app/styles/creator-payments-redesign.css",
+      "entries": [
+        "app"
+      ],
+      "classes": [
+        "crumb",
+        "scrim"
+      ]
+    },
+    {
+      "file": "app/styles/shortlist-redesign-integration.css",
+      "entries": [
+        "app"
+      ],
+      "classes": [
+        "sl-output-dialog",
+        "sl-output-hint",
+        "sl-lay"
+      ]
+    },
+    {
+      "file": "app/styles/shortlist-redesign.css",
+      "entries": [
+        "app"
+      ],
+      "classes": [
+        "sl-lay",
+        "sl-lay__p",
+        "sl-lay__f",
+        "sl-fmt"
+      ]
+    },
+    {
+      "file": "app/styles/vendors-list-suite.css",
+      "entries": [
+        "app"
+      ],
+      "classes": [
+        "tw-band",
+        "tw-mini",
+        "tw-cdh__m",
+        "tw-cw__g",
+        "tw-dr__s",
+        "tw-kv",
+        "tw-dc2__r",
+        "tw-oc__r",
+        "tw-str",
+        "tw-cw__hl",
+        "tw-calc",
+        "tw-agtot",
+        "tw-kid",
+        "tw-sub2",
+        "tw-fe",
+        "platform-v6-kpi-strip"
+      ]
+    },
+    {
+      "file": "features/accounting/accounting.css",
+      "entries": [
+        "app"
+      ],
+      "classes": [
+        "tw-ac-sidebar-label",
+        "tw-ac-nav-active",
+        "tw-ac-upcoming",
+        "tw-ac-roadmap",
+        "tw-ac-setup-tabs",
+        "tw-ac-section-nav"
+      ]
+    },
+    {
+      "file": "features/client-workspace/styles/client-review-ref.css",
+      "entries": [
+        "app"
+      ],
+      "classes": [
+        "lc",
+        "kick",
+        "ers",
+        "plat-n",
+        "plat-followers"
+      ]
+    },
+    {
+      "file": "features/client-workspace/styles/client-review-ref.css",
+      "entries": [
+        "app/(client-workspace)",
+        "app/layout.tsx"
+      ],
+      "classes": [
+        "mono",
+        "narrow",
+        "pill",
+        "dot",
+        "kicker",
+        "chips",
+        "cli",
+        "camp",
+        "acc"
+      ]
+    }
+  ],
+  "animations": [
+    "platform-v6-hs-aurora-shift",
+    "platform-v6-hs-reveal-up",
+    "platform-v6-hs-reveal-left",
+    "platform-v6-hs-ticker",
+    "platform-v6-hs-cursor-blink",
+    "platform-v6-hs-gradient-move",
+    "platform-v6-hs-ticker-scroll",
+    "platform-v6-hs-blink",
+    "platform-v6-hs-pulse",
+    "platform-v6-hs-aurora-drift",
+    "platform-v6-hs-fade-down",
+    "platform-v6-hs-fade-in",
+    "platform-v6-hs-fade-up",
+    "platform-v6-hs-fade-left",
+    "platform-v6-hs-cta-breathe",
+    "platform-v6-hs-ring-sweep",
+    "platform-v6-ai-pulse",
+    "shortlist-avatar-sync-pulse",
+    "qsh",
+    "thinkway-campaign-sh-pulse",
+    "tw-grow",
+    "slsh",
+    "tw-rise2",
+    "tw-slide",
+    "rush"
+  ]
+}
