@@ -1,5 +1,5 @@
 import { cents,decimal } from './journal-model';
-export type Party={id:string;code:string;name:string};
+export type Party={id:string;code:string;name:string;legal_name?:string|null;username?:string|null;display_name?:string|null};
 export type OpenItem={id:string;number:string;date:string;due:string|null;total:string;settled:string;outstanding:string;currency:string;account:string;status?:string};
 export type Allocation={id:string;amount:string};
 export type SettlementQuote={currency:string;base:string;rate:string;date:string;amount:string;cash:string;allocated:string;carrying:string;advance:string;advanceBase:string;gain:string;lines:{id:string;number:string;amount:string;base:string}[]};
