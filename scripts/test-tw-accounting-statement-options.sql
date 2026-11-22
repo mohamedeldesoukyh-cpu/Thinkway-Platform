@@ -8,6 +8,8 @@ j:=tw_accounting_save_signed_workflow(jsonb_build_object('id',gen_random_uuid(),
 PERFORM tw_accounting_post_journal(j,c,1);
 END LOOP;
 
+q:=tw_accounting_statement_filtered(c,'2026-01-01','2026-12-31','111001,411001');IF (q->>'count')::integer<>4 OR jsonb_array_length(q->'accounts')<>2 THEN RAISE EXCEPTION 'Multiple account selection omitted records';END IF;
+q:=tw_accounting_statement_filtered(c,'2026-01-01','2026-12-31','100000,111001');IF (q->>'count')::integer<>2 THEN RAISE EXCEPTION 'Overlapping parent and child duplicated records';END IF;
 q:=tw_accounting_statement_filtered(c,'2026-01-01','2026-12-31','111001');old:=tw_accounting_statement(c,'2026-01-01','2026-12-31','111001');
 IF q->>'count' IS DISTINCT FROM old->>'count' OR q->'accounts'->0->>'closing' IS DISTINCT FROM old->'accounts'->0->>'closing' THEN RAISE EXCEPTION 'Default statement differs from existing balances';END IF;
 IF (q->'accounts'->0->>'closing')::numeric<>300 THEN RAISE EXCEPTION 'Default balance wrong';END IF;
