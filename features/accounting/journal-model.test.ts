@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { cents,decimal,money,totals,reportCsv } from './journal-model';
+import { cents,decimal,money,totals,reportCsv,consolidatedStatement } from './journal-model';
 import { journalSchema,isoDate } from './journal-validation';
 test('money arithmetic remains exact beyond floating point totals',()=>{
  assert.equal(cents('0.10')+cents('0.20'),BigInt(30));
@@ -21,4 +21,14 @@ test('journal input rejects invalid lines and unbalanced drafts',()=>{
 });
 test('report exports escape text formulas and preserve exact decimals',()=>{
  assert.ok(reportCsv([['=HYPERLINK("bad")','123.45']]).includes('"\'=HYPERLINK(""bad"")","123.45"'));
+});
+
+test('shared auxiliary statement totals use decimal amounts and retain credit signs',()=>{
+ const totals=consolidatedStatement([{opening:'0',debit:'10.00',credit:'0',closing:'10.00'},{opening:'0',debit:'20.00',credit:'0',closing:'20.00'}]);
+ assert.deepEqual(totals,{opening:'0.00',debit:'30.00',credit:'0.00',closing:'30.00'});
+ for(const value of Object.values(totals))assert.doesNotThrow(()=>money(value));
+ assert.deepEqual(consolidatedStatement([]),{opening:'0.00',debit:'0.00',credit:'0.00',closing:'0.00'});
+ const credit=consolidatedStatement([{opening:'-900719925474099.90',debit:'0.10',credit:'0.20',closing:'-900719925474100.00'},{opening:'0',debit:'0.20',credit:'0.30',closing:'-0.10'}]);
+ assert.equal(credit.closing,'-900719925474100.10');
+ assert.equal(money(credit.closing),'-900,719,925,474,100.10');
 });
