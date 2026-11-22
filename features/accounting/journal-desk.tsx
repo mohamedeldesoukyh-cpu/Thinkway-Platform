@@ -30,7 +30,7 @@ const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'n
 const balance=(value:string)=>`${money(cents(value)<BigInt(0)?-cents(value):cents(value))} ${cents(value)<BigInt(0)?'Cr':'Dr'}`;
 function download(name:string,rows:string[][]){const url=URL.createObjectURL(new Blob([reportCsv(rows)],{type:'text/csv;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 
-export function JournalDesk({initialDraft,setup,mode,onDirtyChange,onBusyChange,onCashEntry,expenses=false,onPayableExpense,workflow='general'}:{initialDraft?:ClosingDraft|null;workflow?:'general'|'transfer'|'opening'|'closing';setup:AccountingSetup;mode:LedgerView;expenses?:boolean;onPayableExpense?:()=>void;onDirtyChange:(dirty:boolean)=>void;onBusyChange:(busy:boolean)=>void;onCashEntry?:(kind:'receipt'|'payment')=>void}){
+export function JournalDesk({onDraftLoaded,initialDraft,setup,mode,onDirtyChange,onBusyChange,onCashEntry,expenses=false,onPayableExpense,workflow='general'}:{initialDraft?:ClosingDraft|null;onDraftLoaded?:()=>void;workflow?:'general'|'transfer'|'opening'|'closing';setup:AccountingSetup;mode:LedgerView;expenses?:boolean;onPayableExpense?:()=>void;onDirtyChange:(dirty:boolean)=>void;onBusyChange:(busy:boolean)=>void;onCashEntry?:(kind:'receipt'|'payment')=>void}){
  const [discardAction,setDiscardAction]=useState<'undo'|'discard'|null>(null);
  const [markOpen,setMarkOpen]=useState(false),[mark,setMark]=useState<'pending'|'cancelled'|'clear'>('clear'),[markReason,setMarkReason]=useState('');
  const [miniStatement,setMiniStatement]=useState<MiniStatementSelection|null>(null);
@@ -42,7 +42,7 @@ export function JournalDesk({initialDraft,setup,mode,onDirtyChange,onBusyChange,
  const [journals,setJournals]=useState<Journal[]>([]),[count,setCount]=useState(0),[trial,setTrial]=useState<TrialRow[]>([]),[ledger,setLedger]=useState<LedgerReport|null>(null),[periods,setPeriods]=useState<FiscalPeriod[]>([]);
  const [editor,setEditor]=useState<Editor|null>(null),[dirty,setOwnDirty]=useState(false),[decision,setDecision]=useState<Decision|null>(null);
  const initialRecordOpened=useRef(!!initialDraft);
- useEffect(()=>{if(!initialDraft||!setup.access.manage)return;const draft:Editor={...initialDraft,id:crypto.randomUUID(),version:null,currency:company.base_currency,workflow:'closing',kind:'manual',status:'draft',number:null,reversalOf:null,reversal:null,postedAt:null};setEditor(draft);setDirty(true);},[]);
+ useEffect(()=>{if(!initialDraft||!setup.access.manage)return;const draft:Editor={...initialDraft,id:crypto.randomUUID(),version:null,currency:company.base_currency,workflow:'closing',kind:'manual',status:'draft',number:null,reversalOf:null,reversal:null,postedAt:null};setEditor(draft);setDirty(true);onDraftLoaded?.();},[]);
  useEffect(()=>{if(mode!=='journals'||loading||initialRecordOpened.current)return;initialRecordOpened.current=true;if(!editor&&!dirty&&journals[0])void openJournal(journals[0].id);},[loading,journals,mode]);
  const undoStack=useRef<{editor:Editor|null;dirty:boolean}[]>([]),redoStack=useRef<{editor:Editor|null;dirty:boolean}[]>([]),savedEditor=useRef<Editor|null>(null);
  const [reason,setReason]=useState(''),[reverseDate,setReverseDate]=useState(today()),[reversalId,setReversalId]=useState('');
