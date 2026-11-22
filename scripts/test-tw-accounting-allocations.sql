@@ -33,9 +33,10 @@ BEGIN
  UPDATE tw_accounting_companies SET currencies=ARRAY['EGP','USD'] WHERE id=c;
  SELECT id INTO vendor FROM influencers WHERE document_number IS NOT NULL LIMIT 1;
  IF vendor IS NULL THEN RAISE EXCEPTION 'Dev vendor directory unavailable'; END IF;
- val:=jsonb_build_object('company',c,'kind','receipt','party',customer,'currency','USD','date','2026-02-01','amount','30','cash','111001','control','121001','advance','221001','gain','712001','loss','722001','parent',NULL,'advanceRow',true,'method','bank_transfer','reference','QA multi allocation','lines',jsonb_build_array(jsonb_build_object('id',inv,'amount','20')));
+ val:=jsonb_build_object('company',c,'kind','receipt','party',customer,'currency','USD','date','2026-02-01','amount','30','cash','111001','control','121001','advance','221001','gain','712001','loss','722001','parent',NULL,'advanceRow',true,'method','bank_transfer','bank','QA Dev Bank','instrumentNumber','TRF-QA-001','maturity','','reference','QA multi allocation','lines',jsonb_build_array(jsonb_build_object('id',inv,'amount','20')));
  quote:=tw_accounting_settlement_quote(val);saved:=val;j:=tw_accounting_settlement_post(rv,val,quote);
  IF NOT EXISTS(SELECT 1 FROM tw_accounting_journal_lines WHERE journal_id=j AND description LIKE 'Invoice QA-INV-%') THEN RAISE EXCEPTION 'JV line lost invoice reference';END IF;
+ IF NOT EXISTS(SELECT 1 FROM tw_accounting_settlements WHERE journal_id=j AND request->'value'->>'bank'='QA Dev Bank' AND request->'value'->>'instrumentNumber'='TRF-QA-001' AND request->'value'->>'maturity'='') THEN RAISE EXCEPTION 'Bank or transfer details lost';END IF;
  SELECT last_number INTO serial_before FROM tw_accounting_journal_sequences WHERE company_id=c AND fiscal_year=2026;
  SELECT count(*) INTO journal_count_before FROM tw_accounting_journals WHERE company_id=c;
  IF tw_accounting_settlement_post(rv,val,quote)<>j THEN RAISE EXCEPTION 'Voucher retry duplicated'; END IF;
