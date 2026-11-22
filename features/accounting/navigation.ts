@@ -13,7 +13,7 @@ export const accountingGroups = [
   {id:'settings',en:'Settings',ar:'الإعدادات'},
 ] as const;
 export type AccountingGroup = typeof accountingGroups[number]['id'];
-export type AccountingView = 'customer-advances'|'vendor-advances'|'balance-sheet'|'cash-flow'|'vendor-aging'|'auxiliary-statements'|'client-statements'|'vendor-statements'|'unsettled-receivables'|'unsettled-payables'|'closing'|'audit-viewer'|'budget-setup'|'budget-control'|'budget-reports'|'financial-statements'|'aging'|'payment-preparation'|'cheques'|'banks'|'reconciliation'|'bank-movements'|'recurring'|'scheduled-reversal'|'opening'|'transfers'|'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
+export type AccountingView = 'pl-closing'|'customer-advances'|'vendor-advances'|'balance-sheet'|'cash-flow'|'vendor-aging'|'auxiliary-statements'|'client-statements'|'vendor-statements'|'unsettled-receivables'|'unsettled-payables'|'closing'|'audit-viewer'|'budget-setup'|'budget-control'|'budget-reports'|'financial-statements'|'aging'|'payment-preparation'|'cheques'|'banks'|'reconciliation'|'bank-movements'|'recurring'|'scheduled-reversal'|'opening'|'transfers'|'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
 export type NavigationItem = {
   id:string; parent:AccountingGroup; en:string; ar:string; status:'Ready'|'Partial'|'Pending';
   view?:AccountingView; route?:string; permission:'accounting'|'admin'; navigation:boolean; evidence:string;
@@ -37,6 +37,7 @@ export const accountingNavigation:readonly NavigationItem[] = [
   ready('vendors','third-parties','Vendors / creators','الموردون وصناع المحتوى','PartyAccountsDesk vendor preset; assignment vendors only.'),
   ready('chart','general-ledger','Chart of accounts','دليل الحسابات','AccountingConsole account setup and chart.'),
   ready('auxiliaries','general-ledger','Auxiliaries & sharing','الحسابات المساعدة ومشاركتها','AuxiliaryDesk and account setup: own/shared/none, common UUIDs.'),
+  ready('pl-closing','general-ledger','Close P&L Accounts','إقفال حسابات الأرباح والخسائر','Select P&L balances and destination, confirm, then review an editable manual JV.'),
   ready('years','general-ledger','Fiscal years','السنوات المالية','AccountingConsole: fiscal years and monthly period generation.'),
   ready('periods','general-ledger','Accounting periods & locks','الفترات المحاسبية وإقفالها','JournalDesk periods: period locking/unlocking, not individual locks.'),
   ready('ledger','reports','General ledger','الأستاذ العام','JournalDesk ledger: posted GL entries.'),
@@ -51,7 +52,7 @@ export const accountingNavigation:readonly NavigationItem[] = [
   ready('cash-flow','reports','Cash Flow','التدفقات النقدية','FinancialReports cash preset.'),
   ready('vendor-aging','reports','Vendor Aging','أعمار أرصدة الموردين','FinancialReports vendor aging preset.'),
   ready('users','administration','Module access rights','صلاحيات الوحدات','AccountingConsole existing admin-only module access editor.','admin'),
-  ready('company','settings','Company & base currency','الشركة والعملة الأساسية','AccountingConsole company configuration; exchange rates remain shared Media settings.'),
+  ready('company','settings','Company, currencies & working year','الشركة والعملة الأساسية','AccountingConsole company configuration; exchange rates remain shared Media settings.'),
   ready('mapping','settings','Media posting mappings','ربط ترحيلات المنصة','MappingDesk: revenue, costs, AF, UR, VAT, AR/AP, advances, FX and reserved mappings.'),
   ready('recurring','transactions','Recurring JV','القيود الدورية','Saved templates generate due drafts at current rates.'),
   ready('scheduled-reversal','transactions','Scheduled reversing JV','القيود العكسية المجدولة','Explicit execution of due reversals at original rates.'),

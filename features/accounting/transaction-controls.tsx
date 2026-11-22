@@ -1,3 +1,5 @@
+import {workingYear} from './fiscal-context';
+import {accountingToday} from './allocation-model';
 // Inherits AccountingConsole's client boundary.
 import {useEffect,useState} from 'react';
 import type {AccountingSetup} from './setup-types';
@@ -6,7 +8,7 @@ type Entry={resume_status?:'draft'|'posted'|null;id:string;entry_date:string;mem
 type History={id:number;occurred_at:string;operation:string;actor:string;record_id:string;voucher:string;reason:string};
 async function request(url:string,value?:unknown){const r=await fetch(url,value?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)}:{cache:'no-store'});const data=await r.json();if(!r.ok)throw new Error(data.error??'Accounting request failed');return data;}
 export function TransactionControls({setup,mode,onBusyChange,onSaved}:{setup:AccountingSetup;mode:'approvals'|'transaction-locks'|'approval-policy';onBusyChange:(busy:boolean)=>void;onSaved:()=>Promise<void>}){
- const company=setup.company!,year=setup.years.at(-1);
+ const company=setup.company!,year=workingYear(setup,accountingToday());
  const initial={from:year?.start_date??'2026-01-01',to:year?.end_date??'2026-12-31',approval:'all',locked:'all'};
  const [filters,setFilters]=useState(initial),[applied,setApplied]=useState(initial),[page,setPage]=useState(0),[epoch,setEpoch]=useState(0);
  const [rows,setRows]=useState<Entry[]>([]),[count,setCount]=useState(0),[actor,setActor]=useState(''),[selected,setSelected]=useState<string[]>([]);

@@ -1,3 +1,4 @@
+import {numberSearch} from '@/features/accounting/fiscal-context';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { accountingContext } from '@/features/accounting/setup-server';
@@ -37,7 +38,7 @@ export async function GET(request:Request){
   let query=db.from('tw_accounting_journals').select(header,{count:'exact'}).eq('company_id',company).gte('entry_date',from).lte('entry_date',to).order('created_at',{ascending:false}).order('voucher_number',{ascending:false,nullsFirst:false}).order('id').range(page*50,page*50+49);
   if(q.get('workflow'))query=query.eq('workflow',z.enum(['transfer','opening']).parse(q.get('workflow')));
   if(q.get('kind')==='expense')query=query.eq('entry_kind','expense');const status=q.get('status');if(status&&status!=='all')query=query.eq('status',z.enum(['draft','posted','cancelled','pending']).parse(status));
-  const search=z.string().trim().max(120).parse(q.get('search')??'');if(search)query=query.ilike('voucher_number','%'+search.replaceAll('%','\\%').replaceAll('_','\\_')+'%');
+  const search=z.string().trim().max(120).parse(q.get('search')??'');if(search)query=query.ilike('voucher_number',numberSearch(search)??'%'+search.replaceAll('%','\\%').replaceAll('_','\\_')+'%');
   const r=await query;if(r.error)throw new Error(r.error.message);return reply({journals:r.data,count:r.count});
  }catch(e){return reply({error:message(e)},400);}
 }
