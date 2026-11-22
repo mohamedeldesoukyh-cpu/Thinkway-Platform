@@ -235,6 +235,13 @@ function mapVendorAssignmentPaymentRow(
 }
 
 export async function getBillingDashboard(supabase: SupabaseClient): Promise<BillingDashboard> {
+  // Independent of dashboard rollups; catch immediately in case a primary query fails.
+  const queuePromise = loadBillingCampaignQueue(supabase).catch((error) => {
+    devLog("operational-isolation", "billing queue load failed — using line fallback", {
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return { campaigns: [] };
+  });
     const [
     linesResult,
     invoicesResult,
@@ -502,15 +509,7 @@ export async function getBillingDashboard(supabase: SupabaseClient): Promise<Bil
 
   const vendor_batches: VendorPaymentBatchRow[] = [];
 
-  let campaign_queue: BillingDashboard["campaign_queue"] = [];
-  try {
-    const queueResult = await loadBillingCampaignQueue(supabase);
-    campaign_queue = queueResult.campaigns;
-  } catch (error) {
-    devLog("operational-isolation", "billing queue load failed — using line fallback", {
-      message: error instanceof Error ? error.message : String(error),
-    });
-  }
+  let campaign_queue: BillingDashboard["campaign_queue"] = (await queuePromise).campaigns;
 
   if (campaign_queue.length === 0 && lines.length > 0) {
     campaign_queue = buildCampaignQueueFromBillingLines(lines);

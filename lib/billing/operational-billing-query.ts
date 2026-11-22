@@ -1,4 +1,5 @@
 import { loadClientAcceptedLineIds } from "./client-acceptance";
+import { mapBillingCampaigns } from "./map-billing-campaigns";
 import { projectBillingRows, convertMoney } from "./billing-currency";
 import { loadCurrencyRates } from "./billing-currency-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -652,15 +653,17 @@ export async function loadBillingCampaignQueue(
     linesByCampaign.set(line.campaign_header_id, list);
   }
 
-  const campaigns: CampaignBillingQueueRow[] = [];
   const operationalRowsByCampaign = new Map<string, OperationalBillingRow[]>();
   const seenCampaignIds = new Set<string>();
   let operationalErrors = 0;
 
-  for (const header of headers) {
-    if (seenCampaignIds.has(header.id)) continue;
+  const uniqueHeaders = headers.filter((header) => {
+    if (seenCampaignIds.has(header.id)) return false;
     seenCampaignIds.add(header.id);
+    return true;
+  });
 
+  const campaigns = await mapBillingCampaigns(uniqueHeaders, async (header) => {
     const campaignLines = linesByCampaign.get(header.id) ?? [];
     const { operational_rows: nativeRows, groups, error } = await loadCampaignOperationalBilling(
       supabase,
@@ -703,8 +706,7 @@ export async function loadBillingCampaignQueue(
       operationalRowsByCampaign.set(header.id, operational_rows);
     }
 
-    campaigns.push(
-      buildCampaignQueueRow({
+    return buildCampaignQueueRow({
         campaign_header_id: header.id,
         campaign_document_number: header.document_number,
         campaign_name: header.name,
@@ -716,9 +718,8 @@ export async function loadBillingCampaignQueue(
         operational_rows: error ? [] : operational_rows,
         legacy_line_revenue: legacyRevenue,
         legacy_invoiced: legacyInvoiced,
-      })
-    );
-  }
+      });
+  });
 
   const lineRollups = await loadCampaignInvoiceLineRollups(
     supabase,
