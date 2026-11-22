@@ -32,3 +32,10 @@ test('shared auxiliary statement totals use decimal amounts and retain credit si
  assert.equal(credit.closing,'-900719925474100.10');
  assert.equal(money(credit.closing),'-900,719,925,474,100.10');
 });
+
+test('Third Party consolidation offsets advances without merging individual GL balances',()=>{
+ const accounts=[{opening:'100',debit:'0',credit:'20',closing:'80'},{opening:'0',debit:'0',credit:'10',closing:'-10'}];
+ assert.deepEqual(consolidatedStatement(accounts),{opening:'100.00',debit:'0.00',credit:'30.00',closing:'70.00'});
+ assert.deepEqual(accounts.map(a=>a.closing),['80','-10']);
+ assert.deepEqual(consolidatedStatement([{opening:'-100',debit:'40',credit:'0',closing:'-60'},{opening:'0',debit:'10',credit:'0',closing:'10'}]),{opening:'-100.00',debit:'50.00',credit:'0.00',closing:'-50.00'});
+});
