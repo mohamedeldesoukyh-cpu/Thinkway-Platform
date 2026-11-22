@@ -14,7 +14,7 @@ export function AccountingHelp() {
           <tr><td>Ctrl+F</td><td>Search voucher numbers; press Enter to search.</td></tr><tr><td>Ctrl+M</td><td>Open the selected transaction account’s mini statement.</td></tr><tr><td>F2</td><td>Open lookup from an account, auxiliary, currency or Third Party field. Enter a code prefix first to narrow the results.</td></tr>
           <tr><td>Ctrl+S</td><td>Save the current journal, cost invoice or payment preparation. In receipts and payments, run the current save/post action after reviewing the allocation preview.</td></tr>
           <tr><td>Ctrl+P</td><td>Preview the journal or receipt/payment print pages.</td></tr>
-          <tr><td>Ctrl+N</td><td>Add a journal line, or an advance row in a receipt or payment.</td></tr>
+          <tr><td>Tab / Shift+Tab</td><td>Move to the next / previous editable cell; dimmed fields and lookup icons are skipped.</td></tr><tr><td>Ctrl+Enter</td><td>Add a journal line, or an advance row in a receipt or payment. Chrome reserves Ctrl+N for a new window.</td></tr>
           <tr><td>Ctrl+Z</td><td>Undo the latest unsaved JV edit. Undo / Discard in the header restores the last saved JV.</td></tr>
           <tr><td>Ctrl+Y</td><td>Redo an undone JV edit or restore discarded unsaved changes.</td></tr>
           <tr><td>Esc</td><td>Close a lookup or help dialog.</td></tr>

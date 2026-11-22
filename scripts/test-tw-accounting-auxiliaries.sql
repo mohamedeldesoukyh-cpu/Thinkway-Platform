@@ -28,13 +28,13 @@ BEGIN
  {"code":"712001","name":"Realized gain","parent":"400000","type":"Revenue","normal":"Credit","kind":"Posting"},
  {"code":"500000","name":"Expenses","parent":null,"type":"Expense","normal":"Debit","kind":"Group"},
  {"code":"722001","name":"Realized loss","parent":"500000","type":"Expense","normal":"Debit","kind":"Posting"}]');
- UPDATE tw_accounting_accounts SET client_id=customer WHERE company_id=c AND code IN('121001','221001');
+ -- The same client is selected as transaction detail across generic receivable/advance GLs.
  PERFORM tw_accounting_submit_invoice(inv,c);original:=tw_accounting_post_invoice(inv,c,1,'2026-01-15','121001','411001','231001',50.12345678);
  PERFORM tw_accounting_submit_invoice(egp,c);PERFORM tw_accounting_post_invoice(egp,c,1,'2026-01-15','121001','411001',NULL,1);
  UPDATE tw_accounting_companies SET currencies=ARRAY['EGP','USD'] WHERE id=c;
  SELECT id INTO vendor FROM influencers WHERE document_number IS NOT NULL LIMIT 1;
  IF vendor IS NULL THEN RAISE EXCEPTION 'Dev vendor directory unavailable'; END IF;
- UPDATE tw_accounting_accounts SET vendor_id=vendor WHERE company_id=c AND code IN('211001','131001');
+ -- Vendor identity belongs on the journal line, not on the GL account.
  val:=jsonb_build_object('company',c,'kind','receipt','party',customer,'currency','USD','date','2026-02-01','amount','30','cash','111001','control','121001','advance','221001','gain','712001','loss','722001','parent',NULL,'advanceRow',true,'method','bank_transfer','reference','QA multi allocation','lines',jsonb_build_array(jsonb_build_object('id',inv,'amount','20')));
  quote:=tw_accounting_settlement_quote(val);saved:=val;j:=tw_accounting_settlement_post(rv,val,quote);
  IF NOT EXISTS(SELECT 1 FROM tw_accounting_journal_lines WHERE journal_id=j AND description LIKE 'Invoice QA-INV-%') THEN RAISE EXCEPTION 'JV line lost invoice reference';END IF;
@@ -73,7 +73,7 @@ BEGIN
  -- Auxiliary sequences are independent for every GL account.
  IF EXISTS(SELECT 1 FROM tw_accounting_auxiliaries WHERE company_id=c AND account_code IN('121001','211001')) OR EXISTS(SELECT 1 FROM tw_accounting_accounts WHERE company_id=c AND kind='Control' AND has_auxiliary) THEN RAISE EXCEPTION 'Client/vendor account incorrectly has auxiliaries'; END IF;
  blocked:=false;BEGIN UPDATE tw_accounting_accounts SET has_auxiliary=true WHERE company_id=c AND code='121001';EXCEPTION WHEN raise_exception THEN blocked:=true;END;IF NOT blocked THEN RAISE EXCEPTION 'Client auxiliary option accepted';END IF;
- blocked:=false;BEGIN UPDATE tw_accounting_journal_lines SET client_id=gen_random_uuid() WHERE company_id=c AND account_code='121001';EXCEPTION WHEN raise_exception THEN blocked:=true;END;IF NOT blocked THEN RAISE EXCEPTION 'Wrong linked client accepted';END IF;
+ blocked:=false;BEGIN UPDATE tw_accounting_journal_lines SET client_id=gen_random_uuid() WHERE company_id=c AND account_code='121001';EXCEPTION WHEN raise_exception OR foreign_key_violation THEN blocked:=true;END;IF NOT blocked THEN RAISE EXCEPTION 'Wrong linked client accepted';END IF;
  INSERT INTO tw_accounting_accounts(company_id,code,name,parent_code,account_type,normal_balance,kind) VALUES(c,'722002','Auxiliary conversion source','500000','Expense','Debit','Posting'),(c,'722003','Temporary move account','500000','Expense','Debit','Posting');
  j:=gen_random_uuid();j2:=gen_random_uuid();
  val:='[{"account":"722002","description":"Move fixture","debit":"10","credit":"0"},{"account":"111001","description":"Cash","debit":"0","credit":"10"}]';
@@ -112,7 +112,7 @@ BEGIN
  IF (SELECT last_number FROM tw_accounting_auxiliary_sequences WHERE company_id=c AND account_code='722002')<>11 THEN RAISE EXCEPTION 'Lower custom number moved sequence';END IF;
  blocked:=false;BEGIN PERFORM tw_accounting_auxiliary_save_numbered(c,'722002',NULL,NULL,'Duplicate ten',true,NULL,NULL,10);EXCEPTION WHEN raise_exception THEN blocked:=true;END;IF NOT blocked THEN RAISE EXCEPTION 'Duplicate auxiliary number accepted';END IF;
  blocked:=false;BEGIN PERFORM tw_accounting_auxiliary_save_numbered(c,'121001',NULL,NULL,'Not allowed',true,customer,NULL,1);EXCEPTION WHEN raise_exception THEN blocked:=true;END;IF NOT blocked THEN RAISE EXCEPTION 'Client auxiliary creation accepted';END IF;
- RAISE NOTICE 'PASS: direct client/vendor accounts, editable auxiliary numbers, duplicate rejection, sequence continuity and linked account moves';
+ RAISE NOTICE 'PASS: shared client/vendor detail, editable auxiliary numbers, duplicate rejection, sequence continuity and linked account moves';
  -- Mixed-currency Expenses entry: foreign amount and exact local equivalent.
  j:=gen_random_uuid();
  val:='[{"account":"722001","parentAccount":"500000","lineCurrency":"USD","lineRate":"50.12345678","foreignDebit":"10","foreignCredit":"0","debit":"501.23","credit":"0","description":"Foreign expense"},{"account":"111001","lineCurrency":"EGP","foreignDebit":"0","foreignCredit":"501.23","debit":"0","credit":"501.23","description":"Cash counter"}]';
