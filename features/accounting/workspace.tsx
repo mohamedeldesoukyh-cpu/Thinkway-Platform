@@ -1,12 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { ModuleSignOut } from "@/components/layout/module-sign-out";
 import { BookOpen, ChevronDown, ChevronRight, Download, FolderTree, Search, ShieldCheck, X, Layers3, ArrowLeftRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { accountingGroups, visibleAccountingNavigation, type AccountingView, type NavigationLanguage } from "./navigation";
 import { chartCsv, isWithin, type Account } from "./chart";
 
-export function AccountingWorkspace({accounts, companyName, controls, showChart, canMedia, onEdit, sectionTitle, onNavigate}: {accounts: (Account & {active?:boolean})[]; companyName:string; controls:React.ReactNode; showChart:boolean; canMedia:boolean; onEdit?:(account:Account)=>void;sectionTitle:string;onNavigate:(view:string)=>void}) {
+export function AccountingWorkspace({accounts, companyName, controls, showChart, canMedia, onEdit, sectionTitle, onNavigate, activeView, canAdmin}: {accounts: (Account & {active?:boolean})[]; companyName:string; controls:React.ReactNode; showChart:boolean; canMedia:boolean; onEdit?:(account:Account)=>void;sectionTitle:string;activeView:AccountingView;canAdmin:boolean;onNavigate:(view:string)=>void}) {
+  const [language, setLanguage] = useState<NavigationLanguage>('en');
+  const [mobileNavigation, setMobileNavigation] = useState(false);
+  const navigationToggle = useRef<HTMLButtonElement>(null);
+  const navigationItems = visibleAccountingNavigation({accounting:true,admin:canAdmin});
+  const activeItem = navigationItems.find(item=>item.view===activeView);
+  const activeGroup = accountingGroups.find(group=>group.id===activeItem?.parent);
+  const [groupState, setGroupState] = useState<{view:AccountingView; open:string[]}>({view:activeView,open:activeGroup?[activeGroup.id]:[]});
+  // Expand only after a successful view change; preserve the existing dirty-journal guard.
+  if(groupState.view!==activeView) setGroupState({view:activeView,open:[...new Set([...groupState.open,...(activeGroup?[activeGroup.id]:[])])]});
+  const arabic = language==='ar';
   const [query, setQuery] = useState("");
   const [branch, setBranch] = useState("all");
   const [kind, setKind] = useState("all");
@@ -35,8 +46,22 @@ export function AccountingWorkspace({accounts, companyName, controls, showChart,
   }
   return <div className="tw-accounting">
     <header className="tw-ac-topbar"><Link href="/accounting" className="tw-ac-brand"><span className="tw-ac-monogram">tw<span>.</span></span><span>Accounting<small>THINKWAY WORKSPACE</small></span></Link><div className="tw-ac-topbar-right"><span className="tw-ac-review">{companyName}</span>{canMedia && <Link className="tw-ac-switch" href="/modules"><ArrowLeftRight size={16} /> Switch module</Link>}<ModuleSignOut /></div></header>
-    <div className="tw-ac-body"><aside className="tw-ac-sidebar" aria-label="Accounting navigation"><div className="tw-ac-sidebar-label">WORKSPACE</div><nav className="tw-ac-section-nav">{[["parties","Third Parties"],["mapping","System Mapping"],["auxiliaries","Auxiliaries"],["moves","Move transactions"],["expenses","Expenses"],["statements","Statements"],["costs","Cost invoices"],["payments","Payments & allocations"],["receipts","Receipts & collections"],["invoices","Platform invoices"],["journals","Journal vouchers"],["ledger","General ledger"],["trial","Trial balance"],["chart","Chart of accounts"],["periods","Period controls"]].map(([view,label])=><button key={view} className={sectionTitle===label?"tw-ac-nav-active":""} aria-current={sectionTitle===label?"page":undefined} onClick={()=>onNavigate(view)}>{label}</button>)}</nav><div className="tw-ac-sidebar-label tw-ac-upcoming">NEXT IN ACCOUNTING</div><ul className="tw-ac-roadmap"><li>Bank reconciliation</li><li>Financial reports</li><li>Year-end closing</li></ul><div className="tw-ac-sidebar-note"><ShieldCheck size={20} /><strong>Finance workspace</strong><p>Access follows your assigned accounting permissions.</p></div></aside>
-    <main className="tw-ac-main"><div className="tw-ac-breadcrumb">Accounting <ChevronRight size={13} /> General ledger <ChevronRight size={13} /> <span>{sectionTitle}</span></div>
+    <div className="tw-ac-navigation-bar" dir={arabic?'rtl':'ltr'}>
+      <button ref={navigationToggle} className="tw-ac-button tw-ac-mobile-navigation" aria-expanded={mobileNavigation} aria-controls="accounting-navigation" onClick={()=>setMobileNavigation(!mobileNavigation)}><PanelLeftOpen size={18}/>{arabic?'القائمة':'Menu'}</button>
+      <div className="tw-ac-language" aria-label="Navigation language"><button lang="en" aria-pressed={!arabic} onClick={()=>setLanguage('en')}>English</button><button lang="ar" aria-pressed={arabic} onClick={()=>setLanguage('ar')}>العربية</button></div>
+    </div>
+    <div className="tw-ac-body" dir={arabic?'rtl':'ltr'}><aside id="accounting-navigation" className={'tw-ac-sidebar tw-ac-grouped-sidebar '+(mobileNavigation?'is-open':'')} lang={language} aria-label={arabic?'التنقل المحاسبي':'Accounting navigation'} onKeyDown={e=>{if(e.key==='Escape'){setMobileNavigation(false);navigationToggle.current?.focus();}}}>
+      <nav className="tw-ac-grouped-navigation">{accountingGroups.map(group=>{
+        const items=navigationItems.filter(item=>item.parent===group.id);
+        if(group.id==='administration'&&!canAdmin)return null;
+        const open=groupState.open.includes(group.id);
+        return <section key={group.id} className={activeGroup?.id===group.id?'is-current-group':''}>
+          {items.length?<><button className="tw-ac-group-heading" aria-expanded={open} aria-controls={'accounting-group-'+group.id} onClick={()=>setGroupState({view:activeView,open:open?groupState.open.filter(id=>id!==group.id):[...groupState.open,group.id]})}><FolderTree size={16}/><span>{group[language]}</span>{open?<ChevronDown size={16}/>:<ChevronRight size={16} className="tw-ac-direction-chevron"/>}</button><ul id={'accounting-group-'+group.id} hidden={!open}>{items.map(item=><li key={item.id}><button aria-current={activeView===item.view?'page':undefined} onClick={()=>{onNavigate(item.view!);setMobileNavigation(false);}}>{item[language]}</button></li>)}</ul></>:<div className="tw-ac-planned-group"><FolderTree size={16}/><span>{group[language]}</span><small>{arabic?'مخطط':'Planned'}</small></div>}
+        </section>;
+      })}</nav>
+      <div className="tw-ac-sidebar-note"><ShieldCheck size={20}/><strong>{arabic?'مساحة المالية':'Finance workspace'}</strong><p>{arabic?'يخضع الوصول للصلاحيات المحاسبية المخصصة لك.':'Access follows your assigned accounting permissions.'}</p></div>
+    </aside>
+    <main className="tw-ac-main" dir="ltr"><div className="tw-ac-breadcrumb" dir={arabic?'rtl':'ltr'} lang={language}>{arabic?'المحاسبة':'Accounting'} <ChevronRight size={13}/> {activeGroup?.[language]} <ChevronRight size={13}/> <span>{activeItem?.[language]??sectionTitle}</span></div>
     <div className="tw-ac-title-row"><div><div className="tw-ac-eyebrow">THE FOUNDATION OF YOUR BOOKS</div><h1>{sectionTitle}</h1><p>Clear accounts, balanced journals and traceable transactions.</p></div>{showChart && <button className="tw-ac-button" onClick={exportChart}><Download size={16} /> Export CSV</button>}</div>
     {controls}
     {showChart && <><div className="tw-ac-summary"><div><Layers3 size={18} /><span><strong>{roots.length}</strong> account classes</span></div><div><FolderTree size={18} /><span><strong>{groups.length}</strong> summary groups</span></div><div><BookOpen size={18} /><span><strong>{leaves.length}</strong> detail accounts</span></div><span className="tw-ac-summary-note">Six-digit account codes</span></div>
