@@ -1,7 +1,7 @@
 -- Development only. All data, source numbers and journal counters roll back.
 BEGIN;
 DO $$
-DECLARE prep_cancel uuid:=gen_random_uuid();bank_profile uuid:=gen_random_uuid();bank_statement uuid:=gen_random_uuid();before_count integer;bank_line integer;actor uuid; viewer uuid; customer uuid:=gen_random_uuid(); inv uuid:=gen_random_uuid(); egp uuid:=gen_random_uuid(); c uuid; j uuid; j2 uuid; original uuid; p uuid; rev uuid; req uuid:=gen_random_uuid(); q jsonb; blocked boolean; period uuid; vendor uuid; val jsonb; quote jsonb; rv uuid:=gen_random_uuid(); av uuid:=gen_random_uuid(); cost uuid:=gen_random_uuid(); pv uuid:=gen_random_uuid(); saved jsonb;
+DECLARE serial_before bigint; journal_count_before integer; prep_cancel uuid:=gen_random_uuid();bank_profile uuid:=gen_random_uuid();bank_statement uuid:=gen_random_uuid();before_count integer;bank_line integer;actor uuid; viewer uuid; customer uuid:=gen_random_uuid(); inv uuid:=gen_random_uuid(); egp uuid:=gen_random_uuid(); c uuid; j uuid; j2 uuid; original uuid; p uuid; rev uuid; req uuid:=gen_random_uuid(); q jsonb; blocked boolean; period uuid; vendor uuid; val jsonb; quote jsonb; rv uuid:=gen_random_uuid(); av uuid:=gen_random_uuid(); cost uuid:=gen_random_uuid(); pv uuid:=gen_random_uuid(); saved jsonb;
 BEGIN
  SELECT p.id INTO actor FROM profiles p JOIN roles r ON r.id=p.role_id WHERE r.slug='super_admin' AND p.is_active LIMIT 1;
  SELECT p.id INTO viewer FROM profiles p JOIN roles r ON r.id=p.role_id WHERE r.slug='viewer' AND p.is_active AND NOT EXISTS(SELECT 1 FROM client_users WHERE profile_id=p.id) AND NOT EXISTS(SELECT 1 FROM influencers WHERE profile_id=p.id) LIMIT 1;
@@ -33,10 +33,15 @@ BEGIN
  UPDATE tw_accounting_companies SET currencies=ARRAY['EGP','USD'] WHERE id=c;
  SELECT id INTO vendor FROM influencers WHERE document_number IS NOT NULL LIMIT 1;
  IF vendor IS NULL THEN RAISE EXCEPTION 'Dev vendor directory unavailable'; END IF;
- val:=jsonb_build_object('company',c,'kind','receipt','party',customer,'currency','USD','date','2026-02-01','amount','30','cash','111001','control','121001','advance','221001','gain','712001','loss','722001','parent',NULL,'advanceRow',true,'method','bank_transfer','reference','QA multi allocation','lines',jsonb_build_array(jsonb_build_object('id',inv,'amount','20')));
+ val:=jsonb_build_object('company',c,'kind','receipt','party',customer,'currency','USD','date','2026-02-01','amount','30','cash','111001','control','121001','advance','221001','gain','712001','loss','722001','parent',NULL,'advanceRow',true,'method','bank_transfer','bank','QA Dev Bank','instrumentNumber','TRF-QA-001','maturity','','reference','QA multi allocation','lines',jsonb_build_array(jsonb_build_object('id',inv,'amount','20')));
  quote:=tw_accounting_settlement_quote(val);saved:=val;j:=tw_accounting_settlement_post(rv,val,quote);
  IF NOT EXISTS(SELECT 1 FROM tw_accounting_journal_lines WHERE journal_id=j AND description LIKE 'Invoice QA-INV-%') THEN RAISE EXCEPTION 'JV line lost invoice reference';END IF;
+ IF NOT EXISTS(SELECT 1 FROM tw_accounting_settlements WHERE journal_id=j AND request->'value'->>'bank'='QA Dev Bank' AND request->'value'->>'instrumentNumber'='TRF-QA-001' AND request->'value'->>'maturity'='') THEN RAISE EXCEPTION 'Bank or transfer details lost';END IF;
+ SELECT last_number INTO serial_before FROM tw_accounting_journal_sequences WHERE company_id=c AND fiscal_year=2026;
+ SELECT count(*) INTO journal_count_before FROM tw_accounting_journals WHERE company_id=c;
  IF tw_accounting_settlement_post(rv,val,quote)<>j THEN RAISE EXCEPTION 'Voucher retry duplicated'; END IF;
+ IF (SELECT last_number FROM tw_accounting_journal_sequences WHERE company_id=c AND fiscal_year=2026)<>serial_before OR (SELECT count(*) FROM tw_accounting_journals WHERE company_id=c)<>journal_count_before THEN RAISE EXCEPTION 'Receipt retry consumed JV serial or duplicated journal';END IF;
+ IF NOT EXISTS(SELECT 1 FROM tw_accounting_voucher_register WHERE id=rv AND journal_id=j AND voucher_number=(SELECT voucher_number FROM tw_accounting_journals WHERE id=j)) THEN RAISE EXCEPTION 'Receipt register is not linked to its original JV';END IF;
  IF (SELECT amount_paid FROM invoices WHERE id=inv)<>20 OR (SELECT count(*) FROM tw_accounting_journal_lines WHERE journal_id=j)<>4 THEN RAISE EXCEPTION 'Receipt/advance journal incorrect'; END IF;
  IF NOT EXISTS(SELECT 1 FROM payments p JOIN tw_accounting_settlement_payments m ON m.payment_id=p.id WHERE m.settlement_id=rv AND m.is_advance AND p.amount=10 AND p.invoice_id IS NULL) THEN RAISE EXCEPTION 'Advance missing from Media'; END IF;
  q:=tw_accounting_receipt_quote(inv,c,20,'2026-02-01');IF (q->>'settled')::numeric<>20 THEN RAISE EXCEPTION 'Stage 5 quote ignored new settlements'; END IF;
@@ -73,7 +78,10 @@ BEGIN
  blocked:=false;BEGIN PERFORM tw_accounting_payment_prepare(c,'post',pv,1,val,quote||jsonb_build_object('rate','999'));EXCEPTION WHEN OTHERS THEN blocked:=true;END;
  IF NOT blocked OR (SELECT version FROM tw_accounting_payment_preparations WHERE id=pv)<>1 THEN RAISE EXCEPTION 'Stale quote changed preparation';END IF;
  PERFORM tw_accounting_payment_prepare(c,'post',pv,1,val,quote);
+ SELECT last_number INTO serial_before FROM tw_accounting_journal_sequences WHERE company_id=c AND fiscal_year=2026;
+ SELECT count(*) INTO journal_count_before FROM tw_accounting_journals WHERE company_id=c;
  PERFORM tw_accounting_payment_prepare(c,'post',pv,1,val,quote);
+ IF (SELECT last_number FROM tw_accounting_journal_sequences WHERE company_id=c AND fiscal_year=2026)<>serial_before OR (SELECT count(*) FROM tw_accounting_journals WHERE company_id=c)<>journal_count_before THEN RAISE EXCEPTION 'Payment retry consumed JV serial or duplicated journal';END IF;
  IF (SELECT status FROM tw_accounting_payment_preparations WHERE id=pv)<>'posted' OR (SELECT count(*) FROM tw_accounting_settlements WHERE id=pv)<>1 THEN RAISE EXCEPTION 'Prepared payment retry duplicated';END IF;
  IF (tw_accounting_cheques(c)->>'count')::integer<>1 THEN RAISE EXCEPTION 'Cheque register missing payment';END IF;
  PERFORM tw_accounting_bank_action(c,'bank-save',jsonb_build_object('id',bank_profile,'name','QA USD bank','account','111001','auxiliary','','currency','USD','reference','QA ONLY','active',true));

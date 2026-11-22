@@ -13,7 +13,7 @@ export const accountingGroups = [
   {id:'settings',en:'Settings',ar:'الإعدادات'},
 ] as const;
 export type AccountingGroup = typeof accountingGroups[number]['id'];
-export type AccountingView = 'closing'|'audit-viewer'|'budget-setup'|'budget-control'|'budget-reports'|'financial-statements'|'aging'|'payment-preparation'|'cheques'|'banks'|'reconciliation'|'bank-movements'|'recurring'|'scheduled-reversal'|'opening'|'transfers'|'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
+export type AccountingView = 'customer-advances'|'vendor-advances'|'balance-sheet'|'cash-flow'|'vendor-aging'|'auxiliary-statements'|'client-statements'|'vendor-statements'|'unsettled-receivables'|'unsettled-payables'|'closing'|'audit-viewer'|'budget-setup'|'budget-control'|'budget-reports'|'financial-statements'|'aging'|'payment-preparation'|'cheques'|'banks'|'reconciliation'|'bank-movements'|'recurring'|'scheduled-reversal'|'opening'|'transfers'|'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
 export type NavigationItem = {
   id:string; parent:AccountingGroup; en:string; ar:string; status:'Ready'|'Partial'|'Pending';
   view?:AccountingView; route?:string; permission:'accounting'|'admin'; navigation:boolean; evidence:string;
@@ -29,8 +29,10 @@ export const accountingNavigation:readonly NavigationItem[] = [
   ready('invoices','transactions','Platform invoice posting','ترحيل فواتير المنصة','InvoiceDesk: Media invoices, post/unpost/repost; creation stays in Media.'),
   ready('costs','transactions','Cost invoices','فواتير التكلفة','CostInvoiceDesk: supplier and internal provisional invoices.'),
   ready('moves','transactions','Transaction reclassification','إعادة تصنيف المعاملات','AccountMoves: move existing transactions; not a new transfer voucher.'),
-  ready('receipts','receipts','Receipts & advance allocation','المقبوضات وتخصيص الدفعات المقدمة','SettlementDesk receipt: allocations, advances, reversal and printing.'),
-  ready('payments','payments','Payments & advance allocation','المدفوعات وتخصيص الدفعات المقدمة','SettlementDesk payment: vendor allocations, advances and reversal.'),
+  ready('receipts','receipts','Receipts','المقبوضات وتخصيص الدفعات المقدمة','SettlementDesk receipt: allocations, advances, reversal and printing.'),
+  ready('customer-advances','receipts','Customer Advance Allocation','تخصيص الدفعات المقدمة للعملاء','SettlementDesk advances-only client register and allocation workflow.'),
+  ready('vendor-advances','payments','Vendor Advance Allocation','تخصيص الدفعات المقدمة للموردين','SettlementDesk advances-only vendor register and allocation workflow.'),
+  ready('payments','payments','Payments','المدفوعات وتخصيص الدفعات المقدمة','SettlementDesk payment: vendor allocations, advances and reversal.'),
   ready('parties','third-parties','Clients','العملاء','PartyAccountsDesk client preset; shared Media identities.'),
   ready('vendors','third-parties','Vendors / creators','الموردون وصناع المحتوى','PartyAccountsDesk vendor preset; assignment vendors only.'),
   ready('chart','general-ledger','Chart of accounts','دليل الحسابات','AccountingConsole account setup and chart.'),
@@ -39,7 +41,15 @@ export const accountingNavigation:readonly NavigationItem[] = [
   ready('periods','general-ledger','Accounting periods & locks','الفترات المحاسبية وإقفالها','JournalDesk periods: period locking/unlocking, not individual locks.'),
   ready('ledger','reports','General ledger','الأستاذ العام','JournalDesk ledger: posted GL entries.'),
   ready('trial','reports','Trial balance','ميزان المراجعة','JournalDesk trial: posted debit/credit balances.'),
-  ready('statements','reports','Account, auxiliary & Third Party statements','كشوف الحسابات والحسابات المساعدة والأطراف','StatementDesk: GL, auxiliary, client/vendor, consolidated and unsettled views.'),
+  ready('statements','reports','Statement of Account','كشوف الحسابات والحسابات المساعدة والأطراف','StatementDesk: GL, auxiliary, client/vendor, consolidated and unsettled views.'),
+  ready('auxiliary-statements','reports','Auxiliary Statement','كشف الحساب المساعد','StatementDesk auxiliary preset with shared identity consolidation.'),
+  ready('client-statements','reports','Third Party Statement — Clients','كشف الطرف الثالث — العملاء','StatementDesk client preset across compatible GL accounts.'),
+  ready('vendor-statements','reports','Third Party Statement — Vendors','كشف الطرف الثالث — الموردون','StatementDesk vendor preset across compatible GL accounts.'),
+  ready('unsettled-receivables','reports','Unsettled Receivables','الفواتير المدينة غير المسددة','StatementDesk open client invoices.'),
+  ready('unsettled-payables','reports','Unsettled Payables','الفواتير الدائنة غير المسددة','StatementDesk open vendor invoices.'),
+  ready('balance-sheet','reports','Balance Sheet','الميزانية العمومية','FinancialReports balance preset.'),
+  ready('cash-flow','reports','Cash Flow','التدفقات النقدية','FinancialReports cash preset.'),
+  ready('vendor-aging','reports','Vendor Aging','أعمار أرصدة الموردين','FinancialReports vendor aging preset.'),
   ready('users','administration','Module access rights','صلاحيات الوحدات','AccountingConsole existing admin-only module access editor.','admin'),
   ready('company','settings','Company & base currency','الشركة والعملة الأساسية','AccountingConsole company configuration; exchange rates remain shared Media settings.'),
   ready('mapping','settings','Media posting mappings','ربط ترحيلات المنصة','MappingDesk: revenue, costs, AF, UR, VAT, AR/AP, advances, FX and reserved mappings.'),
@@ -57,8 +67,8 @@ export const accountingNavigation:readonly NavigationItem[] = [
   ready('bank-movements','banking','Cash and bank movements','حركة النقدية والبنوك','Bank-currency and local-currency posted movements with reconciliation status.'),
   ready('budget-setup','budgets','Budget setup & allocation','إعداد وتوزيع الموازنة','Monthly GL budget allocations with audited revisions.'),
   ready('budget-control','budgets','Budget control & variance','رقابة الموازنة وتحليل الانحرافات','Posted actuals and favorable/unfavorable variance.'),
-  ready('financial-statements','reports','Profit & loss, balance sheet, cash flow','الأرباح والخسائر والميزانية والتدفقات النقدية','Posted GL financial statements, explicit unclosed earnings and cash-flow classifications.'),
-  ready('aging','reports','Client / vendor aging','أعمار أرصدة العملاء والموردين','Current all-party or selected-party aging by due date and currency.'),
+  ready('financial-statements','reports','Profit & Loss','الأرباح والخسائر والميزانية والتدفقات النقدية','Posted GL financial statements, explicit unclosed earnings and cash-flow classifications.'),
+  ready('aging','reports','Client Aging','أعمار أرصدة العملاء والموردين','Current all-party or selected-party aging by due date and currency.'),
   ready('budget-reports','reports','Budget reports','تقارير الموازنة','Monthly saved budget and actual CSV reports.'),
   ready('closing','general-ledger','Fiscal year closing','إقفال السنة المالية','Preview, administrator close, protected periods and reversal-based reopen.'),
   ready('audit-viewer','administration','Audit logs & activity history','سجل التدقيق والنشاط','Company audit search and before/after history.','admin'),

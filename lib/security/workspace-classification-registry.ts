@@ -162,6 +162,7 @@ export const SERVER_ACTION_MODULE_CLASSIFICATIONS: Record<string, WorkspaceClass
   "features/client-access": "internal_workspace",
   "features/settings": "internal_workspace",
   "features/finance": "internal_workspace",
+  "features/accounting": "internal_workspace",
   "features/creator-payments": "internal_workspace",
   "features/billing": "internal_workspace",
   "features/collections": "internal_workspace",

@@ -3,7 +3,7 @@ export type Party={id:string;code:string;name:string};
 export type OpenItem={id:string;number:string;date:string;due:string|null;total:string;settled:string;outstanding:string;currency:string;account:string;status?:string};
 export type Allocation={id:string;amount:string};
 export type SettlementQuote={currency:string;base:string;rate:string;date:string;amount:string;cash:string;allocated:string;carrying:string;advance:string;advanceBase:string;gain:string;lines:{id:string;number:string;amount:string;base:string}[]};
-export type Voucher={id:string;kind:string;client_id:string|null;vendor_id:string|null;party_code:string;party_name:string;number:string;date:string;currency:string;amount:string|number;control_account:string;advance_account:string;advance_remaining:string;status:string;voucher_number:string;parent_id:string|null;request:{quote:SettlementQuote;value:Record<string,unknown>}};
+export type Voucher={journal_id:string;id:string;kind:string;client_id:string|null;vendor_id:string|null;party_code:string;party_name:string;number:string;date:string;currency:string;amount:string|number;control_account:string;advance_account:string;advance_remaining:string;status:string;voucher_number:string;parent_id:string|null;request:{quote:SettlementQuote;value:Record<string,unknown>}};
 export function automaticAllocation(amount:string,items:OpenItem[]):Allocation[]{
  let left=cents(amount);if(left<=BigInt(0))throw new Error('Enter a positive voucher amount');
  const sorted=[...items].sort((a,b)=>(a.due??'9999-12-31').localeCompare(b.due??'9999-12-31')||a.date.localeCompare(b.date)||a.number.localeCompare(b.number)||a.id.localeCompare(b.id));

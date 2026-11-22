@@ -15,11 +15,11 @@ export function AuxiliaryDesk({setup,onBusyChange,onOpenAccount,accountEditorOpe
 }
 export type Auxiliary={id:string;number:number;name:string;active:boolean;version:number;client_id:string|null;vendor_id:string|null};
 export function AuxiliaryFields({company,accounts,codes,value,onChange}:{company:string;accounts:SavedAccount[];codes:string[];value:Record<string,string>;onChange:(value:Record<string,string>)=>void}){return <>{[...new Set(codes)].map(code=>{const a=accounts.find(a=>a.code===code);return a?.hasAuxiliary&&a.kind==='Posting'?<label key={code}>{a.name} auxiliary<AuxiliaryLookup company={company} account={code} value={value[code]??''} onChange={id=>onChange({...value,[code]:id})}/></label>:null;})}</>;}
-export function AuxiliaryLookup({company,account,value,onChange,disabled=false}:{company:string;account:string;value:string;onChange:(id:string)=>void;disabled?:boolean}){
+export function AuxiliaryLookup({company,account,value,onChange,disabled=false,required=true}:{company:string;account:string;value:string;onChange:(id:string)=>void;disabled?:boolean;required?:boolean}){
  const [rows,setRows]=useState<Auxiliary[]>([]),[typed,setTyped]=useState(''),[error,setError]=useState('');
  useEffect(()=>{const a=new AbortController();void accountingRead({mode:'auxiliaries',company,account},a.signal).then(setRows).catch(e=>{if(!a.signal.aborted)setError(e.message);});return()=>a.abort();},[company,account]);
  const current=rows.find(r=>r.id===value);
- return <><CodeLookup label={`Auxiliary for ${account}`} value={current?String(current.number):typed} options={rows.filter(r=>r.active||r.id===value).map(r=>({code:String(r.number),name:r.name}))} disabled={disabled} onChange={code=>{setTyped(code);onChange(rows.find(r=>String(r.number)===code)?.id??'');}}/>{error&&<small role="alert">{error}</small>}</>;
+ return <><CodeLookup required={required} label={`Auxiliary for ${account}`} value={current?String(current.number):typed} options={rows.filter(r=>r.active||r.id===value).map(r=>({code:String(r.number),name:r.name}))} disabled={disabled} onChange={code=>{setTyped(code);onChange(rows.find(r=>String(r.number)===code)?.id??'');}}/>{required&&!value&&<small>Auxiliary required</small>}{error&&<small role="alert">{error}</small>}</>;
 }
 export function AuxiliaryManager({company,account,manage,onBusyChange}:{company:string;account:SavedAccount;manage:boolean;onBusyChange?:(busy:boolean)=>void}){
  const [rows,setRows]=useState<Auxiliary[]>([]),[epoch,setEpoch]=useState(0),[number,setNumber]=useState(''),[loading,setLoading]=useState(true),[name,setName]=useState(''),[party,setParty]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
