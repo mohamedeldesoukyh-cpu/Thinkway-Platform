@@ -1,4 +1,5 @@
 import {cents,decimal} from './journal-model';
+export const BANK_CSV_TEMPLATE='date,reference,description,amount\r\n2026-01-05,BANK-REF,Receipt,100.00\r\n2026-01-06,BANK-REF-2,Payment,-30.00\r\n';
 export type Bank={id:string;name:string;account_code:string;auxiliary_id:string|null;currency:string;bank_reference:string;active:boolean;version:number};
 export type BankRow={id:string;row_number:number;entry_date:string;reference:string;description:string;amount:string;match_id:string|null};
 export type BankStatement={id:string;bank_id:string;reference:string;from_date:string;to_date:string;opening:string;closing:string;status:'open'|'closed'|'void';version:number};

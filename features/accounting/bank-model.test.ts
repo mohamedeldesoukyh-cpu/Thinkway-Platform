@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {parseBankCsv,bankSelectionTotal} from './bank-model';
+import {BANK_CSV_TEMPLATE,parseBankCsv,bankSelectionTotal} from './bank-model';
 test('bank CSV preserves signed amounts and quoted references/descriptions',()=>{
  const rows=parseBankCsv('\uFEFFdate,reference,description,amount\r\n2026-01-05,"Ref, 1","Bank ""receipt""\ncontinued",100.10\r\n2026-01-06,P1,Payment,-30.05\r\n');
  assert.deepEqual(rows[0],{date:'2026-01-05',reference:'Ref, 1',description:'Bank "receipt"\ncontinued',amount:'100.10'});
@@ -16,3 +16,5 @@ test('reconciliation selection arithmetic remains exact',()=>{
  assert.equal(bankSelectionTotal(['999999999999.99','-999999999999.98']),'0.01');
  assert.equal(bankSelectionTotal(['100.10','-100.10']),'0.00');
 });
+
+test('downloaded bank template imports without spreadsheet escaping artifacts',()=>{const rows=parseBankCsv(BANK_CSV_TEMPLATE);assert.equal(rows.length,2);assert.equal(bankSelectionTotal(rows.map(r=>r.amount)),'70.00');});
