@@ -1401,5 +1401,15 @@
       "features/accounting/journal-desk.tsx",
       "features/accounting/settlement-desk.tsx"
     ]
+  },
+  {
+    "file": "features/accounting/formatted-report-preview.tsx",
+    "parents": [
+      "features/accounting/statement-desk.tsx",
+      "features/accounting/voucher-preview.tsx",
+      "features/accounting/financial-reports.tsx",
+      "features/accounting/budget-desk.tsx",
+      "features/accounting/journal-desk.tsx"
+    ]
   }
 ]

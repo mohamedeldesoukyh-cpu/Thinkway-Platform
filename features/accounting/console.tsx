@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { accountingNavigation, type AccountingView } from "./navigation";
 import { AccountingWorkspace } from "./workspace";
@@ -27,6 +27,9 @@ const emptyAccount: SavedAccount = {code:"",name:"",nameAr:"",parent:"",type:"As
 export function AccountingConsole({initial}:{initial:AccountingSetup}) {
   const [data,setData] = useState(initial);
   const [view,setCurrentView] = useState<View>(initial.company ? "chart" : "company");
+  const [viewRestored,setViewRestored]=useState(false);
+  useEffect(()=>{const requested=window.location.hash.slice(1);const item=accountingNavigation.find(i=>i.view===requested&&i.navigation&&i.status==='Ready'&&(i.permission!=='admin'||initial.access.admin));if(item?.view&&initial.company)setCurrentView(item.view);setViewRestored(true);},[initial.access.admin,initial.company]);
+  useEffect(()=>{if(viewRestored){const url=new URL(window.location.href);url.hash=view;if(data.company)url.searchParams.set('company',data.company.id);window.history.replaceState(window.history.state,'',url);}},[view,viewRestored,data.company]);
   const [journalDirty,setJournalDirty] = useState(false);
   const [journalBusy,setJournalBusy] = useState(false);
   const [journalEpoch,setJournalEpoch] = useState(0);
