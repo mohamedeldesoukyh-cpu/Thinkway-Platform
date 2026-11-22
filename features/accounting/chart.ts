@@ -15,13 +15,13 @@ const sections: [string, string, AccountType, [string, string, string[]][]][] = 
     ["110000", "Cash and banks", ["111001|Petty Cash", "112001|Main Operating Bank", "112002|Foreign Currency Bank", "113001|Transfers in Transit"]],
     ["120000", "Receivables", ["121001|Trade Accounts Receivable|Customer", "122001|Unbilled Revenue / Contract Assets|Customer", "123001|Allowance for Credit Losses||Credit"]],
     ["130000", "Advances and prepayments", ["131001|Supplier and Creator Advances|Supplier / creator", "132001|Staff Advances|Employee", "133001|Prepaid Expenses", "134001|Refundable Deposits"]],
-    ["140000", "Recoverable taxes", ["141001|Recoverable Input VAT", "142001|Customer Withholding Tax Receivable|Customer"]],
+    ["140000", "Recoverable taxes", ["141001|Recoverable Input VAT|Supplier / creator", "142001|Customer Withholding Tax Receivable|Customer"]],
     ["150000", "Fixed assets", ["151001|Computers and Equipment", "152001|Furniture and Fixtures", "153001|Vehicles", "154001|Leasehold Improvements", "159001|Accumulated Depreciation — Computers||Credit", "159002|Accumulated Depreciation — Furniture||Credit", "159003|Accumulated Depreciation — Vehicles||Credit", "159004|Accumulated Depreciation — Leasehold Improvements||Credit"]],
   ]],
   ["200000", "Liabilities", "Liability", [
     ["210000", "Payables", ["211001|Trade Accounts Payable|Supplier / creator", "212001|Accrued Campaign Costs", "213001|Accrued Operating Expenses"]],
     ["220000", "Customer advances", ["221001|Customer Advances / Deferred Revenue|Customer"]],
-    ["230000", "Taxes payable", ["231001|Output VAT", "232001|Supplier Withholding Tax Payable|Supplier / creator", "233001|Payroll Tax Payable", "234001|Social Insurance Payable", "235001|Corporate Income Tax Payable"]],
+    ["230000", "Taxes payable", ["231001|Output VAT|Customer", "232001|Supplier Withholding Tax Payable|Supplier / creator", "233001|Payroll Tax Payable", "234001|Social Insurance Payable", "235001|Corporate Income Tax Payable"]],
     ["240000", "Other liabilities", ["241001|Salaries Payable", "242001|Employee Reimbursements Payable|Employee", "243001|Loans Payable"]],
   ]],
   ["300000", "Equity", "Equity", [
