@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import Link from "next/link";
 import { ModuleSignOut } from "@/components/layout/module-sign-out";
+import { AccountingHelp } from './help';
 import { BookOpen, ChevronDown, ChevronRight, Download, FolderTree, Search, ShieldCheck, X, Layers3, ArrowLeftRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { accountingGroups, visibleAccountingNavigation, type AccountingView, type NavigationLanguage } from "./navigation";
 import { chartCsv, isWithin, type Account } from "./chart";
@@ -45,7 +46,7 @@ export function AccountingWorkspace({accounts, companyName, controls, showChart,
     </div>{open && children.length > 0 && <ul>{children.map(a => treeNode(a, level + 1))}</ul>}</li>;
   }
   return <div className="tw-accounting">
-    <header className="tw-ac-topbar"><Link href="/accounting" className="tw-ac-brand"><span className="tw-ac-monogram">tw<span>.</span></span><span>Accounting<small>THINKWAY WORKSPACE</small></span></Link><div className="tw-ac-topbar-right"><span className="tw-ac-review">{companyName}</span>{canMedia && <Link className="tw-ac-switch" href="/modules"><ArrowLeftRight size={16} /> Switch module</Link>}<ModuleSignOut /></div></header>
+    <header className="tw-ac-topbar"><Link href="/accounting" className="tw-ac-brand"><span className="tw-ac-monogram">tw<span>.</span></span><span>Accounting<small>THINKWAY WORKSPACE</small></span></Link><div className="tw-ac-topbar-right"><span className="tw-ac-review">{companyName}</span>{canMedia && <Link className="tw-ac-switch" href="/modules"><ArrowLeftRight size={16} /> Switch module</Link>}<AccountingHelp /><ModuleSignOut /></div></header>
     <div className="tw-ac-navigation-bar" dir={arabic?'rtl':'ltr'}>
       <button ref={navigationToggle} className="tw-ac-button tw-ac-mobile-navigation" aria-expanded={mobileNavigation} aria-controls="accounting-navigation" onClick={()=>setMobileNavigation(!mobileNavigation)}><PanelLeftOpen size={18}/>{arabic?'القائمة':'Menu'}</button>
       <div className="tw-ac-language" aria-label="Navigation language"><button lang="en" aria-pressed={!arabic} onClick={()=>setLanguage('en')}>English</button><button lang="ar" aria-pressed={arabic} onClick={()=>setLanguage('ar')}>العربية</button></div>

@@ -43,6 +43,9 @@ jobs:
       - name: Billing loading and Clients hydration regression
         run: npx tsx --test lib/billing/map-billing-campaigns.test.ts features/clients/client-created-date.test.ts
 
+      - name: Accounting party-code display
+        run: npx tsx --test features/accounting/party-code.test.ts
+
       - name: Quotation creator order regression
         run: npm run test:quotation-order
 
