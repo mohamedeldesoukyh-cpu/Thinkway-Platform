@@ -1,3 +1,4 @@
+import {TransactionStamp} from './transaction-stamp';
 import {workingYear,yearDate,documentParts,documentLabel} from './fiscal-context';
 import { partyCode } from './party-code';
 // Inherits AccountingConsole's client boundary.
@@ -8,7 +9,7 @@ import { accountingRead,accountingWrite,PartySelect } from './allocation-control
 import { AuxiliaryFields } from './auxiliaries';
 import { CodeLookup } from './code-lookup';
 import { accountingToday } from './allocation-model';
-type Cost={assignment_line_id:string|null;auxiliaries:Record<string,string>;id:string;company_id:string;vendor_id:string;vendor_code:string;vendor_name:string;number:string|null;document_date:string;due_date:string|null;currency:string;net:number;tax:number;expense_account:string;payable_account:string;vat_account:string|null;description:string;supporting_reference:string;supplier_number:string|null;supplier_date:string|null;status:string;version:number;exchange_rate:number|null};
+type Cost={journal_id:string|null;assignment_line_id:string|null;auxiliaries:Record<string,string>;id:string;company_id:string;vendor_id:string;vendor_code:string;vendor_name:string;number:string|null;document_date:string;due_date:string|null;currency:string;net:number;tax:number;expense_account:string;payable_account:string;vat_account:string|null;description:string;supporting_reference:string;supplier_number:string|null;supplier_date:string|null;status:string;version:number;exchange_rate:number|null};
 type Form={assignment:string;auxiliaries:Record<string,string>;id:string;version:number|null;vendor:string;date:string;due:string;currency:string;net:string;tax:string;expense:string;payable:string;vat:string;description:string;reference:string;supplierNumber:string;supplierDate:string};
 export function CostInvoiceDesk({setup,onBusyChange}:{setup:AccountingSetup;onBusyChange:(b:boolean)=>void}){
  const company=setup.company!;
@@ -50,5 +51,5 @@ export function CostInvoiceDesk({setup,onBusyChange}:{setup:AccountingSetup;onBu
  {row?.status==='internal'&&!reconciling&&setup.access.manage&&<button className="tw-ac-button" onClick={()=>{setReconciling(true);change({date:accountingToday()});}}>Receive supplier invoice / reconcile</button>}
  {!editable&&!reconciling&&<p>Posted cost documents are read-only. Their journals and vendor balances appear in Statements and JVs.</p>}
  </>:<><form className="tw-ac-inline-form" onSubmit={e=>{e.preventDefault();setPage(0);setFilter(search.trim());setEpoch(n=>n+1);}}><label>Search invoice, vendor name or code<input maxLength={120} value={search} onChange={e=>setSearch(e.target.value)}/></label><button className="tw-ac-button">Search / refresh</button></form><div className="tw-ac-journal-table-scroll"><table className="tw-ac-journal-table"><thead><tr><th>Cost document</th><th>Vendor</th><th>Date</th><th>Net / tax</th><th>Status</th><th>Review</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{r.number??'Draft'}<small>{r.supplier_number??'Supplier invoice pending'}</small></td><td>{partyCode(r.vendor_code)}<small>{r.vendor_name}</small></td><td>{r.document_date}</td><td>{r.net} + {r.tax} {r.currency}</td><td>{r.status}</td><td><button className="tw-ac-button" onClick={()=>open(r)}>Review cost invoice</button></td></tr>)}</tbody></table></div>{loading?<p>Loading cost invoices…</p>:!rows.length&&<p>No matching cost invoices.</p>}<div className="tw-ac-form-actions"><span>{count} cost documents</span><button className="tw-ac-button" disabled={!page} onClick={()=>setPage(n=>n-1)}>Previous</button><button className="tw-ac-button" disabled={(page+1)*50>=count} onClick={()=>setPage(n=>n+1)}>Next</button></div></>}
- </section>;
+ <TransactionStamp company={company.id} journal={row?.journal_id} version={row?.version}/></section>;
 }

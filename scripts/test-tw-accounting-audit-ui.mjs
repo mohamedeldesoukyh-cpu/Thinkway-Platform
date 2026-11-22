@@ -1,0 +1,19 @@
+import fs from 'node:fs';
+import http from 'node:http';
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {build} from 'esbuild';
+const require=createRequire(import.meta.url),{chromium}=require('C:/thinkway-platform/services/discovery-worker/node_modules/playwright');
+const root=process.cwd(),out=root+'/.tmp/audit-ui';fs.mkdirSync(out,{recursive:true});
+const row={id:1,actor_id:'00000000-0000-4000-8000-000000000001',actor_name:'Audit fixture user',table_name:'tw_accounting_journals',operation:'UPDATE',occurred_at:'2026-11-22T22:11:50Z',before_data:{status:'draft',memo:'Unchanged'},after_data:{status:'posted',memo:'Unchanged'}};
+fs.writeFileSync(out+'/entry.tsx',`import React from 'react';import{createRoot}from'react-dom/client';import{FiscalDesk}from ${JSON.stringify(root+'/features/accounting/fiscal-desk.tsx')};createRoot(document.getElementById('root')).render(<main className="tw-accounting"><FiscalDesk audit setup={{company:{id:'fixture'},years:[{id:'year',start_date:'2026-01-01'}],access:{admin:true},accounts:[]}} onBusyChange={()=>{}}/></main>);`);
+await build({entryPoints:[out+'/entry.tsx'],bundle:true,outfile:out+'/app.js',platform:'browser',jsx:'automatic',define:{'process.env.NODE_ENV':'"production"','process.env':'{}'}});
+const css=fs.readdirSync('.next/static/chunks').filter(f=>f.endsWith('.css')).map(f=>fs.readFileSync('.next/static/chunks/'+f,'utf8')).join('\n');let query;
+const server=http.createServer((req,res)=>{if(req.url.startsWith('/api/accounting/fiscal?')){query=new URL(req.url,'http://localhost').searchParams;res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({count:1,rows:[row]}));}if(req.url==='/app.js')return res.end(fs.readFileSync(out+'/app.js'));if(req.url==='/style.css')return res.end(css);res.setHeader('Content-Type','text/html');res.end('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"></head><body><div id="root"></div><script src="/app.js"></script></body></html>');});
+await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'}),page=await browser.newPage({viewport:{width:1366,height:900}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+try{
+ await page.goto('http://127.0.0.1:'+server.address().port);await page.getByLabel('Search event / reference').fill('JV');await page.getByRole('button',{name:'View history',exact:true}).click();await page.getByText('Audit fixture user',{exact:true}).waitFor();assert.equal(query.get('search'),'JV');assert.match(await page.locator('tbody').innerText(),/23 Nov 2026.*00:11:50/s);assert.equal(await page.locator('details[open]').count(),0);
+ await page.getByText('1 changed fields',{exact:true}).click();assert.match(await page.locator('dl').innerText(),/Status.*draft → posted/s);assert.doesNotMatch(await page.locator('dl').innerText(),/Unchanged/);await page.getByText('Original audit record',{exact:true}).click();assert.match(await page.locator('pre').innerText(),/00000000-0000-4000-8000-000000000001/);
+ await page.screenshot({path:out+'/audit-desktop.png'});const download=page.waitForEvent('download');await page.getByRole('button',{name:'Export current audit page'}).click();const file=await download;await file.saveAs(out+'/audit.csv');const csv=fs.readFileSync(out+'/audit.csv','utf8');assert.match(csv,/Audit fixture user/);assert.match(csv,/Cairo/);
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:out+'/audit-mobile.png'});assert.deepEqual(errors,[]);console.log('PASS audit: user names, Cairo time, collapsed changes, original record, filter and CSV');
+}finally{await browser.close();await new Promise(r=>server.close(r));}
