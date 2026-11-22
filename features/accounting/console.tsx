@@ -1,5 +1,6 @@
-import {FinancialStatement} from './financial-statement';
 "use client";
+import {FinancialStatement} from './financial-statement';
+
 import { useState,useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { accountingNavigation, type AccountingView } from "./navigation";
