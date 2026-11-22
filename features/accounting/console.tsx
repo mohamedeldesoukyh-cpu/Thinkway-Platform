@@ -14,6 +14,8 @@ import { SettlementDesk } from "./settlement-desk";
 import { StatementDesk } from "./statement-desk";
 import { CostInvoiceDesk } from "./cost-invoice-desk";
 import { InvoiceDesk } from "./invoice-desk";
+import { ChequeRegister } from './cheque-register';
+import { BankDesk } from './bank-desk';
 import { JournalSchedules } from './journal-schedules';
 import { JournalDesk, type LedgerView } from "./journal-desk";
 import type { AccountingSetup, SavedAccount } from "./setup-types";
@@ -65,6 +67,8 @@ export function AccountingConsole({initial}:{initial:AccountingSetup}) {
     {message && <p role="status" className="tw-ac-success">{message}</p>}{error && !editing && <p role="alert" className="tw-ac-error">{error}</p>}
     {company && view==='receipts' && <SettlementDesk key={`${company.id}-${journalEpoch}`} setup={data} kind="receipt" autoOpen={cashNew} onBusyChange={setJournalBusy}/>}
     {company && view==='payments' && <SettlementDesk key={`${company.id}-${journalEpoch}`} setup={data} kind="payment" autoOpen={cashNew} onBusyChange={setJournalBusy}/>}
+    {company && view==='payment-preparation' && <SettlementDesk key={`${company.id}-preparations-${journalEpoch}`} setup={data} kind="payment" preparations onBusyChange={setJournalBusy}/>}
+    {company && view==='cheques' && <ChequeRegister company={company.id} onPayment={()=>setView('payments')}/>}
     {company && view==='costs' && <CostInvoiceDesk key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy}/>}
     {company && (view==='parties'||view==='vendors') && <PartyAccountsDesk key={`${company.id}:${view}`} initialKind={view==='vendors'?'vendor':'client'} setup={data} onBusyChange={setJournalBusy} onSaved={()=>refresh()}/>}
     {company && (view==='approvals'||view==='transaction-locks'||view==='approval-policy') && <TransactionControls key={`${company.id}-${view}`} setup={data} mode={view} onBusyChange={setJournalBusy} onSaved={()=>refresh()}/>}
@@ -72,6 +76,7 @@ export function AccountingConsole({initial}:{initial:AccountingSetup}) {
     {company && view==='auxiliaries' && <AuxiliaryDesk accountEditorOpen={!!editing} key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy} onOpenAccount={account=>{setError('');setEditing(account);}}/>}
     {company && (view==='recurring'||view==='scheduled-reversal') && <JournalSchedules key={company.id+view} setup={data} kind={view==='recurring'?'recurring':'reversal'} onBusyChange={setJournalBusy}/>}
     {company && (view==='transfers'||view==='opening') && <JournalDesk key={company.id+view} setup={data} mode="journals" workflow={view==='transfers'?'transfer':'opening'} onDirtyChange={setJournalDirty} onBusyChange={setJournalBusy}/>}
+    {company && (view==='banks'||view==='reconciliation'||view==='bank-movements') && <BankDesk key={company.id+view} setup={data} mode={view} onBusyChange={setJournalBusy}/>}
     {company && view==='moves' && <AccountMoves key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy}/>}
     {company && view==='statements' && <StatementDesk key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy}/>}
     {company && view==='invoices' && <InvoiceDesk key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy}/>}

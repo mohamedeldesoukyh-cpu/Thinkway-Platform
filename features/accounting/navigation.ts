@@ -13,7 +13,7 @@ export const accountingGroups = [
   {id:'settings',en:'Settings',ar:'الإعدادات'},
 ] as const;
 export type AccountingGroup = typeof accountingGroups[number]['id'];
-export type AccountingView = 'recurring'|'scheduled-reversal'|'opening'|'transfers'|'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
+export type AccountingView = 'payment-preparation'|'cheques'|'banks'|'reconciliation'|'bank-movements'|'recurring'|'scheduled-reversal'|'opening'|'transfers'|'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
 export type NavigationItem = {
   id:string; parent:AccountingGroup; en:string; ar:string; status:'Ready'|'Partial'|'Pending';
   view?:AccountingView; route?:string; permission:'accounting'|'admin'; navigation:boolean; evidence:string;
@@ -50,11 +50,11 @@ export const accountingNavigation:readonly NavigationItem[] = [
   ready('approvals','transactions','Journal approvals','اعتماد القيود','Independent approval of saved manual drafts when enabled per company.'),
   ready('transaction-locks','transactions','Transaction locks & history','قفل المعاملات وسجل التحكم','Individual/bulk lock, administrator unlock, approval and lock history.'),
   ready('approval-policy','settings','Journal approval policy','سياسة اعتماد القيود','Administrator-managed optional independent approval; direct posting by default.','admin'),
-  pending('payment-preparation','payments','Payment preparation','إعداد المدفوعات','No separate payment batch preparation workflow.'),
-  pending('cheques','payments','Cheque payments','مدفوعات الشيكات','No cheque register or clearing workflow.'),
-  pending('bank-accounts','banking','Bank account management','إدارة الحسابات البنكية','GL bank accounts and auxiliaries exist; no dedicated bank master workflow.'),
-  pending('reconciliation','banking','Bank reconciliation','التسوية البنكية','No bank import/matching/reconciliation workflow.'),
-  pending('bank-movements','banking','Cash and bank movements','حركة النقدية والبنوك','Movements can be inspected through General ledger; no dedicated banking screen.'),
+  ready('payment-preparation','payments','Payment preparation','إعداد المدفوعات','Saved vendor payment drafts; explicit review and posting through the settlement engine.'),
+  ready('cheques','payments','Cheque payments','مدفوعات الشيكات','Register of check-method payments with bank-reconciliation clearing status.'),
+  ready('banks','banking','Bank account management','إدارة الحسابات البنكية','Bank profiles linked to GL, auxiliary and currency.'),
+  ready('reconciliation','banking','Bank reconciliation','التسوية البنكية','CSV import, grouped matching, audited unmatch, closing and administrator reopen.'),
+  ready('bank-movements','banking','Cash and bank movements','حركة النقدية والبنوك','Bank-currency and local-currency posted movements with reconciliation status.'),
   pending('budget-setup','budgets','Budget setup & allocation','إعداد وتوزيع الموازنة','Future GL/fiscal-period budgets; Media assignment budgets are operational.'),
   pending('budget-control','budgets','Budget control & variance','رقابة الموازنة وتحليل الانحرافات','Depends on accounting budget setup.'),
   pending('financial-statements','reports','Profit & loss, balance sheet, cash flow','الأرباح والخسائر والميزانية والتدفقات النقدية','Dedicated GL financial statements absent; Media P&L is operational.'),

@@ -1363,5 +1363,17 @@
     "parents": [
       "features/accounting/console.tsx"
     ]
+  },
+  {
+    "file": "features/accounting/bank-desk.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/cheque-register.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
   }
 ]
