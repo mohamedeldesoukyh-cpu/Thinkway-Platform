@@ -27,13 +27,13 @@ export async function loadAccountingSetup(companyId?: string): Promise<Accountin
   let accounts: SavedAccount[] = [], years: FiscalYear[] = [], periods: FiscalPeriod[] = [];
   if (company) {
     const [a, m, y, closing] = await Promise.all([
-      db.from("tw_accounting_accounts").select("code,name,name_ar,parent_code,account_type,normal_balance,kind,subledger,has_auxiliary,auxiliary_source_code,client_id,vendor_id,active,version").eq("company_id", company.id).order("code"),
+      db.from("tw_accounting_accounts").select("code,name,name_ar,parent_code,account_type,normal_balance,kind,subledger,directory_source_code,has_auxiliary,auxiliary_source_code,client_id,vendor_id,active,version").eq("company_id", company.id).order("code"),
       db.rpc('tw_accounting_mappings_read',{p_company:company.id}),
       db.from("tw_accounting_years").select("id,start_date,end_date").eq("company_id", company.id).order("start_date"),
       db.from("tw_accounting_year_closings").select("year_id").eq("company_id",company.id).eq("status","closed"),
     ]);
     if (a.error || y.error || m.error || closing.error) throw new Error("Could not load saved chart or financial years.");
-    accounts = (a.data ?? []).filter(row=>!row.client_id&&!row.vendor_id).map(row => ({ code: row.code, name: row.name, nameAr: row.name_ar, parent: row.parent_code, type: row.account_type, normal: row.normal_balance, kind: row.kind, subledger: row.subledger ?? undefined, hasAuxiliary:row.has_auxiliary,auxiliarySource:row.auxiliary_source_code,clientId:row.client_id,vendorId:row.vendor_id, active: row.active, version: row.version }));
+    accounts = (a.data ?? []).filter(row=>!row.client_id&&!row.vendor_id).map(row => ({ code: row.code, name: row.name, nameAr: row.name_ar, parent: row.parent_code, type: row.account_type, normal: row.normal_balance, kind: row.kind, subledger: row.subledger ?? undefined,directorySource:row.directory_source_code,directoryKind:a.data?.find(source=>source.code===row.directory_source_code)?.subledger??undefined, hasAuxiliary:row.has_auxiliary,auxiliarySource:row.auxiliary_source_code,clientId:row.client_id,vendorId:row.vendor_id, active: row.active, version: row.version }));
     mappings = m.data ?? [];
     years = (y.data ?? []).map(row=>({...row,closed:(closing.data??[]).some(c=>c.year_id===row.id)})) as FiscalYear[];
     if (years.length) {

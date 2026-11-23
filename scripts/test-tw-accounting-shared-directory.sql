@@ -1,0 +1,24 @@
+BEGIN;
+DO $$ DECLARE actor uuid;c uuid;client uuid;vendor uuid;r jsonb;entry jsonb;chart_count bigint;BEGIN
+ SELECT p.id INTO actor FROM profiles p JOIN roles r ON r.id=p.role_id WHERE r.slug='super_admin' AND p.is_active LIMIT 1;
+ PERFORM set_config('request.jwt.claim.sub',actor::text,true);PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal2')::text,true);
+ SET LOCAL ROLE authenticated;
+ c:=tw_accounting_create_company('QA shared directory rollback','EG','EGP','2026-01-01','[{"code":"100000","name":"Assets","parent":null,"type":"Asset","normal":"Debit","kind":"Group"},{"code":"121001","name":"Receivables","parent":"100000","type":"Asset","normal":"Debit","kind":"Control","subledger":"Customer"},{"code":"200000","name":"Liabilities","parent":null,"type":"Liability","normal":"Credit","kind":"Group"},{"code":"211001","name":"Payables","parent":"200000","type":"Liability","normal":"Credit","kind":"Control","subledger":"Supplier / creator"}]');
+ SELECT count(*) INTO chart_count FROM tw_accounting_accounts WHERE company_id=c;
+ r:=tw_accounting_create_client(c,'QA shared directory rollback','QA shared legal','agency','EGP','EG');client:=(r->>'id')::uuid;
+ r:=tw_accounting_party_accounts(c,'client','QA shared legal',0);
+ IF r->'rows'->0->>'account'<>'121001' OR r->'rows'->0->>'classification'<>'agency' THEN RAISE EXCEPTION 'Automatic client linkage or classification missing: %',r;END IF;
+ UPDATE clients SET legal_name='QA updated shared legal',agency_or_direct='direct' WHERE id=client;
+ r:=tw_accounting_party_accounts(c,'client','QA updated shared legal',0);
+ IF r->'rows'->0->>'classification'<>'direct' THEN RAISE EXCEPTION 'Shared edits missing';END IF;
+ r:=tw_accounting_party_lookup(c,'client','',client);IF r->0->>'name'<>'QA updated shared legal' THEN RAISE EXCEPTION 'Lookup name stale';END IF;
+ r:=tw_accounting_statement_filtered(c,'2026-01-01','2026-12-31','121001','client',client,NULL,0,NULL,'{"reportMode":"trial","includeThirdParties":true}');
+ IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(r->'auxiliaries') x WHERE x->>'id'=client::text AND x->>'closing'='0') THEN RAISE EXCEPTION 'Zero-balance third party missing: %',r;END IF;
+ r:=tw_accounting_statement_filtered(c,'2026-01-01','2026-12-31','121001','client',client,NULL,0,NULL,'{"reportMode":"trial","includeThirdParties":true,"skipZero":true}');
+ IF jsonb_array_length(r->'auxiliaries')<>0 THEN RAISE EXCEPTION 'Skip zero ignored';END IF;
+ IF (SELECT count(*) FROM tw_accounting_accounts WHERE company_id=c)<>chart_count THEN RAISE EXCEPTION 'Duplicate GL account created';END IF;
+ r:=tw_accounting_party_accounts(c,'client','',0);
+ IF EXISTS(WITH codes AS(SELECT substring(x->>'code' from '[0-9]+$')::numeric n,ord FROM jsonb_array_elements(r->'rows') WITH ORDINALITY t(x,ord)), sorted AS(SELECT n,lag(n) OVER(ORDER BY ord) previous FROM codes)SELECT 1 FROM sorted WHERE n<previous) THEN RAISE EXCEPTION 'Party code ordering is not numeric ascending';END IF;
+ RAISE NOTICE 'PASS: shared client creation, edits, classification, GL linkage, zero third-party detail, skip-zero and numeric ordering';
+END $$;
+ROLLBACK;

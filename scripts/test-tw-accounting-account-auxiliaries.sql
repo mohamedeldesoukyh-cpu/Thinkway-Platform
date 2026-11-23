@@ -1,0 +1,28 @@
+BEGIN;
+DO $$ DECLARE actor uuid;c uuid;v integer;r jsonb;blocked boolean;x uuid;y uuid;j uuid;ls jsonb;BEGIN
+ SELECT p.id INTO actor FROM profiles p JOIN roles r ON r.id=p.role_id WHERE r.slug='super_admin' AND p.is_active LIMIT 1;
+ PERFORM set_config('request.jwt.claim.sub',actor::text,true);PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal2')::text,true);
+ SET LOCAL ROLE authenticated;
+ c:=tw_accounting_create_company('QA account auxiliary rollback','EG','EGP','2026-01-01','[{"code":"100000","name":"Assets","parent":null,"type":"Asset","normal":"Debit","kind":"Group"},{"code":"111001","name":"Cash","parent":"100000","type":"Asset","normal":"Debit","kind":"Posting"}]');
+ SELECT to_jsonb(a),version INTO r,v FROM tw_accounting_accounts a WHERE company_id=c AND code='111001';r:=r||'{"has_auxiliary":true}';
+ PERFORM tw_accounting_account_save(r,v,'[{"number":7,"name":"Office cash"},{"number":null,"name":"Bank cash"}]');
+ IF (SELECT count(*) FROM tw_accounting_auxiliaries WHERE company_id=c)<>2 OR NOT EXISTS(SELECT 1 FROM tw_accounting_auxiliaries WHERE company_id=c AND number=8 AND name='Bank cash') THEN RAISE EXCEPTION 'Owned auxiliary save/numbering failed';END IF;
+ SELECT version INTO v FROM tw_accounting_accounts WHERE company_id=c AND code='111001';
+ blocked:=false;BEGIN PERFORM tw_accounting_account_save(r||'{"name":"Must roll back"}',v,'[{"number":9,"name":"First"},{"number":7,"name":"Duplicate"}]');EXCEPTION WHEN OTHERS THEN blocked:=SQLERRM LIKE '%already used%';END;
+ IF NOT blocked OR EXISTS(SELECT 1 FROM tw_accounting_auxiliaries WHERE company_id=c AND number=9) OR (SELECT name FROM tw_accounting_accounts WHERE company_id=c AND code='111001')<>'Cash' THEN RAISE EXCEPTION 'Partial save occurred';END IF;
+ blocked:=false;BEGIN PERFORM tw_accounting_account_save(r,v-1,'[]');EXCEPTION WHEN serialization_failure THEN blocked:=true;END;IF NOT blocked THEN RAISE EXCEPTION 'Stale version accepted';END IF;
+ PERFORM tw_accounting_account_save(r||'{"code":"111002","name":"New cash"}',NULL,'[{"number":1,"name":"New auxiliary"}]');
+ IF NOT EXISTS(SELECT 1 FROM tw_accounting_auxiliaries WHERE company_id=c AND account_code='111002' AND name='New auxiliary') THEN RAISE EXCEPTION 'New account and auxiliary not saved together';END IF;
+ SELECT id INTO x FROM tw_accounting_auxiliaries WHERE company_id=c AND account_code='111001' AND number=7;
+ SELECT id INTO y FROM tw_accounting_auxiliaries WHERE company_id=c AND account_code='111002' AND number=1;
+ PERFORM tw_accounting_auxiliary_save(c,'111001',x,1,'Renamed office',false);
+ IF (SELECT active FROM tw_accounting_auxiliaries WHERE id=x) THEN RAISE EXCEPTION 'Zero balance removal failed';END IF;
+ PERFORM tw_accounting_auxiliary_save(c,'111001',x,2,'Renamed office',true);
+ j:=gen_random_uuid();ls:=jsonb_build_array(jsonb_build_object('account','111001','auxiliaryId',x,'description','Auxiliary debit','debit','10','credit','0'),jsonb_build_object('account','111002','auxiliaryId',y,'description','Auxiliary credit','debit','0','credit','10'));
+ PERFORM tw_accounting_save_entry(j,c,'2026-01-15','','Auxiliary balance guard',NULL,'manual',ls);
+ PERFORM tw_accounting_post_journal(j,c,(SELECT version FROM tw_accounting_journals WHERE id=j));
+ blocked:=false;BEGIN PERFORM tw_accounting_auxiliary_save(c,'111001',x,3,'Renamed office',false);EXCEPTION WHEN raise_exception THEN blocked:=SQLERRM LIKE '%with a balance%';END;
+ IF NOT blocked OR NOT (SELECT active FROM tw_accounting_auxiliaries WHERE id=x) THEN RAISE EXCEPTION 'Non-zero auxiliary removal accepted';END IF;
+ RAISE NOTICE 'PASS atomic account + auxiliaries, automatic codes, duplicate rollback, stale version, new account';
+END $$;
+ROLLBACK;
