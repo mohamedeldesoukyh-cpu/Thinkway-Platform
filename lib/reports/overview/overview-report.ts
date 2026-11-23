@@ -102,18 +102,31 @@ export function buildOverviewReport(input: Omit<RecognitionInput, "today" | "cam
     currency: option([...input.rates.keys()].map(c => ({ value: c, label: c }))),
   };
   const campaignCurrencies = new Map(headers.map(h => [h.id, h.currency_code || "EGP"]));
-  const events = buildRecognitionEvents({ ...input, campaignCurrencies, today: filters.asOf });
+  const legacyEvents = buildRecognitionEvents({ ...input, campaignCurrencies, today: filters.asOf });
+  // An assignment's recorded live date applies to its full creator line. Child
+  // schedules must not split that amount or override the authoritative date.
+  const events = input.lines.flatMap(line => {
+    const date = typeof line.metadata?.went_live_date === "string" ? line.metadata.went_live_date.slice(0,10) : "";
+    if (!date) return legacyEvents.filter(e => e.campaign_line_id === line.id);
+    if (line.status === "cancelled" || line.metadata?.went_live === false || !/^\d{4}-\d{2}-\d{2}$/.test(date) || date > filters.asOf) return [];
+    const total = aggregateCampaignDisplayFinancials({ lines: [{ ...line, currency_code: line.currency_code || campaignCurrencies.get(line.campaign_header_id) || "EGP" }], displayCurrency: "EGP", rateToEgpByCurrency: input.rates });
+    return [{campaign_line_id:line.id,campaign_header_id:line.campaign_header_id,date,revenue:total.revenue,cost:roundMoney(total.revenue-total.gp),gp:total.gp}];
+  });
+  const dated = Boolean(filters.from || filters.to);
+  const periodEvents = events.filter(e => (!filters.from || e.date >= filters.from) && (!filters.to || e.date <= filters.to));
+  const periodLines = new Set(periodEvents.map(e => e.campaign_line_id));
   const rate = requireReportingRate(input.rates, filters.currency);
   const rows: OverviewRow[] = [];
   for (const header of campaigns) {
     if (filters.campaignId && header.id !== filters.campaignId || filters.status && header.status !== filters.status) continue;
     if (filters.clientType && header.client?.agency_or_direct?.toLowerCase() !== filters.clientType) continue;
-    if (filters.from && (!header.start_date || header.start_date < filters.from) || filters.to && (!header.start_date || header.start_date > filters.to)) continue;
     const labels = { group: header.client?.group?.name ?? "—", client: header.client?.name ?? "—", brand: header.brand?.name ?? "—", campaign: header.name };
     if (filters.q && !Object.values(labels).join(" ").toLowerCase().includes(filters.q.toLowerCase())) continue;
-    const lines = input.lines.filter(l => l.campaign_header_id === header.id).map(l => ({ ...l, currency_code: l.currency_code || header.currency_code || "EGP" }));
+    const campaignLines = input.lines.filter(l => l.campaign_header_id === header.id).map(l => ({ ...l, currency_code: l.currency_code || header.currency_code || "EGP" }));
+    const lines = dated ? campaignLines.filter(l => periodLines.has(l.id)) : campaignLines;
+    if (dated && !lines.length) continue;
     const total = aggregateCampaignDisplayFinancials({ lines, displayCurrency: "EGP", rateToEgpByCurrency: input.rates });
-    const actual = events.filter(e => e.campaign_header_id === header.id);
+    const actual = periodEvents.filter(e => e.campaign_header_id === header.id);
     const revenue = roundMoney(actual.reduce((n,e) => n + e.revenue, 0) / rate);
     const cost = roundMoney(actual.reduce((n,e) => n + e.cost, 0) / rate);
     const totalRevenue = roundMoney(total.revenue / rate), totalCost = roundMoney((total.revenue - total.gp) / rate);
@@ -121,7 +134,8 @@ export function buildOverviewReport(input: Omit<RecognitionInput, "today" | "cam
     const hasActual = actual.length > 0, hasAccrued = accruedRevenue !== 0 || accruedCost !== 0;
     if (filters.activity === "actual" && !hasActual || filters.activity === "accrued" && !hasAccrued || filters.activity === "both" && !(hasActual && hasAccrued)) continue;
     const totalGp = roundMoney(totalRevenue - totalCost);
-    const revenueShare = revenueShareAmount(readRevenueShare(header.metadata), totalRevenue, filters.currency, input.rates);
+    const campaignRevenue = dated ? roundMoney(aggregateCampaignDisplayFinancials({lines:campaignLines,displayCurrency:"EGP",rateToEgpByCurrency:input.rates}).revenue / rate) : totalRevenue;
+    const revenueShare = roundMoney(revenueShareAmount(readRevenueShare(header.metadata), campaignRevenue, filters.currency, input.rates) * (dated ? campaignRevenue ? totalRevenue / campaignRevenue : 0 : 1));
     rows.push({ id: header.id, ...labels, revenue, cost, accruedRevenue, accruedCost, gp: roundMoney(revenue - cost), accruedGp: roundMoney(accruedRevenue - accruedCost), totalRevenue, totalCost, totalGp, revenueShare, gpAfterShare: roundMoney(totalGp - revenueShare) });
   }
   rows.sort((a,b) => a.group.localeCompare(b.group) || a.client.localeCompare(b.client) || a.brand.localeCompare(b.brand) || a.campaign.localeCompare(b.campaign));

@@ -103,7 +103,7 @@ test("search params keep the previous URL shape: non-empty filters then visible 
 test("chips describe applied filters with option labels; currency and as-of are not chips", () => {
   const chips = overviewFilterChips({ ...filters, groupId: "g1", status: "active", from: "2026-01-01", activity: "both", q: "x" }, options);
   assert.deepEqual(chips.map(chip => `${chip.label}=${chip.value}`), [
-    "Search=“x”", "Group=Group One", "Status=Active", "Activity=Actual and accrued", "Start from=1 Jan 2026",
+    "Search=“x”", "Group=Group One", "Status=Active", "Activity=Actual and accrued", "Went live from=1 Jan 2026",
   ]);
   assert.equal(countAdvancedFilters({ ...filters, status: "active", to: "2026-02-01", currency: "USD" }), 2);
 });
