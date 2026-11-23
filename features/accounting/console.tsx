@@ -1,4 +1,5 @@
 "use client";
+import {MonthlyAccrualDesk} from './monthly-accrual-desk';
 import {StaffDesk} from './staff-desk';
 import {PLClosingDesk} from './pl-closing-desk';
 import type {ClosingDraft} from './pl-closing-model';
@@ -101,6 +102,7 @@ export function AccountingConsole({initial}:{initial:AccountingSetup}) {
     {company && view==='moves' && <AccountMoves key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy}/>}
     {company && (view==='closing'||view==='audit-viewer') && <FiscalDesk key={company.id+view} setup={data} audit={view==='audit-viewer'} onBusyChange={setJournalBusy}/>}
     {company && (view==='budget-setup'||view==='budget-control'||view==='budget-reports') && <BudgetDesk key={company.id+view} setup={data} edit={view==='budget-setup'} onDirtyChange={setJournalDirty} onBusyChange={setJournalBusy}/>}
+    {company && view==='monthly-accruals' && <MonthlyAccrualDesk setup={data} onBusyChange={setJournalBusy}/>}
     {company && (view==='financial-statements'||view==='balance-sheet'||view==='trial') && <FinancialStatement key={company.id+view} setup={data} mode={view==='balance-sheet'?'balance':view==='trial'?'trial':'profit'}/>}
     {company && ['cash-flow','aging','vendor-aging'].includes(view) && <FinancialReports key={company.id+view} setup={data} aging={view==='aging'||view==='vendor-aging'} partyKind={view==='vendor-aging'?'vendor':'client'}/>}
     {company && view==='ledger' && <StatementDesk key={company.id+view} setup={data} preset="account" reportTitle="General Ledger" onBusyChange={setJournalBusy}/>}
