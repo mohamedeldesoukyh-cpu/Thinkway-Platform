@@ -1,5 +1,5 @@
-import { ExpenseVendorsDesk } from './expense-vendors-desk';
 "use client";
+import { ExpenseVendorsDesk } from './expense-vendors-desk';
 import {MonthlyAccrualDesk} from './monthly-accrual-desk';
 import {StaffDesk} from './staff-desk';
 import {PLClosingDesk} from './pl-closing-desk';
@@ -121,3 +121,4 @@ export function AccountingConsole({initial}:{initial:AccountingSetup}) {
   </>;
   return <><AccountingWorkspace key={company?.id??"unconfigured"} accounts={data.accounts} companyId={company?.id} companyName={company?.name??"Accounting setup"} controls={controls} sectionTitle={accountingNavigation.find(item=>item.view===view)?.en??'Accounting'} activeView={view} canAdmin={data.access.admin} onNavigate={v=>{setCashNew(false);setView(v as View);}} showChart={view==='chart'} canMedia={data.access.media} onEdit={canManage ? account=>{setError("");setEditing(account as SavedAccount);} : undefined}/>{editor}</>;
 }
+
