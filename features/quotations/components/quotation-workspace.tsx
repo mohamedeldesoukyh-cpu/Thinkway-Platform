@@ -1,4 +1,5 @@
 "use client";
+import { openDocumentPreview } from "@/lib/navigation/preview-navigation";
 import { ThinkwayRouteLoading } from "@/components/layout/thinkway-page-loader";
 import { WorkspaceUndoProvider } from "@/lib/productivity/workspace-undo";
 import { useLiveQuotationEnrichment } from "./use-live-quotation-enrichment";
@@ -772,7 +773,7 @@ function QuotationWorkspaceContent({
         detail.serial_number,
         query || undefined
       );
-      window.open(href, "_blank", "noopener,noreferrer");
+      openDocumentPreview(href);
     },
     [detail.id, detail.serial_number, detail.updated_at, exportTemplate]
   );

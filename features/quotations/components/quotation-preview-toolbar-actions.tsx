@@ -1,4 +1,5 @@
 "use client";
+import { openDocumentPreview } from "@/lib/navigation/preview-navigation";
 import { useQuotationDirectRates } from "./quotation-direct-rates-context";
 import { appendProposalOptions, type ProposalOption } from "@/features/quotations/export/proposal-options";
 
@@ -172,7 +173,7 @@ export function QuotationPreviewToolbarActions({
         platforms,
         proposalOptions: selection.proposalOptions,
       });
-      window.open(href, "_blank", "noopener,noreferrer");
+      openDocumentPreview(href);
       return;
     }
 

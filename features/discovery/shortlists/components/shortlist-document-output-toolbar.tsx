@@ -1,4 +1,5 @@
 "use client";
+import { openDocumentPreview } from "@/lib/navigation/preview-navigation";
 
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -108,7 +109,7 @@ export function ShortlistDocumentOutputToolbar({
         itemIds: ids,
         platforms,
       });
-      window.open(href, "_blank", "noopener,noreferrer");
+      openDocumentPreview(href);
       return;
     }
 

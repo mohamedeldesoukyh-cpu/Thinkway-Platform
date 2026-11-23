@@ -1,8 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Suspense, useEffect, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useRef, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { createPortal } from "react-dom";
+import { PREVIEW_NAVIGATION_EVENT } from "@/lib/navigation/preview-navigation";
 
 import { ThinkwayPageLoader } from "@/components/layout/thinkway-page-loader";
 
@@ -45,10 +47,41 @@ function shouldStartNavigation(event: MouseEvent, pathname: string): boolean {
  * trees do not re-render when the overlay toggles (hydration + memory win).
  */
 function NavigationLoadingOverlay() {
+  const router = useRouter();
+  const [previewPending, startPreviewTransition] = useTransition();
+  const [previewClosing, setPreviewClosing] = useState(false);
+  const previewReturn = useRef<{ from: string; preview: string } | null>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
   const [isNavigating, setIsNavigating] = useState(false);
+
+  useEffect(() => {
+    function navigate(event: Event) {
+      const detail = (event as CustomEvent<{ href: string; close: boolean }>).detail;
+      if (!detail || typeof detail.href !== "string") return;
+      const destination = new URL(detail.href, window.location.href);
+      if (destination.origin !== window.location.origin) return;
+      const href = destination.pathname + destination.search;
+      setPreviewClosing(detail.close);
+      startPreviewTransition(() => {
+        if (detail.close) {
+          const entry = previewReturn.current;
+          previewReturn.current = null;
+          if (entry?.preview === window.location.pathname) router.back();
+          else router.push(href, { scroll: false });
+        } else if (/\/preview\/?$/.test(window.location.pathname)) {
+          if (previewReturn.current) previewReturn.current.preview = destination.pathname;
+          router.replace(href, { scroll: false });
+        } else {
+          previewReturn.current = { from: window.location.pathname, preview: destination.pathname };
+          router.push(href, { scroll: false });
+        }
+      });
+    }
+    window.addEventListener(PREVIEW_NAVIGATION_EVENT, navigate);
+    return () => window.removeEventListener(PREVIEW_NAVIGATION_EVENT, navigate);
+  }, [router]);
 
   useEffect(() => {
     setIsNavigating(false);
@@ -70,6 +103,11 @@ function NavigationLoadingOverlay() {
     const timer = window.setTimeout(() => setIsNavigating(false), 8000);
     return () => window.clearTimeout(timer);
   }, [isNavigating]);
+
+  if (previewPending) return createPortal(
+    <div role="status" aria-live="polite" style={{ position: "fixed", inset: 0, zIndex: 10000, display: "grid", placeItems: "center", background: "#08063f", color: "#fff" }}>
+      <span>{previewClosing ? "Returning to document…" : "Preparing preview…"}</span>
+    </div>, document.body);
 
   if (!isNavigating) return null;
 
