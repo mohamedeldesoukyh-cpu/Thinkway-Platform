@@ -38,7 +38,7 @@ export function resolveCampaignWorkspaceTab(
   if (tabParam && isCampaignWorkspaceTabId(tabParam)) {
     return tabParam;
   }
-  return "overview";
+  return "lines";
 }
 
 /** Merge saved order with default — drops unknown ids and appends any new tabs. */

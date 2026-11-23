@@ -41,7 +41,7 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
     if (!ios.length)
         return { rows: [] as PaymentRow[], batches: [] as PaymentBatch[] };
     const assignmentIds = ios.map(io => io.assignment_id);
-    const [assignments, creators, terms, entries, campaigns, plans, supplierInvoices] = await Promise.all([
+    const [assignments, creators, terms, entries, campaigns, plans, supplierInvoices, publications, links] = await Promise.all([
         paymentRowsByIds(assignmentIds,ids=>db.from('campaign_influencers').select('id,campaign_line_id,agreed_fee,cost_before_vat,cost_vat_percent,currency,vendor_payment_status').in('id', ids).order('id')),
         paymentRowsByIds(ios.map(io=>io.influencer_id),ids=>db.from('influencers').select('id,display_name,legal_name,country_code,payment_details,platform_accounts:influencer_platform_accounts!influencer_platform_accounts_influencer_id_fkey(handle,username,profile_display_name,is_primary)').in('id', ids).order('id')),
         paymentRowsByIds(assignmentIds,ids=>db.from('creator_payment_terms').select('*').in('assignment_id', ids).order('assignment_id')),
@@ -49,43 +49,52 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
         paymentRowsByIds(ios.map(io=>io.campaign_header_id),ids=>db.from('campaign_headers').select('id,name,document_number').in('id', ids).order('id')),
         paymentRowsByIds(assignmentIds,ids=>db.from('creator_payment_plans').select('assignment_id,draft').in('assignment_id', ids).order('assignment_id')),
         paymentRowsByIds(assignmentIds,ids=>db.from('creator_supplier_invoices').select('assignment_id,invoice_number,invoice_date,country_code,revision,from_payment_register').in('assignment_id',ids).order('assignment_id')),
+        paymentRowsByIds(ios.map(io=>io.campaign_header_id),ids=>db.from('campaign_publications').select('id,assignment_deliverable_id,assignment_post_schedule_id,status').in('campaign_header_id',ids).order('id')),
+        paymentRowsByIds(ios.map(io=>io.campaign_header_id),ids=>db.from('deliverable_publication_links').select('id,assignment_deliverable_id,assignment_post_schedule_id,publication_id').in('campaign_header_id',ids).order('id')),
     ]);
     const lineIds = assignments.data.map(a=>a.campaign_line_id).filter((id): id is string=>!!id);
     const batchIds = [...new Set((entries.data ?? []).map(e => e.batch_id).filter((id): id is string=>!!id))];
-    const [fxLines, currencyRates, deliverables, posts, publications, links, batchResult] = await Promise.all([
+    const [fxLines, currencyRates, deliverables, posts, batchResult] = await Promise.all([
         paymentRowsByIds(lineIds, ids => db.from("campaign_lines").select("id,cost_fx_override").in("id", ids).order("id")),
         Promise.all([...new Set([...COMMERCIAL_CURRENCIES, ...assignments.data.map(a => a.currency).filter(Boolean)])].map(async currency => [currency, await resolveRateToEgp(db, currency).catch(() => 0)] as const)).then(Object.fromEntries),
         paymentRowsByIds(lineIds,ids=>db.from('assignment_deliverables').select('id,campaign_line_id,quantity,sort_order,deliverable_type,created_at').in('campaign_line_id',ids).order('id')),
         paymentRowsByIds(lineIds,ids=>db.from('assignment_post_schedule').select('id,assignment_deliverable_id,sequence_number,status').in('campaign_line_id',ids).order('id')),
-        paymentRowsByIds(ios.map(io=>io.campaign_header_id),ids=>db.from('campaign_publications').select('id,assignment_deliverable_id,assignment_post_schedule_id,status').in('campaign_header_id',ids).order('id')),
-        paymentRowsByIds(ios.map(io=>io.campaign_header_id),ids=>db.from('deliverable_publication_links').select('id,assignment_deliverable_id,assignment_post_schedule_id,publication_id').in('campaign_header_id',ids).order('id')),
         paymentRowsByIds(batchIds,ids=>db.from('creator_payment_exports').select('id,created_at,transfer_date').in('id', ids).order('created_at', { ascending: false }).order('id')),
     ]);
+    const assignmentById = new Map(assignments.data.map(row => [row.id, row]));
+    const creatorById = new Map(creators.data.map(row => [row.id, row]));
+    const termByAssignment = new Map(terms.data.map(row => [row.assignment_id, row]));
+    const campaignById = new Map(campaigns.data.map(row => [row.id, row]));
+    const planByAssignment = new Map(plans.data.map(row => [row.assignment_id, row]));
+    const fxByLine = new Map(fxLines.data.map(row => [row.id, row]));
+    const entriesByAssignment = Map.groupBy(entries.data, row => row.assignment_id);
+    const entriesByBatch = Map.groupBy(entries.data, row => row.batch_id);
+    const deliverablesByLine = Map.groupBy(deliverables.data, row => row.campaign_line_id);
     const rows: PaymentRow[] = ios.map(io => {
-        const a = assignments.data?.find(a => a.id === io.assignment_id);
-        const creator = creators.data?.find(c => c.id === io.influencer_id);
-        const term = terms.data?.find(t => t.assignment_id === io.assignment_id);
+        const a = assignmentById.get(io.assignment_id);
+        const creator = creatorById.get(io.influencer_id);
+        const term = termByAssignment.get(io.assignment_id);
         const account = creator?.platform_accounts?.find(p => p.is_primary) ?? creator?.platform_accounts?.[0];
-        const campaign = campaigns.data?.find(c => c.id === io.campaign_header_id);
-        const ledger = (entries.data ?? []).filter(e => e.assignment_id === io.assignment_id);
+        const campaign = campaignById.get(io.campaign_header_id);
+        const ledger = entriesByAssignment.get(io.assignment_id) ?? [];
         const fee = Number(a?.cost_before_vat ?? a?.agreed_fee ?? io.amount ?? 0);
         const vat = Number(a?.cost_vat_percent ?? term?.vat ?? 0);
         const paid = ledger.filter(e => e.status === 'paid').reduce((s, e) => s + Number(e.original_amount), 0);
         const pendingPaid = ledger.filter(e => e.status === 'revision_pending').reduce((s,e)=>s+Number(e.original_amount),0);
-        const saved = paymentDraftSchema.safeParse(plans.data?.find(p => p.assignment_id === io.assignment_id)?.draft);
+        const saved = paymentDraftSchema.safeParse(planByAssignment.get(io.assignment_id)?.draft);
         const invoice=supplierInvoices.data.find(i=>i.assignment_id===io.assignment_id&&i.from_payment_register)??supplierInvoices.data.find(i=>i.assignment_id===io.assignment_id);
-        return {creatorCountry:creator?.country_code??'',creatorInvoice:invoice?{number:invoice.invoice_number??'',date:invoice.invoice_date??'',country:invoice.country_code,revision:invoice.revision}:undefined, nextPaymentSequence: Math.max(0, ...ledger.map(e => Number(e.payment_sequence ?? 0))) + 1, history: ledger.filter(e=>e.status === 'paid' || e.status === 'revision_pending' || e.cleared_at).sort((a,b)=>(a.payment_sequence ?? 0)-(b.payment_sequence ?? 0)) as PaymentEntry[], units: paymentUnits(deliverables.data.filter(d=>d.campaign_line_id === a?.campaign_line_id),posts.data,publications.data,links.data), savedDraft: saved.success ? saved.data : undefined, assignmentId: io.assignment_id, campaignId: io.campaign_header_id, creatorId: io.influencer_id,
+        return {creatorCountry:creator?.country_code??'',creatorInvoice:invoice?{number:invoice.invoice_number??'',date:invoice.invoice_date??'',country:invoice.country_code,revision:invoice.revision}:undefined, nextPaymentSequence: Math.max(0, ...ledger.map(e => Number(e.payment_sequence ?? 0))) + 1, history: ledger.filter(e=>e.status === 'paid' || e.status === 'revision_pending' || e.cleared_at).sort((a,b)=>(a.payment_sequence ?? 0)-(b.payment_sequence ?? 0)) as PaymentEntry[], units: paymentUnits(deliverablesByLine.get(a?.campaign_line_id ?? "") ?? [],posts.data,publications.data,links.data), savedDraft: saved.success ? saved.data : undefined, assignmentId: io.assignment_id, campaignId: io.campaign_header_id, creatorId: io.influencer_id,
             campaign: campaign?.name ?? campaign?.document_number ?? 'Campaign',
             creator: account?.profile_display_name || creator?.legal_name || creator?.display_name || 'Creator', username: account?.username || account?.handle || undefined, ioId: io.id, ioNumber: io.document_number ?? 'IO', ioStatus: io.is_superseded ? 'superseded' : io.status,
             revisionPending: pendingPaid>0, pendingPaid: money(pendingPaid),
             payable: pendingPaid<=0 && !io.is_superseded && !['cancelled','rejected','void','voided'].includes(io.status),
             currency: a?.currency ?? io.currency_code, fee, vat,
-            costFxOverride: fxLines.data.find(line => line.id === a?.campaign_line_id)?.cost_fx_override ?? null, currencyRates,
+            costFxOverride: fxByLine.get(a?.campaign_line_id ?? "")?.cost_fx_override ?? null, currencyRates,
             paid: money(paid || (!ledger.length && a?.vendor_payment_status === 'paid' ? fee + Math.round(fee * vat) / 100 : 0)),
             reserved: ledger.filter(e => e.status === 'exported').reduce((s, e) => s + Number(e.original_amount), 0),
             bank: bankDetails(creator?.payment_details ?? {}) };
     });
-    const batches: PaymentBatch[] = batchResult.data.map(b => ({ ...b, entries: entries.data.filter(e => e.batch_id === b.id) as PaymentEntry[] }));
+    const batches: PaymentBatch[] = batchResult.data.map(b => ({ ...b, entries: (entriesByBatch.get(b.id) ?? []) as PaymentEntry[] }));
     return { rows, batches };
 }
 export async function loadCreatorPayments(scope: Scope) {

@@ -1,7 +1,7 @@
 import { loadClientAcceptedLineIds } from "./client-acceptance";
 import { mapBillingCampaigns } from "./map-billing-campaigns";
 import { projectBillingRows, convertMoney } from "./billing-currency";
-import { loadCurrencyRates } from "./billing-currency-server";
+import { createCurrencyRateLoader } from "./billing-currency-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
@@ -176,8 +176,8 @@ export async function loadCampaignOperationalBilling(
   const lineSelectFallback =
     "id, document_number, name, campaign_header_id, billing_status, operational_status, vendor_io_id, revenue_fx_override, currency_code, pricing_mode, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, metadata, invoice_id, invoice:invoices(id, document_number, regeneration_status), vendor_io:vendor_ios(document_number)";
 
-  const { data: lines, error: linesError } =
-    await queryCampaignLinesWithDisplayOrder<LineRow>(async (orderColumn, includeSortOrderColumn) => {
+  const [{ data: lines, error: linesError }, invoiceLinks] =
+    await Promise.all([queryCampaignLinesWithDisplayOrder<LineRow>(async (orderColumn, includeSortOrderColumn) => {
       const result = await supabase
         .from("campaign_lines")
         .select(includeSortOrderColumn ? lineSelectWithSort : lineSelectFallback)
@@ -185,23 +185,22 @@ export async function loadCampaignOperationalBilling(
         .neq("status", "cancelled")
         .order(orderColumn, { ascending: true });
       return { data: (result.data ?? null) as LineRow[] | null, error: result.error };
-    });
+    }), loadOperationalInvoiceLinkage(supabase, campaignId)]);
 
   if (linesError) {
     return { groups: [], operational_rows: [], error: linesError };
   }
 
-  const clientAccepted = await loadClientAcceptedLineIds(supabase, lines);
   const lineIds = lines.map((l) => l.id);
   if (lineIds.length === 0) {
     return { groups: [], operational_rows: [] };
   }
 
-  const {
+  const [clientAccepted, {
     data: deliverableRows,
     error: deliverableError,
     includesVatExempt,
-  } = await queryAssignmentDeliverables<
+  }] = await Promise.all([loadClientAcceptedLineIds(supabase, lines), queryAssignmentDeliverables<
     Omit<DeliverableBillingRow, "label"> & { revenue_vat_exempt?: boolean | null }
   >(async (select) => {
     const result = await supabase
@@ -215,7 +214,7 @@ export async function loadCampaignOperationalBilling(
       > | null,
       error: result.error,
     };
-  });
+  })]);
 
   if (deliverableError) {
     return { groups: [], operational_rows: [], error: deliverableError };
@@ -542,7 +541,6 @@ export async function loadCampaignOperationalBilling(
   const shaped_rows = ensureOperationalBillingTreeShape(operational_rows);
   traceOperationalTreeStage("loadCampaignOperationalBilling:shaped", shaped_rows);
   const normalized_rows = normalizeOperationalBillingTree(shaped_rows, billingContext);
-  const invoiceLinks = await loadOperationalInvoiceLinkage(supabase, campaignId);
   const linked_rows = ensureOperationalBillingTreeShape(
     applyOperationalInvoiceLinkage(normalized_rows, invoiceLinks)
   );
@@ -663,6 +661,7 @@ export async function loadBillingCampaignQueue(
     return true;
   });
 
+  const loadRates = createCurrencyRateLoader(supabase);
   const campaigns = await mapBillingCampaigns(uniqueHeaders, async (header) => {
     const campaignLines = linesByCampaign.get(header.id) ?? [];
     const { operational_rows: nativeRows, groups, error } = await loadCampaignOperationalBilling(
@@ -682,7 +681,7 @@ export async function loadBillingCampaignQueue(
       }
     }
 
-    const rates = await loadCurrencyRates(supabase, [header.currency_code, ...groups.map(g => g.currency_code), ...campaignLines.map(l => l.currency_code)]);
+    const rates = await loadRates([header.currency_code, ...groups.map(g => g.currency_code), ...campaignLines.map(l => l.currency_code)]);
     const legacyAmount = (line: typeof campaignLines[number]) => convertMoney(line.revenue, line.currency_code, header.currency_code, rates);
     const operational_rows = projectBillingRows(nativeRows, header.currency_code, rates);
     const legacyRevenue = error
