@@ -11,6 +11,7 @@ export const navigationEvidence:Record<string,string>={
   "payments": "SettlementDesk payment: vendor allocations, advances and reversal.",
   "parties": "PartyAccountsDesk client preset; shared Media identities.",
   "vendors": "PartyAccountsDesk vendor preset; assignment vendors only.",
+  "expense-vendors": "ExpenseVendorsDesk: shared supplier creation, existing vendor links and linked expense accounts; browser and Dev database checks.",
   "staff": "StaffDesk: existing Employee directory with shared detail identities and independent GL balances.",
   "chart": "AccountingConsole account setup and chart.",
   "auxiliaries": "AuxiliaryDesk and account setup: own/shared/none, common UUIDs.",
@@ -54,3 +55,4 @@ export const navigationEvidence:Record<string,string>={
   "global-administration": "Existing /settings/users, /settings/roles, /settings/permissions, /settings/access-control in Media; existing module switch preserves access. No duplicate admin screens.",
   "exchange-rates": "Existing /finance/exchange-rates in Media; accounting uses shared rates. No new cross-module permission grant."
 };
+
