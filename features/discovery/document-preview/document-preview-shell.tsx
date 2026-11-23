@@ -1,3 +1,5 @@
+import {usePathname} from "next/navigation";
+import {PreviewWindowControls} from "@/components/ui/preview-window-controls";
 
 import {
   useCallback,
@@ -72,6 +74,9 @@ export function DocumentPreviewShell({
   paginationReadyAttr = "data-sl-paginated",
   paginationReadyValue = "ready",
 }: Props) {
+  const pathname = usePathname();
+  const closeHref = pathname?.replace(/\/preview\/?$/, "") || "/";
+  const [maximized, setMaximized] = useState(true);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [pageCount, setPageCount] = useState(0);
   const [activePage, setActivePage] = useState(1);
@@ -272,7 +277,7 @@ export function DocumentPreviewShell({
   }
 
   return (
-    <div className={cn("flex flex-col", contained ? "h-full min-h-0 min-w-0 flex-1 overflow-hidden" : "min-h-[calc(100vh-8rem)] gap-3")}>
+    <div style={{position:"fixed",inset:maximized?0:24,zIndex:100,height:maximized?"100dvh":"calc(100dvh - 48px)",background:"#08063f",borderRadius:maximized?0:12,overflow:"hidden"}} className={cn("flex flex-col", contained ? "h-full min-h-0 min-w-0 flex-1 overflow-hidden" : "min-h-[calc(100vh-8rem)] gap-3")}>
       <div className={cn("z-20 shrink-0 border-b border-border print:hidden", contained ? "quotation-preview-toolbar px-3 py-1.5" : "sticky top-0 -mx-4 bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:-mx-8 md:px-8")}>
         <div className="flex flex-wrap items-center justify-between gap-1.5">
           <div className="flex flex-wrap items-center gap-2">{toolbarLeft}
@@ -352,6 +357,7 @@ export function DocumentPreviewShell({
               </Button>
             </div>
             {toolbarRight}
+            <PreviewWindowControls maximized={maximized} onToggle={()=>setMaximized(v=>!v)} closeHref={closeHref}/>
           </div>
         </div>
       </div>
