@@ -1451,5 +1451,11 @@
     "parents": [
       "features/accounting/console.tsx"
     ]
+  },
+  {
+    "file": "features/accounting/expense-vendors-desk.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
   }
 ]
