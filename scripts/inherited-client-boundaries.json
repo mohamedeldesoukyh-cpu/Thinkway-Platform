@@ -1412,7 +1412,8 @@
       "features/accounting/financial-reports.tsx",
       "features/accounting/budget-desk.tsx",
       "features/accounting/journal-desk.tsx",
-      "features/accounting/financial-statement.tsx"
+      "features/accounting/financial-statement.tsx",
+      "features/accounting/monthly-accrual-desk.tsx"
     ]
   },
   {
@@ -1443,6 +1444,12 @@
     "file": "features/finance/posting-center/components/note-allocations.tsx",
     "parents": [
       "features/finance/posting-center/components/accounting-posting-queue.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/monthly-accrual-desk.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
     ]
   }
 ]
