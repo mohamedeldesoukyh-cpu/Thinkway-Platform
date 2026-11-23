@@ -12,7 +12,7 @@ test('saved chart exports status and neutralizes spreadsheet formulas',()=>{
 
 test('login destination follows assigned modules',()=>{
  assert.equal(moduleHome(NO_MODULES),'/modules');
- assert.equal(moduleHome({...NO_MODULES,media:true}),'/');
+ assert.equal(moduleHome({...NO_MODULES,media:true}),'/media');
  assert.equal(moduleHome({...NO_MODULES,accounting:true}),'/accounting');
  assert.equal(moduleHome({...NO_MODULES,media:true,accounting:true}),'/modules');
  assert.equal(isAccountingPath('/api/accounting/setup'),true);

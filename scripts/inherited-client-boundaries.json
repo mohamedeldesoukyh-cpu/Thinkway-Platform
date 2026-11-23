@@ -1280,7 +1280,8 @@
   {
     "file": "features/accounting/statement-desk.tsx",
     "parents": [
-      "features/accounting/console.tsx"
+      "features/accounting/console.tsx",
+      "features/accounting/mini-statement.tsx"
     ]
   },
   {
@@ -1311,7 +1312,8 @@
       "features/accounting/auxiliaries.tsx",
       "features/accounting/account-moves.tsx",
       "features/accounting/allocation-controls.tsx",
-      "features/accounting/mapping-desk.tsx"
+      "features/accounting/mapping-desk.tsx",
+      "features/accounting/staff-desk.tsx"
     ]
   },
   {
@@ -1331,7 +1333,8 @@
       "features/accounting/cost-invoice-desk.tsx",
       "features/accounting/invoice-desk.tsx",
       "features/accounting/statement-desk.tsx",
-      "features/accounting/mapping-desk.tsx"
+      "features/accounting/mapping-desk.tsx",
+      "features/accounting/staff-desk.tsx"
     ]
   },
   {
@@ -1390,6 +1393,61 @@
   },
   {
     "file": "features/accounting/fiscal-desk.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/mini-statement.tsx",
+    "parents": [
+      "features/accounting/journal-desk.tsx",
+      "features/accounting/settlement-desk.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/formatted-report-preview.tsx",
+    "parents": [
+      "features/accounting/statement-desk.tsx",
+      "features/accounting/voucher-preview.tsx",
+      "features/accounting/financial-reports.tsx",
+      "features/accounting/budget-desk.tsx",
+      "features/accounting/journal-desk.tsx",
+      "features/accounting/financial-statement.tsx",
+      "features/accounting/monthly-accrual-desk.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/financial-statement.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/account-detail.tsx",
+    "parents": [
+      "features/accounting/journal-desk.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/pl-closing-desk.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/staff-desk.tsx",
+    "parents": [
+      "features/accounting/console.tsx"
+    ]
+  },
+  {
+    "file": "features/finance/posting-center/components/note-allocations.tsx",
+    "parents": [
+      "features/finance/posting-center/components/accounting-posting-queue.tsx"
+    ]
+  },
+  {
+    "file": "features/accounting/monthly-accrual-desk.tsx",
     "parents": [
       "features/accounting/console.tsx"
     ]

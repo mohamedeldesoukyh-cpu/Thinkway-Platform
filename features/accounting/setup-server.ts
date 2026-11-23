@@ -18,7 +18,7 @@ export async function accountingContext() {
 
 export async function loadAccountingSetup(companyId?: string): Promise<AccountingSetup> {
   const { db, access } = await accountingContext();
-  const { data, error } = await db.from("tw_accounting_companies").select("id,name,country_code,base_currency,currencies,fiscal_start_month,journal_approval_required,version").order("name");
+  const { data, error } = await db.from("tw_accounting_companies").select("id,name,country_code,base_currency,currencies,fiscal_start_month,journal_approval_required,automatic_cost_accrual,aging_day_limits,version").order("name");
   if (error) throw new Error("Could not load accounting companies.");
   const companies = (data ?? []) as Company[];
   const company = (companyId ? companies.find(c => c.id === companyId) : companies[0]) ?? null;
@@ -26,15 +26,16 @@ export async function loadAccountingSetup(companyId?: string): Promise<Accountin
   let mappings: import('./mapping-model').SystemMapping[] = [];
   let accounts: SavedAccount[] = [], years: FiscalYear[] = [], periods: FiscalPeriod[] = [];
   if (company) {
-    const [a, m, y] = await Promise.all([
+    const [a, m, y, closing] = await Promise.all([
       db.from("tw_accounting_accounts").select("code,name,name_ar,parent_code,account_type,normal_balance,kind,subledger,has_auxiliary,auxiliary_source_code,client_id,vendor_id,active,version").eq("company_id", company.id).order("code"),
       db.rpc('tw_accounting_mappings_read',{p_company:company.id}),
       db.from("tw_accounting_years").select("id,start_date,end_date").eq("company_id", company.id).order("start_date"),
+      db.from("tw_accounting_year_closings").select("year_id").eq("company_id",company.id).eq("status","closed"),
     ]);
-    if (a.error || y.error || m.error) throw new Error("Could not load saved chart or financial years.");
-    accounts = (a.data ?? []).map(row => ({ code: row.code, name: row.name, nameAr: row.name_ar, parent: row.parent_code, type: row.account_type, normal: row.normal_balance, kind: row.kind, subledger: row.subledger ?? undefined, hasAuxiliary:row.has_auxiliary,auxiliarySource:row.auxiliary_source_code,clientId:row.client_id,vendorId:row.vendor_id, active: row.active, version: row.version }));
+    if (a.error || y.error || m.error || closing.error) throw new Error("Could not load saved chart or financial years.");
+    accounts = (a.data ?? []).filter(row=>!row.client_id&&!row.vendor_id).map(row => ({ code: row.code, name: row.name, nameAr: row.name_ar, parent: row.parent_code, type: row.account_type, normal: row.normal_balance, kind: row.kind, subledger: row.subledger ?? undefined, hasAuxiliary:row.has_auxiliary,auxiliarySource:row.auxiliary_source_code,clientId:row.client_id,vendorId:row.vendor_id, active: row.active, version: row.version }));
     mappings = m.data ?? [];
-    years = (y.data ?? []) as FiscalYear[];
+    years = (y.data ?? []).map(row=>({...row,closed:(closing.data??[]).some(c=>c.year_id===row.id)})) as FiscalYear[];
     if (years.length) {
       const result = await db.from("tw_accounting_periods").select("id,year_id,period_number,start_date,end_date,is_closed,lock_reason,version").in("year_id",years.map(y => y.id)).order("start_date");
       if (result.error) throw new Error("Could not load fiscal periods.");

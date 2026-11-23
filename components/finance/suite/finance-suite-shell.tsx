@@ -5,6 +5,7 @@ import { PageBackButton } from "@/components/navigation/page-back-button";
 
 type FinanceSuiteShellProps = {
   children: ReactNode;
+  header?: ReactNode;
   title: string;
   description?: string;
   actions?: ReactNode;
@@ -15,6 +16,7 @@ type FinanceSuiteShellProps = {
 
 export function FinanceSuiteShell({
   children,
+  header,
   title,
   description,
   actions,
@@ -30,7 +32,7 @@ export function FinanceSuiteShell({
       hideDesktopHeader
       mainClassName="tw-main"
     >
-      <div className="tw-hd">
+      {header ?? <div className="tw-hd">
         {backFallbackHref ? (
           <PageBackButton
             fallbackHref={backFallbackHref}
@@ -50,7 +52,7 @@ export function FinanceSuiteShell({
         <button type="button" className="tw-b pri">
           Actions
         </button></>}
-      </div>
+      </div>}
       {children}
     </DashboardShell>
   );
