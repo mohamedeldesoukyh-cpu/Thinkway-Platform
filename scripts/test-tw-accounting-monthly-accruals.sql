@@ -2,7 +2,7 @@ BEGIN;
 -- Dev only: all fixture documents, accounts and serials roll back.
 
 DO $$
-DECLARE monthly uuid:=gen_random_uuid(); postid uuid:=gen_random_uuid(); deliverable uuid:=gen_random_uuid(); headerid uuid:=gen_random_uuid(); runj uuid; revj uuid; plan jsonb; cash_id uuid;cash_jv uuid;cash_value jsonb;cash_quote jsonb;target uuid;before_balance numeric;sgn numeric;actor uuid;c uuid;client uuid;inv uuid:=gen_random_uuid();supplier uuid:=gen_random_uuid();cost uuid;note uuid;j uuid;j2 uuid;v integer;serial text;q jsonb;r jsonb;blocked boolean;k text;t text;l campaign_lines%ROWTYPE;a campaign_influencers%ROWTYPE;
+DECLARE legacy uuid:=gen_random_uuid();legacyj uuid:=gen_random_uuid();expected_native jsonb; statement_rows jsonb;monthly uuid:=gen_random_uuid(); postid uuid:=gen_random_uuid(); deliverable uuid:=gen_random_uuid(); headerid uuid:=gen_random_uuid(); runj uuid; revj uuid; plan jsonb; cash_id uuid;cash_jv uuid;cash_value jsonb;cash_quote jsonb;target uuid;before_balance numeric;sgn numeric;actor uuid;c uuid;client uuid;inv uuid:=gen_random_uuid();supplier uuid:=gen_random_uuid();cost uuid;note uuid;j uuid;j2 uuid;v integer;serial text;q jsonb;r jsonb;blocked boolean;k text;t text;l campaign_lines%ROWTYPE;a campaign_influencers%ROWTYPE;
 BEGIN
  SELECT p.id INTO actor FROM profiles p JOIN roles ro ON ro.id=p.role_id WHERE ro.slug='super_admin' AND p.is_active LIMIT 1;
  PERFORM set_config('request.jwt.claim.sub',actor::text,true);PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal2')::text,true);
@@ -33,10 +33,21 @@ BEGIN
  VALUES(deliverable,headerid,l.id,1,'instagram','reel',2,300,600,1000,600,200,100,100);
  INSERT INTO assignment_post_schedule(id,assignment_deliverable_id,campaign_line_id,sequence_number,live_date,status,metadata) VALUES(postid,deliverable,l.id,1,'2026-01-10','posted','{"live_date_source":"manual"}');
  INSERT INTO assignment_post_schedule(assignment_deliverable_id,campaign_line_id,sequence_number,live_date,status,metadata) VALUES(deliverable,l.id,2,'2026-01-10','posted','{"live_date_source":"assignment","assignment_live_date":"2026-01-10"}');
+ UPDATE campaign_lines SET metadata=metadata||'{"went_live":true,"went_live_date":"2026-02-01"}'::jsonb WHERE id=l.id;
+ SET LOCAL ROLE authenticated;
+ plan:=tw_accounting_monthly_plan(c,'2026-01-01','2026-01-31',ARRAY[l.id]);
+ IF plan->'items'<>'[]'::jsonb THEN RAISE EXCEPTION 'Future assignment live date included';END IF;
+ RESET ROLE;
+ UPDATE campaign_lines SET metadata=metadata||'{"went_live":false,"went_live_date":"2026-01-10"}'::jsonb WHERE id=l.id;
+ SET LOCAL ROLE authenticated;
+ plan:=tw_accounting_monthly_plan(c,'2026-01-01','2026-01-31',ARRAY[l.id]);
+ IF plan->'items'<>'[]'::jsonb THEN RAISE EXCEPTION 'Explicitly not-live assignment included';END IF;
+ RESET ROLE;
+ UPDATE campaign_lines SET metadata=metadata||'{"went_live":true,"went_live_date":"2026-01-10"}'::jsonb WHERE id=l.id;
  SET LOCAL ROLE authenticated;
  plan:=tw_accounting_monthly_plan(c,'2026-01-01','2026-01-31',ARRAY[l.id]);
  IF jsonb_array_length(plan->'items')<>5 THEN RAISE EXCEPTION 'Expected all five net components: %',plan;END IF;
- IF (SELECT sum((value->>'amount')::numeric) FROM jsonb_array_elements(plan->'items'))<>1000 THEN RAISE EXCEPTION 'Only one of two ads is actually live: %',plan;END IF;
+ IF (SELECT sum((value->>'amount')::numeric) FROM jsonb_array_elements(plan->'items'))<>2000 THEN RAISE EXCEPTION 'Full creator line must be recognized when one ad goes live: %',plan;END IF;
  blocked:=false;BEGIN PERFORM tw_accounting_monthly_post(c,monthly,'2026-01-01','2026-01-31','stale',ARRAY[l.id]);EXCEPTION WHEN serialization_failure THEN blocked:=true;END;IF NOT blocked THEN RAISE EXCEPTION 'Stale review accepted';END IF;
  runj:=tw_accounting_monthly_post(c,monthly,'2026-01-01','2026-01-31',plan->>'token',ARRAY[l.id]);
  IF tw_accounting_monthly_post(c,monthly,'2026-01-01','2026-01-31',plan->>'token',ARRAY[l.id])<>runj THEN RAISE EXCEPTION 'Duplicate monthly batch';END IF;
@@ -55,9 +66,9 @@ BEGIN
  IF (SELECT sum(amount) FROM tw_accounting_monthly_revenue_clearings WHERE journal_id=j)<>260 THEN RAISE EXCEPTION 'Revenue partial release wrong';END IF;
  IF (SELECT sum(credit) FROM tw_accounting_journal_lines WHERE journal_id=j AND account_code='231001')<>36.4 THEN RAISE EXCEPTION 'Actual invoice VAT lost';END IF;
  q:=tw_accounting_media_source(c,'client_invoice',inv);PERFORM tw_accounting_media_unpost(c,'client_invoice',inv,(q->>'version')::integer,'Review monthly transfer restoration');
- IF (SELECT sum(amount) FROM tw_accounting_cost_accruals WHERE monthly_id=monthly)<>350 THEN RAISE EXCEPTION 'Unpost did not restore monthly estimate';END IF;
+ IF (SELECT sum(amount) FROM tw_accounting_cost_accruals WHERE monthly_id=monthly)<>700 THEN RAISE EXCEPTION 'Unpost did not restore monthly estimate';END IF;
  q:=tw_accounting_media_source(c,'client_invoice',inv);IF tw_accounting_media_post(c,'client_invoice',inv,q->>'token')<>j THEN RAISE EXCEPTION 'Monthly-linked invoice repost changed JV';END IF;
- IF (SELECT sum(amount) FROM tw_accounting_cost_accruals WHERE monthly_id=monthly)<>210 THEN RAISE EXCEPTION 'Repost transferred monthly costs twice';END IF;
+ IF (SELECT sum(amount) FROM tw_accounting_cost_accruals WHERE monthly_id=monthly)<>560 THEN RAISE EXCEPTION 'Repost transferred monthly costs twice';END IF;
  -- Reverse the monthly remainder before a supplier invoice: the estimate
  -- transferred to billed revenue must survive. Roll this branch back locally.
  BEGIN
@@ -73,11 +84,31 @@ BEGIN
  q:=tw_accounting_media_source(c,'supplier_invoice',supplier);j2:=tw_accounting_media_post(c,'supplier_invoice',supplier,q->>'token');
  IF (SELECT sum(amount) FROM tw_accounting_accrual_clearings WHERE journal_id=j2)<>140 THEN RAISE EXCEPTION 'Cost partial release includes VAT or is missing';END IF;
  plan:=tw_accounting_monthly_reversal_plan(c,monthly,(now() AT TIME ZONE 'Africa/Cairo')::date);
- IF (SELECT sum((value->>'amount')::numeric) FROM jsonb_array_elements(plan->'items'))<>600 THEN RAISE EXCEPTION 'Reverse only remainder, expected 600: %',plan;END IF;
+ IF (SELECT sum((value->>'amount')::numeric) FROM jsonb_array_elements(plan->'items'))<>1600 THEN RAISE EXCEPTION 'Reverse only remainder, expected 1600: %',plan;END IF;
  revj:=tw_accounting_monthly_reverse(c,monthly,(now() AT TIME ZONE 'Africa/Cairo')::date,plan->>'token','Test remaining estimate reversal');
  IF revj=runj OR (SELECT reversal_of FROM tw_accounting_journals WHERE id=revj)<>runj THEN RAISE EXCEPTION 'Reversal must be a new linked JV';END IF;
  IF EXISTS(SELECT 1 FROM tw_accounting_journal_lines ln JOIN tw_accounting_journals j ON j.id=ln.journal_id WHERE j.company_id=c AND j.status='posted' AND ln.account_code IN('122001','212001') GROUP BY ln.account_code HAVING sum(debit-credit)<>0) THEN RAISE EXCEPTION 'Reversed estimates retain balance';END IF;
  IF EXISTS(SELECT 1 FROM tw_accounting_journal_lines WHERE company_id=c GROUP BY journal_id HAVING sum(debit-credit)<>0) THEN RAISE EXCEPTION 'Unbalanced journal';END IF;
- RAISE NOTICE 'PASS monthly: actual live evidence, five net components, stale review, idempotency, partial revenue/cost clearing, actual VAT, dated linked remainder reversal';
+ RESET ROLE;
+ -- Historical custom-FX invoice support must come from a matching reviewed snapshot.
+ INSERT INTO invoices(id,document_number,client_id,issue_date,currency,subtotal,tax_amount,total,revenue_before_vat,revenue_vat_amount,revenue_after_vat)
+ VALUES(legacy,'QA-LEGACY-'||legacy,client,'2026-01-05','EGP',99,0,99,99,0,99);
+ INSERT INTO invoice_line_items(invoice_id,sort_order,description,quantity,unit_price,revenue_before_vat,revenue_vat_percent,campaign_line_id,metadata)
+ VALUES(legacy,1,'Legacy custom FX evidence',1,99,99,0,l.id,'{"billing_fx":{"source_amount":2,"source_currency":"USD","rate":49.5}}');
+ UPDATE invoices SET amounts_finalized_at=now() WHERE id=legacy;
+ expected_native:=jsonb_build_object(l.id::text||':assignment_revenue',2,l.id::text||':agency_fee',0,l.id::text||':usage_rights_revenue',0);
+ INSERT INTO tw_accounting_journals(id,company_id,entry_date,activation_date,memo,transaction_currency,exchange_rate,exchange_rate_date,created_by,source_invoice_id,posting_mapping)
+ SELECT legacyj,c,'2026-01-05','2026-01-05','QA frozen custom FX invoice','EGP',1,'2026-01-05',actor,legacy,jsonb_build_object('historicalNativeParts',expected_native,'historicalInvoiceHash',md5(tw_accounting_invoice_snapshot(i)::text)) FROM invoices i WHERE i.id=legacy;
+ PERFORM tw_accounting_auto_line(legacyj,1,'121001','Legacy receipt basis',99,0,99,0,client,NULL,(SELECT document_number FROM clients WHERE id=client));
+ PERFORM tw_accounting_auto_line(legacyj,2,'411001','Frozen custom FX invoice',0,99,0,99,client,NULL,(SELECT document_number FROM clients WHERE id=client));
+ PERFORM tw_accounting_finish_receipt_journal(legacyj);
+ IF tw_accounting_invoice_native_parts(legacy) IS DISTINCT FROM expected_native THEN RAISE EXCEPTION 'Reviewed custom FX native parts were not preserved';END IF;
+ UPDATE tw_accounting_journals SET posting_mapping=jsonb_set(posting_mapping,'{historicalInvoiceHash}','"stale"') WHERE id=legacyj;
+ blocked:=false;BEGIN PERFORM tw_accounting_invoice_native_parts(legacy);EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Stale historical snapshot accepted';END IF;
+ -- This backdated January JV was created last; statements must still order by JV date.
+ statement_rows:=tw_accounting_statement_filtered(c,'2026-01-01','2026-11-23','121001','all',NULL,NULL,0,NULL,'{"dateBasis":"journal"}')->'rows';
+ IF EXISTS(SELECT 1 FROM (SELECT value->>'date' AS report_date,lag(value->>'date') OVER(ORDER BY ordinality) previous FROM jsonb_array_elements(statement_rows) WITH ORDINALITY)z WHERE report_date<previous) THEN RAISE EXCEPTION 'Statement follows creation order instead of JV date';END IF;
+ RAISE NOTICE 'PASS monthly: full creator-line eligibility and assignment date boundaries, five net components, stale review, idempotency, partial revenue/cost clearing, actual VAT, dated linked remainder reversal, custom FX legacy snapshot, statement JV-date ordering';
 END $$;
 ROLLBACK;
