@@ -26,3 +26,19 @@
 .tw-ac-journal-table tr[data-side=D]:focus-within{background:#edf6fc}.tw-ac-journal-table tr[data-side=C]:focus-within{background:#fff5e5}
 
 .tw-accounting .tw-ac-journal-status.pending{background:#fff4d6;color:#875b05}
+
+/* Dense transaction rows: reserve readable numeric fields and let descriptions wrap. */
+.tw-accounting .tw-ac-entry-grid table{table-layout:auto;min-width:1120px}
+.tw-accounting .tw-ac-entry-grid :is(th,td){padding:4px 6px;vertical-align:top;font-size:12px;line-height:1.35}
+.tw-accounting .tw-ac-entry-grid td:first-child{min-width:170px}
+.tw-accounting .tw-ac-entry-grid td:nth-child(2){min-width:170px}
+.tw-accounting .tw-ac-entry-grid td:nth-child(3){min-width:64px;white-space:nowrap}
+.tw-accounting .tw-ac-entry-grid td:nth-child(4){min-width:220px}
+.tw-accounting .tw-ac-entry-grid :is(input,select,textarea){min-height:28px;padding:3px 6px;font-size:12px;line-height:1.35}
+.tw-accounting .tw-ac-entry-grid td :is(label,small){font-size:11px;line-height:1.25;margin:0}
+.tw-accounting .tw-ac-entry-grid input[inputmode=decimal]{min-width:112px;font-variant-numeric:tabular-nums}
+.tw-accounting .tw-ac-line-description span,.tw-accounting .tw-ac-line-detail{display:block;white-space:normal;overflow-wrap:anywhere;line-height:1.35}
+.tw-accounting .tw-ac-entry-grid td:nth-child(n+5){white-space:nowrap}
+@media(pointer:coarse){.tw-accounting .tw-ac-entry-grid :is(input,select,button){min-height:36px}}
+
+.tw-accounting .tw-ac-jv-identity{display:inline-block;font-size:24px;line-height:1.2;font-weight:800;color:#15364b;margin:4px 12px 4px 0}

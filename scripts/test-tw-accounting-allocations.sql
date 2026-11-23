@@ -30,6 +30,10 @@ BEGIN
  {"code":"722001","name":"Realized loss","parent":"500000","type":"Expense","normal":"Debit","kind":"Posting"}]');
  PERFORM tw_accounting_submit_invoice(inv,c);original:=tw_accounting_post_invoice(inv,c,1,'2026-01-15','121001','411001','231001',50.12345678);
  PERFORM tw_accounting_submit_invoice(egp,c);PERFORM tw_accounting_post_invoice(egp,c,1,'2026-01-15','121001','411001',NULL,1);
+ -- Historical settlement fixture only: automatic posting now uses today's journal date.
+ RESET ROLE;
+ UPDATE tw_accounting_journals SET entry_date='2026-01-15' WHERE company_id=c AND source_invoice_id IN(inv,egp);
+ SET LOCAL ROLE authenticated;
  UPDATE tw_accounting_companies SET currencies=ARRAY['EGP','USD'] WHERE id=c;
  SELECT id INTO vendor FROM influencers WHERE document_number IS NOT NULL LIMIT 1;
  IF vendor IS NULL THEN RAISE EXCEPTION 'Dev vendor directory unavailable'; END IF;
@@ -66,6 +70,7 @@ BEGIN
  IF (SELECT amount_paid FROM invoices WHERE id=inv)<>0 THEN RAISE EXCEPTION 'Receipt reversal did not restore Media'; END IF;
  val:=jsonb_build_object('id',cost,'company',c,'version',NULL,'vendor',vendor,'date','2026-01-15','due','2026-02-15','currency','USD','net','100','tax','0','expense','722001','payable','211001','vat','111001','description','QA provisional creator cost','reference','QA approved assignment','supplierNumber','','supplierDate','');
  PERFORM tw_accounting_cost_save(val);quote:=tw_accounting_cost_fx(cost,c);j:=tw_accounting_cost_post(cost,c,1,(quote->>'rate')::numeric);
+ RESET ROLE; UPDATE tw_accounting_journals SET entry_date='2026-01-15' WHERE id=j AND company_id=c; SET LOCAL ROLE authenticated;
  IF NOT EXISTS(SELECT 1 FROM tw_accounting_cost_invoices WHERE id=cost AND status='internal' AND number LIKE 'IC-%') THEN RAISE EXCEPTION 'Internal cost not posted'; END IF;
  val:=jsonb_build_object('company',c,'kind','payment','party',vendor,'currency','USD','date','2026-02-01','amount','50','cash','111001','control','211001','advance','131001','gain','712001','loss','722001','parent',NULL,'advanceRow',true,'method','bank_transfer','reference','QA vendor allocation','lines',jsonb_build_array(jsonb_build_object('id',cost,'amount','40')));
  val:=val||jsonb_build_object('method','check','reference','QA-CHEQUE-001');
@@ -97,8 +102,8 @@ BEGIN
  j2:=tw_accounting_cost_reconcile(cost,c,2,'2026-02-02','QA-SUPPLIER-123','2026-01-15',110,0,'111001','QA received supplier invoice');
  IF NOT EXISTS(SELECT 1 FROM tw_accounting_cost_invoices WHERE id=cost AND status='supplier' AND journal_id=j AND net=110) THEN RAISE EXCEPTION 'Supplier reconciliation duplicated original cost'; END IF;
  IF (SELECT count(*) FROM tw_accounting_settlement_lines WHERE cost_id=cost)<>1 THEN RAISE EXCEPTION 'Supplier reconciliation lost allocations'; END IF;
- q:=tw_accounting_statement(c,'2026-02-01','2026-12-31','211001','vendor',vendor,NULL,0);
- IF jsonb_array_length(q->'accounts')<>1 OR jsonb_array_length(q->'rows')<>2 THEN RAISE EXCEPTION 'Vendor statement missing payment/adjustment'; END IF;
+ q:=tw_accounting_statement_filtered(c,'2026-02-01','2026-12-31','211001','vendor',vendor,NULL,0);
+ IF jsonb_array_length(q->'accounts')<>1 OR jsonb_array_length(q->'rows')<>3 THEN RAISE EXCEPTION 'Vendor statement missing payment, original-payable reversal or actual supplier payable'; END IF;
  blocked:=false;BEGIN PERFORM tw_accounting_reverse_journal(j,c,gen_random_uuid(),'2026-02-03','Illegal generic reversal');EXCEPTION WHEN raise_exception THEN blocked:=true;END;IF NOT blocked THEN RAISE EXCEPTION 'Automatic cost journal manually reversed'; END IF;
  PERFORM tw_accounting_settlement_reverse(pv,c,'2026-02-03','QA vendor reversal');
  IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(tw_accounting_open_items(c,'vendor',vendor,'USD','211001')) x WHERE x->>'id'=cost::text AND (x->>'outstanding')::numeric=110) THEN RAISE EXCEPTION 'Vendor payment reversal did not restore open item'; END IF;
