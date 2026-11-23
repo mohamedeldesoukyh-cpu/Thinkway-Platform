@@ -1,4 +1,4 @@
-import { OpenAiProvider } from "@/features/ai/llm/openai-provider";
+import { FinanceAiProvider } from "@/features/finance-assistant/provider";
 import { runFinanceAssistant } from "@/features/finance-assistant/assistant";
 import { financeChatSchema } from "@/features/finance-assistant/contracts";
 import { executeFinanceReport } from "@/features/finance-assistant/report-tools";
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     const year = setup.years.find(y=>y.id===input.yearId);
     if (input.yearId && !year) return json({error:"The selected fiscal year does not belong to this company."},400);
     return json(await runFinanceAssistant(input,{
-      provider:new OpenAiProvider({apiKey,defaultModel:process.env.FINANCE_AI_MODEL?.trim() || "gpt-4.1"}),
+      provider:new FinanceAiProvider(apiKey,process.env.FINANCE_AI_MODEL?.trim() || "gpt-4.1"),
       context:JSON.stringify({company:setup.company?.name,baseCurrency:setup.company?.base_currency,yearFrom:year?.start_date,yearTo:year?.end_date}),
       execute:plan=>executeFinanceReport(ctx.db,setup,input.yearId,plan),
     }));

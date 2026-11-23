@@ -56,6 +56,7 @@ export function FinanceAssistantWorkspace({companyId,yearId}:{companyId:string;y
           {message.reply?.sources.map((source) => <div key={source.href} className="mt-4 border-t pt-3">
             <Link className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4" href={source.href}>{source.title}</Link>
             <p className="text-sm text-muted-foreground">{source.scope}</p>
+            {source.tables?.map((table,tableIndex)=><div key={tableIndex} className="mt-4 overflow-x-auto rounded-lg border" role="region" aria-label={table.heading} tabIndex={0} dir="ltr"><table className="w-full text-left text-sm"><caption className="p-3 text-left font-semibold">{table.heading}</caption><thead className="bg-muted"><tr>{table.columns.map((column,i)=><th key={i} scope="col" className="whitespace-nowrap px-3 py-2">{column}</th>)}</tr></thead><tbody>{table.rows.map((row,i)=><tr key={i} className="border-t">{row.map((cell,j)=><td key={j} className="px-3 py-2 tabular-nums" dir="auto">{cell}</td>)}</tr>)}</tbody></table></div>)}
             <details className="mt-2"><summary className="cursor-pointer py-2 text-sm">Verified report data</summary><pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded bg-muted p-3 text-xs" dir="ltr">{JSON.stringify(source.facts, null, 2)}</pre></details>
           </div>)}
         </article>)}

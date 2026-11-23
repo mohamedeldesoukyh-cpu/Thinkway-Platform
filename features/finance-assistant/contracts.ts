@@ -34,6 +34,7 @@ export const financePlanSchema = z.discriminatedUnion("action", [
 export type FinancePlan = z.infer<typeof financePlanSchema>;
 export type FinanceChatInput = z.infer<typeof financeChatSchema>;
 export type FinanceEvidence = {
+  tables?: Array<{heading:string;columns:string[];rows:string[][]}>;
   title: string;
   href: string;
   scope: string;

@@ -48,10 +48,11 @@ export async function executeFinanceReport(
   const scope = `${company.name} · ${from} to ${to} · Journal dates · Posted transactions including unlocked entries · ${plan.display === "foreign" ? "Foreign currencies shown separately" : plan.display === "USD" ? "Second local: USD" : "Company base currency: " + company.base_currency}. ${plan.action === "pnl" ? "Closing entries excluded. Ledger-based income and expenses; completeness depends on recorded entries, not certified IFRS financial statements." : "Opening balances, debits, credits and closing balances from the accounting statement."} Report link opens the accounting screen; use the dates and display shown here.`;
   if (plan.action === "pnl") {
     const sections = financialReportSections({...report,auxiliaries:[]},setup.accounts,"profit",false,false);
-    return {title:"Accounting Profit & Loss",href:`/accounting?${params}#financial-statements`,scope,
+    return {title:"Accounting Profit & Loss",href:`/accounting?${params}#financial-statements`,scope,tables:sections,
       facts:{company:company.name,from,to,display:plan.display,sections}};
   }
   const groups = statementGroups({...report,rows:[],count:report.count??0} as Statement);
   return {title:`${partyName} — account statement`,href:`/accounting?${params}#client-statements`,scope,
+    tables:groups.map(({currency,totals,accounts})=>({heading:currency,columns:["Account","Name","Opening","Debit","Credit","Closing"],rows:[...accounts.map(a=>[a.account,a.name,a.opening,a.debit,a.credit,a.closing]),["","Total",totals.opening,totals.debit,totals.credit,totals.closing]]})),
     facts:{company:company.name,client:partyName,from,to,display:plan.display,groups:groups.map(({currency,totals,accounts})=>({currency,totals,accounts}))}};
 }

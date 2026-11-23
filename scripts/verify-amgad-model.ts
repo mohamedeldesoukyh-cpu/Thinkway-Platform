@@ -1,10 +1,10 @@
 /** Optional real-provider smoke: only synthetic in-memory data, no database or email writes. */
 import assert from 'node:assert/strict';
-import { OpenAiProvider } from '../features/ai/llm/openai-provider';
+import { FinanceAiProvider } from '../features/finance-assistant/provider';
 import { runFinanceAssistant } from '../features/finance-assistant/assistant';
 async function main() {
   if (!process.env.OPENAI_API_KEY && !process.env.FINANCE_AI_API_KEY) throw new Error('Configure an AI key first');
-  const provider = new OpenAiProvider({apiKey:process.env.FINANCE_AI_API_KEY || process.env.OPENAI_API_KEY,defaultModel:process.env.FINANCE_AI_MODEL || 'gpt-4.1'});
+  const provider = new FinanceAiProvider((process.env.FINANCE_AI_API_KEY || process.env.OPENAI_API_KEY)!,process.env.FINANCE_AI_MODEL || 'gpt-4.1');
   const scope={companyId:'11111111-1111-4111-8111-111111111111',yearId:null,history:[]};
   for (const [message, action] of [
     ['هات كشف حساب شركة الاختبار من 2026-01-01 إلى 2026-11-23','client_statement'],
@@ -22,5 +22,8 @@ async function main() {
   const identity=await runFinanceAssistant({...scope,message:'What is your name and can you read my Gmail now?'},{provider,execute:async()=>{throw new Error('Unexpected report call');}});
   assert.match(identity.content,/Amgad/i);assert.match(identity.content,/not|cannot|can't|isn.t/i);
   console.log('identity and unconnected-mailbox honesty: real-model PASS');
+  const arabic = await runFinanceAssistant({...scope,message:'أمجد، عرفني بنفسك وهل بريدك الإلكتروني متصل الآن؟',history:[{role:'assistant',content:'The selected fiscal year P&L has a net profit of EGP 0.00.'}]},{provider,execute:async()=>{throw new Error('Unexpected report call');}});
+  assert.match(arabic.content,/أمجد|Amgad/i);assert.match(arabic.content,/غير|ليس|لم/);
+  console.log('Arabic follow-up after a report: real-model PASS');
 }
 main().catch(()=>{console.error('Model smoke failed; no data or credentials logged.');process.exitCode=1;});

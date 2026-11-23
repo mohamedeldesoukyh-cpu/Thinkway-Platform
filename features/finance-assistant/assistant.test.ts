@@ -15,7 +15,7 @@ test("Arabic statement requests execute a validated report and retain server evi
   const requests: LlmCompletionRequest[] = [];
   const evidence = { title: "Client", href: "/reports/statements", scope: "Period movement", facts: { currency: "EGP", debit: 120 } };
   const result = await runFinanceAssistant({ message: "هات كشف حساب العميل", history: [], companyId: "11111111-1111-4111-8111-111111111111", yearId: null }, {
-    provider: provider([JSON.stringify({ action: "client_statement", clientName: "عميل", display: "local", from: "2026-01-01", to: "2026-11-23" }), "هذه حركة الحساب بالجنيه المصري"], requests),
+    provider: provider([JSON.stringify({ action: "client_statement", clientName: "عميل", display: "local", from: "2026-01-01", to: "2026-11-23" }), JSON.stringify({reply:"هذه حركة الحساب بالجنيه المصري"})], requests),
     execute: async (plan) => { assert.equal(plan.action, "client_statement"); return evidence; },
     now: new Date("2026-11-23T10:00:00Z"),
   });
