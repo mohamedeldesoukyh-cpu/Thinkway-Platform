@@ -139,6 +139,7 @@ export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
 
   "/api/quotations/[id]/export": "internal_workspace",
   "/api/quotations/exchange-rate": "internal_workspace",
+  "/api/quotations/creator-platforms": "internal_workspace",
   "/api/shortlists/[id]/export": "internal_workspace",
   "/api/invoices/[id]/document": "internal_workspace",
   "/api/client-ios/[id]/document": "internal_workspace",
