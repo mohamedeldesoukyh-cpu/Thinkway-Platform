@@ -427,9 +427,11 @@ export function DocumentPreviewShell({
           srcDoc={html}
           src={src}
           sandbox={sandbox}
+          style={{ visibility: ready ? "visible" : "hidden" }}
           className={cn("document-preview-frame w-full min-w-0 rounded-lg border border-border bg-card", contained ? "h-full min-h-0" : "min-h-[1200px]")}
         />
       </div>
+      {!ready && <div role="status" style={{ position: "absolute", inset: "72px 0 0", display: "grid", placeItems: "center", background: "#08063f", color: "#fff", pointerEvents: "none" }}>Preparing preview…</div>}
     </div>
   );
 }

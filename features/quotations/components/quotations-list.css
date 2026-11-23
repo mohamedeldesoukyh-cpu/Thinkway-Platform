@@ -3,8 +3,8 @@
   gap: 4px;
 }
 
-/* Match the register's smallest status text throughout its cells. */
+/* Match the Campaign list's 11px row typography. */
 .quotation-register-grid :is([role="gridcell"], a, span, button) {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.45;
 }

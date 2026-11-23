@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import { campaignDisplayName, downloadDisposition, quotationDownloadName } from './download-filename';
+import { accountingDownloadName, reportFilename } from '../../features/accounting/report-filename';
+import { formattedReportHtml } from '../../features/accounting/formatted-report-model';
+
+assert.equal(campaignDisplayName('Quotation — NBK Xmas Campaign'), 'NBK Xmas Campaign');
+assert.equal(campaignDisplayName('Arab Bank December'), 'Arab Bank December');
+assert.equal(quotationDownloadName('Mindshare', 'Quotation — Tikka', 'QT-26-58', '2026-11-23'), 'Mindshare - Tikka - QT-26-58 - 2026-11-23');
+assert.equal(accountingDownloadName('Statement of Account', 'Bundle Plus', '2026-11-23'), 'Statement of Account - Bundle Plus - 2026-11-23');
+assert.equal(accountingDownloadName('JV', '300', '2026-11-23'), 'JV - 300 - 2026-11-23');
+assert.equal(reportFilename({title:'Profit & Loss',caption:'2026-01-01 — 2026-11-23'}), 'P&L - 2026-11-23');
+const name = accountingDownloadName('Statement of Account', 'شركة / Client "A"\r\n', '2026-11-23');
+assert.doesNotMatch(name, /["/\r\n]/);
+const header = downloadDisposition(name + '.xlsx');
+assert.match(header, /filename\*=UTF-8''/);
+assert.ok(header.endsWith('.xlsx'));
+assert.doesNotMatch(header, /[\r\n]/);
+assert.ok(decodeURIComponent(header.split("UTF-8''")[1]).includes('شركة'));
+const html = formattedReportHtml({title:'Statement of Account',company:'Thinkway',caption:'2026-11-23',downloadName:name,sections:[]});
+assert.ok(html.includes('<title>'+name+'</title>'));
+console.log('PASS: descriptive filenames, report date, Unicode headers and PDF title');

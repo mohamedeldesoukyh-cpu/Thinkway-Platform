@@ -1,7 +1,8 @@
 "use client";
 
 import { ArrowLeftIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { closeDocumentPreview } from "@/lib/navigation/preview-navigation";
 
 import { Button } from "@/components/ui/button";
 import { navigateBack } from "@/lib/navigation/go-back";
@@ -25,8 +26,13 @@ export function PageBackButton({
   title,
 }: PageBackButtonProps) {
   const router = useRouter();
+  const pathname = usePathname();
 
   function handleBack() {
+    if (/\/preview\/?$/.test(pathname)) {
+      closeDocumentPreview(fallbackHref);
+      return;
+    }
     navigateBack(router, fallbackHref);
   }
 

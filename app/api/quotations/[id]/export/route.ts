@@ -1,3 +1,4 @@
+import {quotationDownloadName,downloadDisposition} from '@/lib/documents/download-filename';
 import { parseProposalOptions } from "@/features/quotations/export/proposal-options";
 import { quotationListPdfOptions } from "@/features/quotations/export/quotation-creator-list";
 import { renderRateCardPdf } from "@/features/rate-cards/report-pdf";
@@ -20,7 +21,6 @@ import { buildQuotationHtml } from "@/features/quotations/export/quotation-html"
 import { QUOTATION_PDF_OPTIONS } from "@/features/quotations/export/quotation-pdf";
 import {
   isCreatorDeckTemplate,
-  quotationExportFilenameRevision,
   resolveQuotationTemplate,
 } from "@/features/quotations/export/quotation-template";
 import { resolveThinkwayReportLogoSrcsForExport } from "@/lib/reports/document/thinkway-report-logo-embed";
@@ -123,12 +123,8 @@ export async function GET(request: Request, context: RouteContext) {
       doc = await embedQuotationDocumentAvatars(doc);
       doc = await embedQuotationDocumentPublicationShots(doc);
     }
-    const baseName = doc.serial;
+    const baseName = quotationDownloadName(doc.clientName, detail.name, doc.serial, detail.issue_date ?? new Intl.DateTimeFormat('en-CA', {timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()));
     const disposition = download ? "attachment" : "inline";
-    const templateSuffix = template === "detailed" ? "" : `-${template}`;
-    const revisionSuffix = `-${quotationExportFilenameRevision(
-      detail.updated_at ?? searchParams.get("v")
-    )}`;
     const siteOrigin = resolveQuotationExportSiteOrigin(
       request.headers.get("x-forwarded-host") ?? request.headers.get("host"),
       request.headers.get("x-forwarded-proto")
@@ -140,7 +136,7 @@ export async function GET(request: Request, context: RouteContext) {
         headers: withExportCacheHeaders({
           "Content-Type":
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          "Content-Disposition": `attachment; filename="${baseName}${revisionSuffix}.xlsx"`,
+          "Content-Disposition": downloadDisposition(baseName+".xlsx"),
         }),
       });
     }
@@ -153,7 +149,7 @@ export async function GET(request: Request, context: RouteContext) {
       return new NextResponse(html, {
         headers: withExportCacheHeaders({
           "Content-Type": "application/msword",
-          "Content-Disposition": `attachment; filename="${baseName}${templateSuffix}${revisionSuffix}.doc"`,
+          "Content-Disposition": downloadDisposition(baseName+".doc"),
         }),
       });
     }
@@ -170,7 +166,7 @@ export async function GET(request: Request, context: RouteContext) {
       return new NextResponse(pdfResult.buffer as unknown as BodyInit, {
         headers: withExportCacheHeaders({
           "Content-Type": "application/pdf",
-          "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}${revisionSuffix}.pdf"`,
+          "Content-Disposition": downloadDisposition(baseName+".pdf",disposition),
         }),
       });
     }
@@ -185,7 +181,7 @@ export async function GET(request: Request, context: RouteContext) {
           headers: withExportCacheHeaders({
             "Content-Type":
               "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}${revisionSuffix}.pptx"`,
+            "Content-Disposition": downloadDisposition(baseName+".pptx",disposition),
           }),
         });
       } catch (error) {
@@ -205,7 +201,7 @@ export async function GET(request: Request, context: RouteContext) {
       headers: withExportCacheHeaders(
         {
           "Content-Type": "text/html; charset=utf-8",
-          "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}${revisionSuffix}.html"`,
+          "Content-Disposition": downloadDisposition(baseName+".html",disposition),
         },
         { embeddable: isInlineHtmlPreview }
       ),
