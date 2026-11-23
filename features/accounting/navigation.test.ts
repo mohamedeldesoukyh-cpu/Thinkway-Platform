@@ -5,7 +5,7 @@ import {accountingGroups,accountingNavigation,visibleAccountingNavigation} from 
 
 test('all legacy screens remain reachable; vendor preset reuses the shared directory',()=>{
   const items=visibleAccountingNavigation({accounting:true,admin:true});
-  assert.deepEqual(new Set(items.map(item=>item.view)),new Set(['monthly-accruals','staff','pl-closing','customer-advances','vendor-advances','balance-sheet','cash-flow','vendor-aging','auxiliary-statements','client-statements','vendor-statements','unsettled-receivables','unsettled-payables','closing','audit-viewer','budget-setup','budget-control','budget-reports','financial-statements','aging','payment-preparation','cheques','banks','reconciliation','bank-movements','recurring','scheduled-reversal','opening','transfers','approvals','transaction-locks','approval-policy','parties','vendors','mapping','auxiliaries','moves','expenses','statements','costs','payments','receipts','invoices','chart','company','years','users','journals','ledger','trial','periods']));
+  assert.deepEqual(new Set(items.map(item=>item.view)),new Set(['expense-vendors','monthly-accruals','staff','pl-closing','customer-advances','vendor-advances','balance-sheet','cash-flow','vendor-aging','auxiliary-statements','client-statements','vendor-statements','unsettled-receivables','unsettled-payables','closing','audit-viewer','budget-setup','budget-control','budget-reports','financial-statements','aging','payment-preparation','cheques','banks','reconciliation','bank-movements','recurring','scheduled-reversal','opening','transfers','approvals','transaction-locks','approval-policy','parties','vendors','mapping','auxiliaries','moves','expenses','statements','costs','payments','receipts','invoices','chart','company','years','users','journals','ledger','trial','periods']));
   assert.ok(items.every(item=>item.route==='/accounting'));
 });
 test('registry has unique identities, valid parents, bilingual labels and evidence',()=>{
@@ -32,3 +32,4 @@ test('transaction controls, workflows and fiscal closing are ready',()=>{
   for(const id of ['moves','periods','approvals','transaction-locks','transfers','opening','recurring','scheduled-reversal'])assert.equal(accountingNavigation.find(item=>item.id===id)?.status,'Ready');
   for(const id of ['closing','audit-viewer'])assert.equal(accountingNavigation.find(item=>item.id===id)?.status,'Ready');
 });
+
