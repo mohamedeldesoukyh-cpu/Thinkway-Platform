@@ -61,7 +61,6 @@ export async function POST(request:Request) {
     const recipient=reportRecipient(mail);
     const text=mail.text?.trim();
     if(!text||text.length>4000)return json({error:"This message needs manual review: send a plain-text request of at most 4,000 characters."},422);
-    if(mail.attachments?.length)return json({error:"This message contains attachments. Document processing is not enabled; review the documents before preparing a response."},422);
     const key=process.env.FINANCE_AI_API_KEY?.trim()||process.env.OPENAI_API_KEY?.trim();
     if(!key)throw new Error("Amgad's AI connection is not configured.");
     const setup=await loadAccountingSetup(input.companyId);
@@ -69,10 +68,10 @@ export async function POST(request:Request) {
     if(input.yearId&&!year)return json({error:"Invalid company fiscal year."},400);
     const reply=await runFinanceAssistant({companyId:input.companyId,yearId:input.yearId,message:text,history:[]},{
       provider:new FinanceAiProvider(key,process.env.FINANCE_AI_MODEL?.trim()||"gpt-4.1"),
-      context:JSON.stringify({company:setup.company?.name,baseCurrency:setup.company?.base_currency,yearFrom:year?.start_date,yearTo:year?.end_date}),
+      context:JSON.stringify({company:setup.company?.name,baseCurrency:setup.company?.base_currency,yearFrom:year?.start_date,yearTo:year?.end_date,attachmentsProcessed:false}),
       execute:plan=>executeFinanceReport(ctx.db,setup,input.yearId,plan),
     });
-    const body=financeEmailText(reply);
+    const body=financeEmailText(reply)+(mail.attachments?.length ? "\n\nAttachments were not read or processed. / لم تتم قراءة أو معالجة المرفقات." : "");
     const approval=signMailApproval({userId:ctx.user.id,threadId:input.threadId,emailId:input.emailId,recipient,text:body,expires:Date.now()+10*60*1000,nonce:randomUUID()},financeMailKey());
     return json({recipient,text:body,approval,sendEnabled:process.env.FINANCE_MAIL_SEND_ENABLED==="true"});
   }catch(error){return json({error:error instanceof Error?error.message:"Unable to process email."},502);}
