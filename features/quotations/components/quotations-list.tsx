@@ -59,6 +59,7 @@ import { QuotationListFilterBar } from "./quotation-list-filter-bar";
 
 /** Keep the register readable with its campaign conversion column. */
 const QUOTATIONS_MIN_W = DISCOVERY_GRID_MIN_W.quotations ?? 1300;
+const REGISTER_NAME_STYLE = { display: "block", minWidth: 0, maxWidth: "100%", whiteSpace: "normal", overflowWrap: "anywhere", textOverflow: "clip" } as const;
 
 const LIST_ACTION_RUNNERS: Record<
   QuotationListActionKey,
@@ -324,7 +325,7 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
           </DiscoverySuiteCell>
           <DiscoverySuiteCell className="tw-id">{serial}</DiscoverySuiteCell>
           <DiscoverySuiteCell>
-            <Link href={quotationDetailPath(row)} className="tw-nm quotation-register-name">
+            <Link href={quotationDetailPath(row)} className="tw-nm quotation-register-name" style={REGISTER_NAME_STYLE}>
               {row.name}
             </Link>
           </DiscoverySuiteCell>
@@ -332,7 +333,7 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
             {brand || "not set"}
           </DiscoverySuiteCell>
           <DiscoverySuiteCell>
-            <span className="tw-t quotation-register-client" title={client || undefined}>
+            <span className="tw-t quotation-register-client" style={REGISTER_NAME_STYLE} title={client || undefined}>
               {client || "—"}
             </span>
           </DiscoverySuiteCell>
