@@ -372,7 +372,7 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
             <span className="tw-cw2" style={{ gap: 7 }}>
               <span
                 className={cn("tw-av", ownerTone(index))}
-                style={{ width: 22, height: 22, fontSize: 9 }}
+                style={{ width: 22, height: 22, fontSize: 10 }}
               >
                 {ini(ownerLabel).slice(0, 1)}
               </span>
@@ -470,6 +470,7 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
             />
           ) : (
             <DiscoverySuiteGrid
+              className="quotation-register-grid"
               cols="quotations"
               minWidth={QUOTATIONS_MIN_W}
               framed={false}

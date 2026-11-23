@@ -149,6 +149,7 @@ export default async function QuotationPreviewPage({
     const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host");
     const protocol = requestHeaders.get("x-forwarded-proto") || "https";
     const rendered = await renderQuotationPreviewHtml(supabase, detail.id, {
+      detail,
       template,
       siteOrigin: host ? `${protocol}://${host}` : undefined,
       itemIds,

@@ -1,5 +1,5 @@
 import type { QuotationCreatorPlatformOption } from "@/features/quotations/actions";
-import { getQuotationCreatorPlatformOptions } from "@/features/quotations/actions";
+import { requestCreatorPlatforms } from "./quotation-platform-batch";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 import {
   bootstrapPlatformOptionsFromItem,
@@ -51,14 +51,12 @@ export async function loadCreatorPlatformOptions(
   const inflight = inflightRequests.get(key);
   if (inflight) return inflight.then((platforms) => mergeCreatorPlatformOptions(platforms, bootstrap));
 
-  const request = getQuotationCreatorPlatformOptions({
+  const request = requestCreatorPlatforms({
     unified_id: item.unified_id,
     influencer_id: item.influencer_id,
     profile_id: item.profile_id,
   })
-    .then((res) => {
-      const fetched =
-        res.ok && res.data?.platforms?.length ? res.data.platforms : [];
+    .then((fetched) => {
       const platforms = mergeCreatorPlatformOptions(fetched, bootstrap);
       if (platforms.length > 0) {
         platformOptionsCache.set(key, platforms);

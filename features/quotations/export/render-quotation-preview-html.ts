@@ -33,6 +33,7 @@ export async function renderQuotationPreviewHtml(
   supabase: AppSupabase,
   quotationId: string,
   options?: {
+    detail?: import("../types").QuotationDetail;
     template?: QuotationTemplateVariant | string | null;
     proposalOptions?: import("./proposal-options").ProposalOption[];
     itemIds?: string[];
@@ -46,7 +47,7 @@ export async function renderQuotationPreviewHtml(
   creatorCount: number;
 }> {
   const template = resolveQuotationTemplate(options?.template ?? null);
-  const detail = await getQuotationDetail(quotationId);
+  const detail = options?.detail?.id === quotationId ? options.detail : await getQuotationDetail(quotationId);
   if (!detail) {
     throw new Error("Quotation not found");
   }

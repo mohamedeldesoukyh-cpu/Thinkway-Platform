@@ -13,3 +13,10 @@
   flex-wrap: wrap;
   gap: 4px;
 }
+
+/* Match the register's smallest status text throughout its cells. */
+.discovery-suite .quotation-register-grid [role="gridcell"],
+.discovery-suite .quotation-register-grid [role="gridcell"] :is(a, span, button) {
+  font-size: 10px;
+  line-height: 1.45;
+}
