@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { FinanceReply } from "./contracts";
+import { FinanceMailWorkspace } from "./mail-workspace";
 
 type Message = { role: "user" | "assistant"; content: string; reply?: FinanceReply };
 const suggestions = ["Show the P&L for the selected fiscal year", "هات كشف حساب عميل", "What can you help me with?"];
@@ -40,7 +41,7 @@ export function FinanceAssistantWorkspace({companyId,yearId}:{companyId:string;y
     }
   }
 
-  return <div className="mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
+  return <><div className="mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
     <section className="min-w-0 rounded-xl border bg-card p-4 sm:p-6" aria-label="Finance conversation">
       <div className="mb-6 flex items-center justify-between gap-3">
         <div><h2 className="text-lg font-semibold">Ask Amgad / اسأل أمجد</h2><p className="text-sm text-muted-foreground">AI Finance Assistant · Thinkway</p></div>
@@ -70,8 +71,8 @@ export function FinanceAssistantWorkspace({companyId,yearId}:{companyId:string;y
     </section>
     <aside className="space-y-5 text-sm">
       <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">Connected to TW Accounting</h2><p className="mt-2 leading-relaxed text-muted-foreground">Client account statements and ledger-based P&L. Reports include posted, unlocked entries and use journal dates. Source details show the exact scope.</p></section>
-      <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">Google Workspace</h2><p className="mt-2 break-words">amgad@thinkwaymedia.com</p><p className="mt-2 font-medium">Awaiting mailbox connection</p><p className="mt-2 leading-relaxed text-muted-foreground">Email intake and sending will be available after the dedicated mailbox is created and authorized.</p></section>
+      <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">Google Workspace + Resend</h2><p className="mt-2 break-words">amgad@thinkwaymedia.com</p><p className="mt-2 leading-relaxed text-muted-foreground">Forwarding is configured with Gmail copies retained. Use the inbox below to check connectivity and prepare replies for the approved finance team.</p></section>
       <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">First release</h2><p className="mt-2 leading-relaxed text-muted-foreground">Reports and explanations are available. Document uploads, voice, transaction approval and maintained IFRS references are next.</p></section>
     </aside>
-  </div>;
+  </div><FinanceMailWorkspace key={`${companyId}:${yearId}`} companyId={companyId} yearId={yearId}/></>;
 }
