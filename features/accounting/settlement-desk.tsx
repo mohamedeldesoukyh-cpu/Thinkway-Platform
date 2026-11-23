@@ -1,3 +1,4 @@
+import {TransactionStamp} from './transaction-stamp';
 import {workingYear,yearDate,documentParts,documentLabel} from './fiscal-context';
 import { MiniStatement,type MiniStatementSelection } from './mini-statement';
 import { VoucherSearch,useVoucherSearch } from './voucher-search';
@@ -98,7 +99,7 @@ export function SettlementDesk({setup,kind,onBusyChange,autoOpen=false,preparati
  </>}
  {client&&<details><summary>Review receipts recorded in Media or the earlier invoice receipt screen</summary><ReceiptDesk setup={setup} onBusyChange={onBusyChange}/></details>}
  </>}
- </section>;
+ <TransactionStamp company={company.id} journal={review?.journal_id} version={epoch}/></section>;
 }
 function VoucherPreview({quote:originalQuote,client:isClient,advanceApplication,onStatement}:{quote:SettlementQuote;client:boolean;advanceApplication:boolean;onStatement:(scope:'control'|'advance'|'cash'|'gain'|'loss')=>void}){
  const isRefund=originalQuote.amount.startsWith('-'),client=isRefund?!isClient:isClient;const abs=(v:string)=>decimal(cents(v)<BigInt(0)?-cents(v):cents(v));const q=isRefund?{...originalQuote,amount:abs(originalQuote.amount),cash:abs(originalQuote.cash),allocated:abs(originalQuote.allocated),carrying:abs(originalQuote.carrying),advance:abs(originalQuote.advance),advanceBase:abs(originalQuote.advanceBase)}:originalQuote;

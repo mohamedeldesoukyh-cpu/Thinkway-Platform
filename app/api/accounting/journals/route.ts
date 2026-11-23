@@ -4,13 +4,14 @@ import { z } from 'zod';
 import { accountingContext } from '@/features/accounting/setup-server';
 import { isoDate,journalSchema,journalActionSchema,reversalSchema,periodSchema } from '@/features/accounting/journal-validation';
 import { assertCsrfRequest } from '@/lib/security/csrf';
-const header='resume_status,workflow,id,company_id,entry_date,reference,memo,status,voucher_number,version,reversal_of,reversal_reason,source_invoice_id,source_payment_id,automatic_source,entry_kind,transaction_currency,exchange_rate,exchange_rate_date,unpost_reason,created_at,posted_at,control_locked,approval_state,control_reason';
+const header='resume_status,workflow,id,company_id,entry_date,activation_date,reference,memo,status,voucher_number,version,reversal_of,reversal_reason,source_invoice_id,source_payment_id,automatic_source,entry_kind,transaction_currency,exchange_rate,exchange_rate_date,unpost_reason,created_at,posted_at,control_locked,approval_state,control_reason';
 const reply=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
 const message=(e:unknown)=>e instanceof z.ZodError?e.issues[0]?.message:e instanceof Error?e.message:'Accounting request failed';
 export async function GET(request:Request){
  try{
   const {db}=await accountingContext();const q=new URL(request.url).searchParams;
   const company=z.string().uuid().parse(q.get('company'));const mode=q.get('mode')??'journals';
+  if(mode==='stamp'){const r=await db.rpc('tw_accounting_transaction_stamp',{p_company:company,p_journal:z.string().uuid().parse(q.get('id'))});if(r.error)throw Error(r.error.message);return reply(r.data);}
   if(mode==='schedules'){
    const r=await db.from('tw_accounting_schedules').select('id,kind,name,next_date,end_date,interval_months,active,version,source_id,occurrence').eq('company_id',company).order('next_date').limit(500);if(r.error)throw new Error(r.error.message);
    const runs=await db.from('tw_accounting_schedule_runs').select('schedule_id,due_date,journal_id').eq('company_id',company).order('created_at',{ascending:false}).limit(100);if(runs.error)throw new Error(runs.error.message);return reply({schedules:r.data,runs:runs.data});

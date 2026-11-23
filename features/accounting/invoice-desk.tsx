@@ -1,3 +1,4 @@
+import {TransactionStamp} from './transaction-stamp';
 import { partyCode } from './party-code';
 // Inherits AccountingConsole's client boundary.
 import { mappedAccount } from './mapping-model';
@@ -20,7 +21,7 @@ export function InvoiceDesk({setup,onBusyChange}:{setup:AccountingSetup;onBusyCh
  },[company.id,page,epoch]);
  function refresh(){setLoading(true);setError('');setEpoch(n=>n+1);}
  function changePage(next:number){setLoading(true);setError('');setPage(next);}
- function review(row:InvoiceSubmission){setSelected(row);setReceivable(setup.accounts.find(a=>a.active&&a.clientId===row.client_id&&a.type==='Asset'&&a.normal==='Debit')?.code??mappedAccount(setup,'client_receivable','121001'));setAuxiliaries({});setVat(mappedAccount(setup,'output_vat','231001'));setReason('');setFx(null);setDate(row.source.date);setRevenue(mappedAccount(setup,'assignment_revenue','411001'));setConfirmed(false);setError('');setNotice('');}
+ function review(row:InvoiceSubmission){setSelected(row);setReceivable(setup.accounts.find(a=>a.active&&a.clientId===row.client_id&&a.type==='Asset'&&a.normal==='Debit')?.code??mappedAccount(setup,'client_receivable','121001'));setAuxiliaries({});setVat(mappedAccount(setup,'output_vat','231001'));setReason('');setFx(null);setDate(new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()));setRevenue(mappedAccount(setup,'assignment_revenue','411001'));setConfirmed(false);setError('');setNotice('');}
  async function write(operation:'post'|'withdraw'|'unpost'){
   if(!selected)return;setBusy(true);onBusyChange(true);setError('');
   try{const value=operation==='post'?{auxiliaries,expectedPlan:fx?.plan,invoice:selected.invoice_id,company:company.id,version:selected.version,date,receivable,revenue,vat:vat||null,rate:fx?.rate}:{invoice:selected.invoice_id,company:company.id,version:selected.version,reason};
@@ -42,7 +43,7 @@ export function InvoiceDesk({setup,onBusyChange}:{setup:AccountingSetup;onBusyCh
  <p>Invoice date: {selected.source.date}. Amount: {selected.source.total} {selected.source.currency}. Receipt balances are handled separately.</p>
  {fx&&<p>1 {fx.currency} = {fx.rate} {fx.base} · Rate effective on {fx.date}{selected.status==='submitted'?' · System rate for this posting':' · Saved posting rate'}</p>}
  {selected.status==='pending'?<p>Voucher {selected.voucher} is Pending and excluded from balances. In TW Media, un-generate this invoice, correct its campaign lines, regenerate, then submit it again. Reposting rebuilds the same voucher; automatic journal lines cannot be edited here.</p>:selected.status==='posted'?<><p>This invoice is {selected.reversal?'reversed':'posted'} as {selected.voucher}. Automatic journal lines are read-only. Unpost to correct the invoice, or reverse the voucher from Journal vouchers.{selected.reversal&&` Reversal: ${selected.reversal}.`}</p>{!selected.reversal&&setup.access.manage&&<form onSubmit={e=>{e.preventDefault();void write('unpost');}}><fieldset disabled={busy} className="tw-ac-form-grid"><label className="tw-ac-span">Unposting reason<input aria-label="Unposting reason" required minLength={3} maxLength={500} value={reason} onChange={e=>setReason(e.target.value)}/></label><p>The journal will be Pending and removed from posted balances. Its number and audit history will be retained.</p><button className="tw-ac-button" disabled={reason.trim().length<3}>Unpost invoice</button></fieldset></form>}</>:<form onSubmit={e=>{e.preventDefault();void write('post');}}><fieldset disabled={busy||!setup.access.manage} className="tw-ac-form-grid">
- <label>Posting date<input type="date" required min={selected.source.date} value={date} onChange={e=>{setDate(e.target.value);setConfirmed(false);}}/></label>
+ <label>Journal date<input type="date" readOnly value={date}/></label><label>Activation date<input type="date" readOnly value={selected.source.date}/></label>
  <label>Customer receivable<select required value={receivable} onChange={e=>{setReceivable(e.target.value);setFx(null);setConfirmed(false);}}><option value="">Select account</option>{options('receivable')}</select></label>
  <label className="tw-ac-span">Revenue account<select required value={revenue} onChange={e=>{setRevenue(e.target.value);setFx(null);setConfirmed(false);}}><option value="">Choose the invoice revenue account</option>{options('revenue')}</select></label>
  {Number(selected.source.vat)>0&&<label className="tw-ac-span">Output VAT account<select required value={vat} onChange={e=>{setVat(e.target.value);setFx(null);setConfirmed(false);}}><option value="">Select account</option>{options('vat')}</select></label>}
@@ -52,5 +53,5 @@ export function InvoiceDesk({setup,onBusyChange}:{setup:AccountingSetup;onBusyCh
  <label className="tw-ac-check tw-ac-span"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/> I reviewed the company, date, accounts, exchange rate and both currency amounts.</label>
  <div className="tw-ac-form-actions"><button type="button" className="tw-ac-button" onClick={()=>void write('withdraw')}>Withdraw submission</button><button className="tw-ac-button tw-ac-primary" disabled={!confirmed||!!previewError||!fx?.plan}>{busy?'Posting…':'Post invoice'}</button></div>
  </fieldset></form>}{previewError&&<p role="alert" className="tw-ac-error">{previewError}</p>}{error&&<p role="alert" className="tw-ac-error">{error}</p>}</>}</DialogContent></Dialog>
- </section>;
+ <TransactionStamp company={company.id} journal={selected?.journal_id} version={selected?.version}/></section>;
 }

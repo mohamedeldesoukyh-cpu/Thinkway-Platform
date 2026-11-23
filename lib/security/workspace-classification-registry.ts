@@ -53,6 +53,7 @@ export const PAGE_PREFIX_CLASSIFICATIONS: Array<{
 export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
   "/api/accounting/setup": "internal_workspace",
   "/api/accounting/journals": "internal_workspace",
+  "/api/accounting/favorites": "internal_workspace",
   "/api/accounting/fiscal": "internal_workspace",
   "/api/accounting/budgets": "internal_workspace",
   "/api/accounting/reports": "internal_workspace",
