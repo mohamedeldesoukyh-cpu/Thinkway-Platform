@@ -1,3 +1,4 @@
+import { ExpenseVendorsDesk } from './expense-vendors-desk';
 "use client";
 import {MonthlyAccrualDesk} from './monthly-accrual-desk';
 import {StaffDesk} from './staff-desk';
@@ -94,6 +95,7 @@ export function AccountingConsole({initial}:{initial:AccountingSetup}) {
     {company && view==='payment-preparation' && <SettlementDesk key={`${company.id}-preparations-${journalEpoch}`} setup={transactionData} kind="payment" preparations onBusyChange={setJournalBusy}/>}
     {company && view==='cheques' && <ChequeRegister company={company.id} onPayment={()=>setView('payments')}/>}
     {company && view==='costs' && <CostInvoiceDesk key={`${company.id}-${journalEpoch}`} setup={transactionData} onBusyChange={setJournalBusy}/>}
+    {company && view==='expense-vendors' && <ExpenseVendorsDesk setup={data} onSaved={()=>refresh()} onBusyChange={setJournalBusy}/>}
     {company && (view==='parties'||view==='vendors') && <PartyAccountsDesk key={`${company.id}:${view}`} initialKind={view==='vendors'?'vendor':'client'} setup={data} onBusyChange={setJournalBusy} onSaved={()=>refresh()}/>}
     {company && view==='staff' && <StaffDesk key={`${company.id}-${journalEpoch}`} setup={data} onBusyChange={setJournalBusy} onOpenAccount={account=>{setError('');setEditing(account);}}/>}
     {company && (view==='approvals'||view==='transaction-locks'||view==='approval-policy') && <TransactionControls key={`${company.id}-${view}`} setup={data} mode={view} onBusyChange={setJournalBusy} onSaved={()=>refresh()}/>}
