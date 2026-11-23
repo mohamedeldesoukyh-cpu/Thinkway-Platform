@@ -23,7 +23,6 @@ import {
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { CAMPAIGN_STATUS_OPTIONS } from "@/features/campaigns/constants";
 import { campaignPortfolioIntel } from "@/features/campaigns/lifecycle/campaign-portfolio-intelligence";
-import { campaignProcessCueFromListItem } from "@/features/campaigns/lifecycle/campaign-process-presentation";
 import type { CampaignListItem, CampaignStatus } from "@/types/database";
 import { formatGroupDisplayName } from "@/lib/groups/group-display";
 import { campaignDetailPathWithTab } from "@/lib/routing/entity-paths";
@@ -51,8 +50,7 @@ const CAMPAIGNS_LIST_TRACKS: Record<string, string> = {
 const SELECT_TRACK = "30px";
 
 function campaignOpenHref(campaign: CampaignListItem) {
-  const cue = campaignProcessCueFromListItem(campaign);
-  return campaignDetailPathWithTab(campaign, cue.entryStageId);
+  return campaignDetailPathWithTab(campaign, "lines");
 }
 
 type CampaignsTableProps = {

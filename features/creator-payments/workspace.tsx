@@ -127,6 +127,8 @@ export function CreatorPaymentsWorkspace({ campaignId, creatorId }: {
     const [bulkPct, setBulkPct] = useState(50);
     const [bulkCurrency, setBulkCurrency] = useState('');
     const loadVersion = useRef(0);
+    const activeLoads = useRef(0);
+    const lastBackgroundRefresh = useRef(0);
     const requestId = useRef<string | null>(null);
     const [settings, setSettings] = useState<ExportSettings>({ debitAccount: '', date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()), charge: 'SHA', purpose: '', details: 'Creator campaign payment', advice: false });
     const acceptResult = useCallback((r: Awaited<ReturnType<typeof loadCreatorPayments>>, preserveDrafts = false) => { setLoading(false); if (!r.ok) {
@@ -134,11 +136,13 @@ export function CreatorPaymentsWorkspace({ campaignId, creatorId }: {
         return;
     } setError(''); setCanWrite(r.canWrite); setRows(r.rows); setBatches(r.batches); if (!preserveDrafts) { setDrafts({}); setSelected(new Set()); } }, []);
     const reload = useCallback(async (preserveDrafts = false) => {
+        activeLoads.current++;
         const version = ++loadVersion.current;
         if (!preserveDrafts) setLoading(true);
         setError('');
         try { const result = await loadCreatorPayments({ campaignId, creatorId }); if (version === loadVersion.current) acceptResult(result, preserveDrafts); }
         catch { if (version === loadVersion.current) { setLoading(false); setError('Could not load payments. Please try Refresh again.'); } }
+        finally { activeLoads.current--; }
     }, [campaignId, creatorId, acceptResult]);
     // The counter intentionally invalidates every outstanding request on cleanup.
     // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
@@ -155,7 +159,13 @@ export function CreatorPaymentsWorkspace({ campaignId, creatorId }: {
             setBankRow(current => current?.creatorId === change.creatorId ? { ...current, bank: change.bank } : current);
             void reload(true);
         };
-        const refresh = () => { if (document.visibilityState === 'visible') void reload(true); };
+        const refresh = () => {
+            // Focus and visibilitychange often fire together. Do not queue duplicate
+            // server actions behind the active load or a just-started refresh.
+            if (document.visibilityState !== 'visible' || activeLoads.current > 0 || Date.now() - lastBackgroundRefresh.current < 1500) return;
+            lastBackgroundRefresh.current = Date.now();
+            void reload(true);
+        };
         const timer = window.setInterval(refresh, 30000);
         window.addEventListener(CREATOR_BANK_SAVED, saved);
         window.addEventListener('focus', refresh);
