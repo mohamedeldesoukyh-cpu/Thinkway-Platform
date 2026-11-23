@@ -223,12 +223,22 @@ export async function embedQuotationDocumentAvatars(
 ): Promise<QuotationDocument> {
   const requireEmbeddedAvatar = isCreatorDeckTemplate(doc.template);
   const supabase = await resolveExportAvatarSupabase();
+  // Reuse identical image work within this export; preserve the exact image bytes.
+  const images = new Map<string, Promise<string | null>>();
+  const embed = (src: string | null | undefined, profile: string | null | undefined, list = false) => {
+    const key = JSON.stringify([src, profile, list]);
+    let request = images.get(key);
+    if (!request) {
+      request = embedAvatarDataUri(src ?? null, profile ?? null, supabase, list);
+      images.set(key, request);
+    }
+    return request;
+  };
   const creatorGroups = await Promise.all(
     doc.creatorGroups.map(async (group) => {
-      const embedded = await embedAvatarDataUri(
+      const embedded = await embed(
         group.avatarUrl,
         group.profileUrl,
-        supabase,
         isQuotationListTemplate(doc.template)
       );
       if (embedded?.startsWith("data:")) {
@@ -262,10 +272,9 @@ export async function embedQuotationDocumentAvatars(
           ...pkg,
           creators: await Promise.all(
             pkg.creators.map(async (creator) => {
-              const embedded = await embedAvatarDataUri(
+              const embedded = await embed(
                 creator.avatarUrl,
-                creator.profileUrl,
-                supabase
+                creator.profileUrl
               );
               if (embedded?.startsWith("data:")) {
                 return {
