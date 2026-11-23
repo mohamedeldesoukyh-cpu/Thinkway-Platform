@@ -1,3 +1,4 @@
+import {navigationEvidence} from './navigation-evidence';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {accountingGroups,accountingNavigation,visibleAccountingNavigation} from './navigation';
@@ -12,7 +13,7 @@ test('registry has unique identities, valid parents, bilingual labels and eviden
   assert.equal(new Set(accountingNavigation.map(item=>item.id)).size,accountingNavigation.length);
   for(const item of accountingNavigation){
     assert.ok(accountingGroups.some(group=>group.id===item.parent));
-    assert.ok(item.en && /[\u0600-\u06ff]/.test(item.ar) && item.evidence);
+    assert.ok(item.en && /[\u0600-\u06ff]/.test(item.ar) && navigationEvidence[item.id]);
   }
   assert.equal(accountingNavigation.some(item=>/cost.?cent(er|re)/i.test(item.en)),false);
 });

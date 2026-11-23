@@ -1,0 +1,25 @@
+BEGIN;
+DO $$ DECLARE actor uuid;c uuid;s uuid;r jsonb;v integer;j uuid;blocked boolean;BEGIN
+ SELECT p.id INTO actor FROM profiles p JOIN roles r ON r.id=p.role_id WHERE r.slug='super_admin' AND p.is_active LIMIT 1;
+ PERFORM set_config('request.jwt.claim.sub',actor::text,true);PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal2')::text,true);
+ SET LOCAL ROLE authenticated;
+ c:=tw_accounting_create_company('QA staff rollback','EG','EGP','2026-01-01','[{"code":"100000","name":"Assets","parent":null,"type":"Asset","normal":"Debit","kind":"Group"},{"code":"111001","name":"Cash","parent":"100000","type":"Asset","normal":"Debit","kind":"Posting"}]');
+ s:=tw_accounting_staff_save(c,NULL,NULL,'Staff person',true);
+ IF NOT EXISTS(SELECT 1 FROM tw_accounting_auxiliaries WHERE id=s AND account_code IS NULL AND staff_number=1) THEN RAISE EXCEPTION 'Staff creation requires a GL';END IF;
+ SELECT to_jsonb(a) INTO r FROM tw_accounting_accounts a WHERE company_id=c AND code='111001';
+ PERFORM tw_accounting_account_save(r||'{"code":"132001","name":"Staff advances","kind":"Control","subledger":"Employee"}',NULL,'[]');
+ PERFORM tw_accounting_account_save(r||'{"code":"132002","name":"Other staff account","kind":"Control","subledger":"Employee"}',NULL,'[]');
+ j:=gen_random_uuid();
+ PERFORM tw_accounting_save_entry(j,c,'2026-01-15','','Staff shared identity test',NULL,'manual',jsonb_build_array(jsonb_build_object('account','132001','auxiliaryId',s,'debit','10','credit','0'),jsonb_build_object('account','132002','auxiliaryId',s,'debit','0','credit','10')));
+ PERFORM tw_accounting_post_journal(j,c,(SELECT version FROM tw_accounting_journals WHERE id=j));
+ PERFORM tw_accounting_staff_save(c,s,1,'Staff renamed',true);
+ IF (SELECT count(*) FROM tw_accounting_journal_lines WHERE journal_id=j AND auxiliary_id=s)<>2 THEN RAISE EXCEPTION 'Shared staff identity lost';END IF;
+ blocked:=false;BEGIN PERFORM tw_accounting_staff_save(c,s,2,'Staff renamed',false);EXCEPTION WHEN raise_exception THEN blocked:=SQLERRM LIKE '%with a balance%';END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Balances on different staff GLs incorrectly netted';END IF;
+ blocked:=false;BEGIN PERFORM tw_accounting_staff_save(c,s,1,'Stale rename',true);EXCEPTION WHEN serialization_failure THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Staff concurrency check missing';END IF;
+ r:=tw_accounting_statement_filtered(c,'2026-01-01','2026-12-31',NULL,'all',NULL,NULL,0,s,'{"reportMode":"trial","includeThirdParties":true}');
+ IF jsonb_array_length(r->'auxiliaries')<>2 OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(r->'auxiliaries') x WHERE x->>'name' LIKE '%Staff renamed%') THEN RAISE EXCEPTION 'Staff report details missing';END IF;
+ RAISE NOTICE 'PASS independent staff creation, shared GL identity, rename, per-account balance protection, stale version';
+END $$;
+ROLLBACK;
