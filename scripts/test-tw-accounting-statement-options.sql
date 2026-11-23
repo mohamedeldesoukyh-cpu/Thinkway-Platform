@@ -26,6 +26,8 @@ j:=tw_accounting_save_signed_workflow(jsonb_build_object('id',gen_random_uuid(),
 q:=tw_accounting_statement_filtered(c,'2026-01-01','2026-12-31','100000',p_options=>'{"display":"foreign"}');
 IF jsonb_array_length(q->'accounts')<>2 OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(q->'accounts') a WHERE a->>'currency'='EGP' AND (a->>'closing')::numeric=300) OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(q->'accounts') a WHERE a->>'currency'='USD' AND (a->>'closing')::numeric=1) THEN RAISE EXCEPTION 'Foreign currency balances combined';END IF;
 q:=tw_accounting_statement_filtered(c,'2026-11-23','2026-12-31','111001',p_options=>'{"skipInactivePeriod":true}');IF jsonb_array_length(q->'accounts')<>0 THEN RAISE EXCEPTION 'Inactive period filter ignored';END IF;
+q:=tw_accounting_statement_filtered(c,'2026-01-01','2026-12-31',p_options=>'{"reportMode":"trial","includeAuxiliary":true,"includeThirdParties":true}');
+IF jsonb_array_length(q->'accounts')=0 THEN RAISE EXCEPTION 'Full chart missing';END IF;
 RAISE NOTICE 'PASS: preserved balances, parent descendants, transaction/lock filters, USD equivalents, independent foreign balances, no-movement option';
 END $$;
 ROLLBACK;
