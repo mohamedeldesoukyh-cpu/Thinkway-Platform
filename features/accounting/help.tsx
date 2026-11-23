@@ -1,24 +1,19 @@
 // Inherits AccountingWorkspace's client boundary.
 import { useState } from 'react';
+import {DropdownMenu,DropdownMenuTrigger,DropdownMenuContent,DropdownMenuItem} from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+const shortcuts=[["Ctrl+F", "Search voucher numbers; Enter runs the search."], ["Ctrl+M", "Open the selected account’s mini statement."], ["F2", "Open the field lookup. Type a prefix to filter."], ["Ctrl+S", "Save the current entry. Receipts/payments run Save/Post after allocation review."], ["Ctrl+Alt+P", "Preview the current report, chart or voucher."], ["Ctrl+P", "Preview JV or receipt/payment print pages."], ["Enter / ↑ / ↓", "In lookups: Enter opens/selects a row; arrows move between rows."], ["Tab / Shift+Tab", "Next / previous editable cell; skips disabled fields and lookup icons."], ["Ctrl+Enter", "Add a journal line or advance row. Chrome reserves Ctrl+N."], ["Ctrl+Z", "Undo an unsaved JV edit; header Discard restores the saved JV."], ["Ctrl+Y", "Redo an undone JV edit or discarded changes."], ["Esc", "Close preview, lookup or dialog; then return to Accounting home. Unsaved JV changes require confirmation."]];
 
 export function AccountingHelp() {
   const [open, setOpen] = useState(false);
   return <>
-    <button type="button" className="tw-ac-button" onClick={() => setOpen(true)}>Help</button>
+    <DropdownMenu><DropdownMenuTrigger className="tw-ac-button">Help</DropdownMenuTrigger><DropdownMenuContent><DropdownMenuItem onSelect={()=>setOpen(true)}>Keyboard shortcuts</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="tw-accounting tw-ac-edit-dialog" style={{ minHeight: 0 }}>
-        <DialogHeader><DialogTitle>Accounting Help</DialogTitle><DialogDescription>Keyboard shortcuts work in the relevant entry form. Validation and posting permissions still apply.</DialogDescription></DialogHeader>
-        <h3>Keyboard shortcuts</h3>
-        <table className="tw-ac-journal-table"><thead><tr><th>Shortcut</th><th>Action</th></tr></thead><tbody>
-          <tr><td>Ctrl+F</td><td>Search voucher numbers; press Enter to search.</td></tr><tr><td>Ctrl+M</td><td>Open the selected transaction account’s mini statement.</td></tr><tr><td>F2</td><td>Open lookup from an account, auxiliary, currency or Third Party field. Enter a code prefix first to narrow the results.</td></tr>
-          <tr><td>Ctrl+S</td><td>Save the current journal, cost invoice or payment preparation. In receipts and payments, run the current save/post action after reviewing the allocation preview.</td></tr>
-          <tr><td>Ctrl+P</td><td>Preview the journal or receipt/payment print pages.</td></tr>
-          <tr><td>Tab / Shift+Tab</td><td>Move to the next / previous editable cell; dimmed fields and lookup icons are skipped.</td></tr><tr><td>Ctrl+Enter</td><td>Add a journal line, or an advance row in a receipt or payment. Chrome reserves Ctrl+N for a new window.</td></tr>
-          <tr><td>Ctrl+Z</td><td>Undo the latest unsaved JV edit. Undo / Discard in the header restores the last saved JV.</td></tr>
-          <tr><td>Ctrl+Y</td><td>Redo an undone JV edit or restore discarded unsaved changes.</td></tr>
-          <tr><td>Esc</td><td>Close a lookup or help dialog.</td></tr>
-        </tbody></table>
+        <DialogHeader><DialogTitle>Keyboard shortcuts</DialogTitle><DialogDescription>Keyboard shortcuts work in the relevant entry form. Validation and posting permissions still apply.</DialogDescription></DialogHeader>
+
+        <table className="tw-ac-journal-table"><thead><tr><th>Shortcut</th><th>Action</th></tr></thead><tbody>{shortcuts.map(([key,action])=><tr key={key}><td>{key}</td><td>{action}</td></tr>)}</tbody></table>
       </DialogContent>
     </Dialog>
   </>;

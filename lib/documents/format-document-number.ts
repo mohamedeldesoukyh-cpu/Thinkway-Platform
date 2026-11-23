@@ -14,7 +14,7 @@ const CAMPAIGN_DISPLAY_PREFIX = "Camp#";
 
 /** Format internal references embedded in document text; never alter bank, tax or PO IDs. */
 export function formatDocumentReferences(value: string): string {
-  return value.replace(/\b(?:TW|INV|INF|CIO|VIO|QT|SL|CL)-\d+(?:-\d+)*(?:-[A-Z])?(?:\/\d+)?\b/g,
+  return value.replace(/\b(?:TW|INV|INF|CIO|VIO|QT|SL|CL|CLT|CLI|VND|VEN|JV|RV|PV|AL|IC|CI|RR|PR)-\d+(?:-\d+)*(?:-[A-Z])?(?:\/\d+)?\b/g,
     reference => formatDocumentNumberForDisplay(reference));
 }
 

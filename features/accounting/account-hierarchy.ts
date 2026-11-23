@@ -6,8 +6,9 @@ export function isLedgerAccount(account: SavedAccount): boolean {
   return account.kind !== 'Group' && !account.clientId && !account.vendorId;
 }
 export function partyDirectory(account?: SavedAccount): 'client' | 'vendor' | null {
-  if (account?.kind !== 'Control') return null;
-  return account.subledger === 'Customer' ? 'client' : account.subledger === 'Supplier / creator' ? 'vendor' : null;
+  if (!account || account.kind !== 'Control' && !account.directorySource) return null;
+  const kind=account.directoryKind??account.subledger;
+  return kind === 'Customer' ? 'client' : kind === 'Supplier / creator' ? 'vendor' : null;
 }
 export function lineDetailComplete(account: SavedAccount | undefined, line: JournalLine): boolean {
   if (!account || !isLedgerAccount(account)) return false;

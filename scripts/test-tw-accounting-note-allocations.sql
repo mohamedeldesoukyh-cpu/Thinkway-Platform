@@ -49,7 +49,7 @@ BEGIN
  cost:=gen_random_uuid();
  PERFORM tw_accounting_cost_save(jsonb_build_object('id',cost,'company',c,'version',NULL,'vendor',a.influencer_id,'assignment',l.id,'date','2026-01-17','due','','currency','EGP','net','100','tax','0','expense','511001','payable','211001','vat','141001','description','Internal accrual clearance','reference','QA provisional','supplierNumber','','supplierDate',''));
  q:=tw_accounting_media_source(c,'internal_cost',cost);PERFORM tw_accounting_media_post(c,'internal_cost',cost,q->>'token');
- j:=tw_accounting_post_with_aux('cost-reconcile',jsonb_build_object('id',cost,'company',c,'version',2,'date','2026-01-18','number','QA-ACTUAL','supplierDate','2026-01-18','net','120','tax','16.80','vat','141001','reference','QA actual supplier invoice'));
+ j:=tw_accounting_post_with_aux('cost-reconcile',jsonb_build_object('id',cost,'company',c,'version',2,'date',(now() AT TIME ZONE 'Africa/Cairo')::date,'number','QA-ACTUAL','supplierDate','2026-01-18','net','120','tax','16.80','vat','141001','reference','QA actual supplier invoice'));
  IF NOT EXISTS(SELECT 1 FROM tw_accounting_journal_lines WHERE journal_id=j AND description LIKE 'Reverse original cost:%' AND credit=100) OR NOT EXISTS(SELECT 1 FROM tw_accounting_journal_lines WHERE journal_id=j AND description LIKE 'Actual supplier cost:%' AND debit=120) OR NOT EXISTS(SELECT 1 FROM tw_accounting_journal_lines WHERE journal_id=j AND account_code='141001' AND debit=16.8) THEN RAISE EXCEPTION 'Actual cost replacement did not reverse original and recognise full new cost with VAT';END IF;
  IF (SELECT sum(amount) FROM tw_accounting_accrual_clearings WHERE cost_id=cost)<>120 THEN RAISE EXCEPTION 'Actual supplier invoice clearing includes VAT or ignores delta';END IF;
  q:=tw_accounting_media_queue(c,'client_invoice','2026-01-01','2026-12-31',true,0);
@@ -95,7 +95,7 @@ BEGIN
   IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(q)x WHERE x->>'id'=target::text AND (x->>'outstanding')::numeric=before_balance+sgn*11.4) THEN RAISE EXCEPTION 'Invoice aging incorrect';END IF;
 
   cash_id:=gen_random_uuid();
-  cash_value:=jsonb_build_object('company',c,'party',CASE WHEN k LIKE 'client_%' THEN client ELSE a.influencer_id END,'kind',CASE WHEN k LIKE 'client_%' THEN 'receipt' ELSE 'payment' END,'date','2026-01-18','currency','EGP','amount',(before_balance+sgn*11.4)::text,'control',CASE WHEN k LIKE 'client_%' THEN '121001' ELSE '211001' END,'advance',CASE WHEN k LIKE 'client_%' THEN '221001' ELSE '131001' END,'cash','112001','gain','712001','loss','722001','method','bank_transfer','reference','QA note settlement','lines',jsonb_build_array(jsonb_build_object('id',target,'amount',(before_balance+sgn*11.4)::text)));
+  cash_value:=jsonb_build_object('company',c,'party',CASE WHEN k LIKE 'client_%' THEN client ELSE a.influencer_id END,'kind',CASE WHEN k LIKE 'client_%' THEN 'receipt' ELSE 'payment' END,'date',(now() AT TIME ZONE 'Africa/Cairo')::date,'currency','EGP','amount',(before_balance+sgn*11.4)::text,'control',CASE WHEN k LIKE 'client_%' THEN '121001' ELSE '211001' END,'advance',CASE WHEN k LIKE 'client_%' THEN '221001' ELSE '131001' END,'cash','112001','gain','712001','loss','722001','method','bank_transfer','reference','QA note settlement','lines',jsonb_build_array(jsonb_build_object('id',target,'amount',(before_balance+sgn*11.4)::text)));
   cash_quote:=tw_accounting_settlement_quote(cash_value);
   cash_jv:=tw_accounting_settlement_post(cash_id,cash_value,cash_quote);
   IF EXISTS(SELECT 1 FROM jsonb_array_elements(tw_accounting_open_items(c,CASE WHEN k LIKE 'client_%' THEN 'client' ELSE 'vendor' END,CASE WHEN k LIKE 'client_%' THEN client ELSE a.influencer_id END,'EGP'))x WHERE x->>'id'=target::text) THEN RAISE EXCEPTION 'Fully settled adjusted invoice remains open';END IF;
@@ -115,9 +115,9 @@ BEGIN
    BEGIN PERFORM tw_accounting_note_allocate(c,k,note,(q->>'version')::integer,'[]');EXCEPTION WHEN raise_exception THEN blocked:=true;END;
    IF NOT blocked THEN RAISE EXCEPTION 'Debit removed underneath a dependent cash settlement';END IF;
   END IF;
-  r:=tw_accounting_statement_filtered(c,'2026-01-01','2026-01-31',CASE WHEN k LIKE 'client_%' THEN '121001' ELSE '211001' END);
+  r:=tw_accounting_statement_filtered(c,'2026-01-01',(now() AT TIME ZONE 'Africa/Cairo')::date,CASE WHEN k LIKE 'client_%' THEN '121001' ELSE '211001' END);
   IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(r->'rows')x WHERE x->>'id'=j::text AND x->>'description' LIKE '%11.40 EGP%') THEN RAISE EXCEPTION 'Statement allocation reference missing';END IF;
-  PERFORM tw_accounting_settlement_reverse(cash_id,c,'2026-01-19','QA reverse settlement');
+  PERFORM tw_accounting_settlement_reverse(cash_id,c,(now() AT TIME ZONE 'Africa/Cairo')::date,'QA reverse settlement');
   q:=tw_accounting_media_source(c,k,note);PERFORM tw_accounting_note_allocate(c,k,note,(q->>'version')::integer,'[]');
   q:=tw_accounting_media_source(c,k,note);PERFORM tw_accounting_media_unpost(c,k,note,(q->>'version')::integer,'Correct note');q:=tw_accounting_media_source(c,k,note);IF tw_accounting_media_post(c,k,note,q->>'token')<>j THEN RAISE EXCEPTION 'Note repost changed JV';END IF;
  END LOOP;

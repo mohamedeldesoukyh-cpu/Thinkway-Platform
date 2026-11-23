@@ -1,23 +1,14 @@
-// Reuse the existing Employee directory and shared detail identities.
-import {useState} from 'react';
+// Inherits AccountingConsole's client boundary.
+import {useEffect,useState} from 'react';
 import type {AccountingSetup,SavedAccount} from './setup-types';
-import {AuxiliaryManager} from './auxiliaries';
-import {CodeLookup} from './code-lookup';
-
+import {accountingRead,accountingWrite} from './allocation-controls';
+import {lookupInput} from './lookup-layout';
+type Staff={id:string;number:number;name:string;active:boolean;version:number};
 export function StaffDesk({setup,onBusyChange,onOpenAccount}:{setup:AccountingSetup;onBusyChange:(busy:boolean)=>void;onOpenAccount:(account:SavedAccount)=>void}) {
- const sources=setup.accounts.filter(a=>a.active&&a.kind==='Control'&&a.subledger==='Employee'&&!a.auxiliarySource);
- const [code,setCode]=useState(sources.find(a=>a.hasAuxiliary)?.code??sources[0]?.code??'');
- const [busy,setBusy]=useState(false);
- const source=sources.find(a=>a.code===code);
- const linked=setup.accounts.filter(a=>a.code===code||a.auxiliarySource===code);
- return <section className="tw-ac-setup-panel"><h2>Third Parties · Staff</h2>
-  <p>Create staff names in one shared directory. Configure staff costs, advances, salaries payable and other staff accounts with Third Parties · Staff, then select this directory as their shared source. Each account keeps its own balance; the same staff identity is retained across all linked accounts.</p>
-  <label>Staff directory account<CodeLookup label="Staff directory account" value={code} onChange={setCode} disabled={busy} options={sources.map(a=>({code:a.code,name:a.name}))}/></label>
-  {source?<>
-   {setup.access.manage&&<button type="button" className="tw-ac-button" disabled={busy} onClick={()=>onOpenAccount(source)}>Configure staff directory</button>}
-   {source.hasAuxiliary?<AuxiliaryManager key={`${source.code}:${source.version}`} company={setup.company!.id} account={source} manage={setup.access.manage} onBusyChange={value=>{setBusy(value);onBusyChange(value);}}/>:<p>Enable Own Auxiliary in this account’s setup to create the staff directory. Other staff accounts can share its list.</p>}
-   <h3>Linked staff accounts</h3><div className="tw-ac-journal-table-scroll"><table className="tw-ac-journal-table"><thead><tr><th>Code</th><th>Account</th></tr></thead><tbody>{linked.map(a=><tr key={a.code}><td>{a.code}</td><td>{a.name}</td></tr>)}</tbody></table></div>
-   <p>Use Auxiliary Statements with the staff member selected and no account filter to view the consolidated statement across linked staff accounts.</p>
-  </>:<p>Create a GL account with the Third Parties · Staff directory in Chart of Accounts first.</p>}
- </section>;
+ const [rows,setRows]=useState<Staff[]>([]),[name,setName]=useState(''),[names,setNames]=useState<Record<string,string>>({}),[busy,setBusy]=useState(false),[error,setError]=useState(''),[epoch,setEpoch]=useState(0),[notice,setNotice]=useState('');
+ const company=setup.company!.id;
+ useEffect(()=>{const controller=new AbortController();void accountingRead({mode:'staff',company},controller.signal).then(setRows).catch(e=>{if(!controller.signal.aborted)setError(e.message);});return()=>controller.abort();},[company,epoch]);
+ async function save(row?:Staff,toggle=false){if(toggle&&row?.active&&!window.confirm('Deactivate staff? All account balances must be zero. History is retained.'))return;setBusy(true);onBusyChange(true);setError('');setNotice('');try{await accountingWrite('staff-save',{company,id:row?.id??null,version:row?.version??null,name:row?(names[row.id]??row.name):name,active:row?(toggle?!row.active:row.active):true});setName('');setNames({});setEpoch(n=>n+1);setNotice('Staff saved. Available on all accounts linked to Staff.');}catch(e){setError(e instanceof Error?e.message:'Could not save staff');}finally{setBusy(false);onBusyChange(false);}}
+ const linked=setup.accounts.filter(a=>a.kind==='Control'&&a.subledger==='Employee');
+ return <section className="tw-ac-setup-panel"><h2>Third Parties · Staff</h2><p>Add staff once for use in Advances, Staff Cost, Salaries and other Staff accounts.</p>{error&&<p role="alert" className="tw-ac-error">{error}</p>}{notice&&<p role="status">{notice}</p>}<div className="tw-ac-journal-table-scroll"><table className="tw-ac-journal-table"><thead><tr><th>Code</th><th>Staff name</th><th>Status</th><th>Action</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{r.number}</td><td>{setup.access.manage?<input style={lookupInput} aria-label={`Staff name ${r.number}`} value={names[r.id]??r.name} maxLength={150} disabled={busy} onChange={e=>setNames({...names,[r.id]:e.target.value})}/>:r.name}</td><td>{r.active?'Active':'Inactive'}</td><td>{setup.access.manage&&<><button type="button" className="tw-ac-button" disabled={busy||!names[r.id]?.trim()||names[r.id]===r.name} onClick={()=>void save(r)}>Save</button> <button type="button" className="tw-ac-button" disabled={busy} onClick={()=>void save(r,true)}>{r.active?'Deactivate':'Restore'}</button></>}</td></tr>)}{setup.access.manage&&<tr><td>Automatic</td><td><input style={lookupInput} aria-label="New staff name" value={name} maxLength={150} disabled={busy} onChange={e=>setName(e.target.value)}/></td><td>New</td><td><button type="button" className="tw-ac-button tw-ac-primary" disabled={busy||!name.trim()} onClick={()=>void save()}>Add staff</button></td></tr>}</tbody></table></div><h3>Linked staff accounts</h3><p>In account setup, choose Account with directory → Third Parties · Staff.</p><table className="tw-ac-journal-table"><thead><tr><th>Code</th><th>Account</th></tr></thead><tbody>{linked.map(a=><tr key={a.code}><td>{a.code}</td><td><button type="button" className="tw-ac-text-button" disabled={busy||!setup.access.manage} onClick={()=>onOpenAccount(a)}>{a.name}</button></td></tr>)}</tbody></table></section>;
 }

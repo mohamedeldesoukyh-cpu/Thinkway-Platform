@@ -26,3 +26,9 @@ test('Journal request validation retains Third Party identity for database enfor
  assert.equal(journalLineSchema.parse({...line,clientId:id}).clientId,id);
  assert.equal(journalLineSchema.parse({...line,vendorId:id}).vendorId,id);
 });
+
+ test('Revenue and cost use an existing GL third-party directory',()=>{
+ const revenue={code:'411001',name:'Revenue',kind:'Posting',type:'Revenue',normal:'Credit',active:true,nameAr:'',version:1,parent:null,directorySource:'121001',directoryKind:'Customer'} as import('./setup-types').SavedAccount;
+ assert.equal(partyDirectory(revenue),'client');assert.equal(lineDetailComplete(revenue,{clientId:'client'} as import('./journal-model').JournalLine),true);assert.equal(lineDetailComplete(revenue,{auxiliaryId:'old-component'} as import('./journal-model').JournalLine),false);
+ assert.equal(partyDirectory({...revenue,directorySource:'211001',directoryKind:'Supplier / creator'}),'vendor');
+ });
