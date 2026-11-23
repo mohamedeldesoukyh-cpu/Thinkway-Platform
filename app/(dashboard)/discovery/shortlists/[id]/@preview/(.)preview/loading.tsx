@@ -1,0 +1,1 @@
+export default function PreviewLoading() { return <div role="status" style={{position:"fixed",inset:0,zIndex:10000,display:"grid",placeItems:"center",background:"#08063f",color:"#fff"}}>Preparing preview…</div>; }

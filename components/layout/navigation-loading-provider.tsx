@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Suspense, useEffect, useRef, useState, useTransition } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import { PREVIEW_NAVIGATION_EVENT } from "@/lib/navigation/preview-navigation";
@@ -56,7 +56,7 @@ function NavigationLoadingOverlay() {
   const search = searchParams.toString();
   const [isNavigating, setIsNavigating] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     function navigate(event: Event) {
       const detail = (event as CustomEvent<{ href: string; close: boolean }>).detail;
       if (!detail || typeof detail.href !== "string") return;
