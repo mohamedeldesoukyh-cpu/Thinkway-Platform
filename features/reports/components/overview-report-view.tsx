@@ -181,7 +181,7 @@ function OverviewReportContent({
             Actual = went-live activity through the as-of date. Acc. (called accrued in this report) = total campaign value minus actual; it has not yet gone live. This is different from earned-but-unbilled revenue. Total = actual + not yet live. GP = revenue − cost. Rev. Share = campaign revenue share.
             GP after RS = Total GP − Rev. Share. Totals cover all filtered campaigns.
           </p>
-          <p>Dates filter campaign start dates. The as-of date splits current campaign values by publication date; it is not a historical accounting snapshot.</p>
+          <p>Dates filter assignment went-live dates. Each recorded live assignment includes its full creator-line revenue and cost. Clear the date range to include not-yet-live assignments. Values are current commercials, not a historical accounting snapshot.</p>
         </footer>
       </section>
     </div>

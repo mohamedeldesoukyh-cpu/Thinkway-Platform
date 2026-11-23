@@ -238,7 +238,7 @@ export function OverviewOptionFilter({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Campaign start date range                                                   */
+/* Went live date range                                                   */
 /* -------------------------------------------------------------------------- */
 
 type DateRangeFilterProps = {
@@ -262,16 +262,16 @@ export function OverviewDateRangeFilter({ from, to, appliedFrom, appliedTo, toda
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button type="button" aria-haspopup="dialog" className={pillButton}>
-            <PillLabel label="Campaign start" value={value || undefined} icon={<CalendarRangeIcon aria-hidden className="size-3.5 shrink-0" />} />
+            <PillLabel label="Went live" value={value || undefined} icon={<CalendarRangeIcon aria-hidden className="size-3.5 shrink-0" />} />
             {!value && <ChevronDownIcon aria-hidden className="size-3.5 shrink-0 opacity-60" />}
             <EditedDot edited={state.edited} />
           </button>
         </PopoverTrigger>
-        <PopoverContent align="start" aria-label="Campaign start dates" className={cn(panelClass, "w-[min(22rem,calc(100vw-1.5rem))]")}>
+        <PopoverContent align="start" aria-label="Went live dates" className={cn(panelClass, "w-[min(22rem,calc(100vw-1.5rem))]")}>
           <div className="space-y-3 p-3.5">
             <div>
-              <p className="text-xs font-semibold text-foreground">Campaign start date</p>
-              <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">Shows campaigns that start within this range. Not related to publication dates.</p>
+              <p className="text-xs font-semibold text-foreground">Went live date</p>
+              <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">Includes creator assignments whose recorded went-live dates fall within this range.</p>
             </div>
             <div role="group" aria-label="Quick ranges" className="flex flex-wrap gap-1.5">
               {presets.map(preset => {
@@ -310,7 +310,7 @@ export function OverviewDateRangeFilter({ from, to, appliedFrom, appliedTo, toda
           </div>
         </PopoverContent>
       </Popover>
-      {(from || to) && <ClearButton label="Campaign start" onClear={() => onChange("", "")} />}
+      {(from || to) && <ClearButton label="Went live" onClear={() => onChange("", "")} />}
     </span>
   );
 }

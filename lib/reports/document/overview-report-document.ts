@@ -3,14 +3,14 @@ import { buildStyledExcelBuffer } from "./thinkway-report-excel";
 import { formatReportAmountAlways, renderThinkwayReportHtml } from "./thinkway-report-html";
 
 const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-const notes = ["Actual = went-live activity; highlighted Not-live columns = total campaign value minus actual (previously Acc.). This is not earned-but-unbilled revenue. Blue Total columns = actual + not yet live.", "GP = revenue − cost. Rev. Share = campaign revenue share; GP after RS = Total GP − Rev. Share. Amounts exclude VAT. Campaign dates filter start dates. As-of uses current commercial values, not a historical accounting snapshot."];
+const notes = ["Actual = went-live activity; highlighted Not-live columns = total campaign value minus actual (previously Acc.). This is not earned-but-unbilled revenue. Blue Total columns = actual + not yet live.", "GP = revenue − cost. Rev. Share = campaign revenue share; GP after RS = Total GP − Rev. Share. Amounts exclude VAT. Dates filter assignment went-live dates using full creator-line revenue and cost. Fixed revenue share is allocated to selected assignments by revenue. Clear dates to include not-yet-live assignments. As-of uses current commercial values, not a historical accounting snapshot."];
 function metadata(report: OverviewReport) {
   const f = report.filters;
   const result = [{ label: "Currency", value: f.currency }, { label: "Went live as of", value: f.asOf }, { label: "Campaigns", value: String(report.rows.length) }];
   for (const [key, label] of [["groupId", "Group"], ["clientId", "Client"], ["brandId", "Brand"], ["campaignId", "Campaign"], ["status", "Status"]] as const) {
     if (f[key]) result.push({ label, value: report.options[key].find(o => o.value === f[key])?.label ?? f[key] });
   }
-  for (const [key,label] of [["from", "Campaign start from"], ["to", "Campaign start to"], ["q", "Search"], ["clientType", "Client type"], ["activity", "Activity"]] as const) if (f[key]) result.push({ label, value: f[key] });
+  for (const [key,label] of [["from", "Went live from"], ["to", "Went live to"], ["q", "Search"], ["clientType", "Client type"], ["activity", "Activity"]] as const) if (f[key]) result.push({ label, value: f[key] });
   return result;
 }
 export function buildOverviewReportHtml(report: OverviewReport) {

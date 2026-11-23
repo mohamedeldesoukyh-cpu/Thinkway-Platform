@@ -174,8 +174,8 @@ const CHIP_LABEL: Record<OverviewFilterChip["key"], string> = {
   status: "Status",
   clientType: "Client type",
   activity: "Activity",
-  from: "Start from",
-  to: "Start to",
+  from: "Went live from",
+  to: "Went live to",
 };
 
 /** Chips for the APPLIED filters (what the table currently shows), never the draft. */

@@ -32,12 +32,29 @@ test("as-of date and currency preserve partition identities", () => {
   assert.equal(Math.round((r.revenue + r.accruedRevenue) * 100), Math.round(r.totalRevenue * 100));
 });
 test("filters and cancellation apply before totals", () => {
-  for (const patch of [{ groupId: "other" }, { clientId: "other" }, { brandId: "other" }, { campaignId: "other" }, { status: "completed" }, { clientType: "direct" }, { from: "2026-02-01" }, { to: "2025-12-01" }, { q: "missing" }]) {
+  for (const patch of [{ groupId: "other" }, { clientId: "other" }, { brandId: "other" }, { campaignId: "other" }, { status: "completed" }, { clientType: "direct" }, { from: "2026-04-01" }, { to: "2025-12-01" }, { q: "missing" }]) {
     const report = buildOverviewReport({ ...input, filters: { ...input.filters, ...patch } });
     assert.equal(report.rows.length, 0); assert.equal(report.totals.totalRevenue, 0);
   }
   assert.equal(buildOverviewReport({ ...input, headers: [{ ...header, status: "cancelled" }] }).rows.length, 0);
   assert.equal(buildOverviewReport({ ...input, filters: { ...input.filters, activity: "both", q: "client" } }).rows.length, 1);
+});
+
+test('assignment went-live date includes the full creator line despite blank campaign start and partial child schedules',()=>{
+  const actual={...input,headers:[{...header,start_date:null}],lines:[{...line,metadata:{went_live:true,went_live_date:'2026-07-25'}}],filters:{...input.filters,from:'2026-07-01',to:'2026-07-31'}};
+  const r=buildOverviewReport(actual).rows[0];
+  assert.equal(r.revenue,1210);assert.equal(r.cost,640);assert.equal(r.accruedRevenue,0);assert.equal(r.accruedCost,0);
+  assert.equal(buildOverviewReport({...actual,filters:{...actual.filters,to:'2026-07-24'}}).rows.length,0);
+  assert.equal(buildOverviewReport({...actual,filters:{...actual.filters,from:'2026-07-26'}}).rows.length,0);
+  assert.equal(buildOverviewReport({...actual,filters:{...actual.filters,asOf:'2026-07-24'}}).rows.length,0);
+});
+
+test('went-live period selects assignment amounts and allocates fixed revenue share once',()=>{
+  const actual={...input,headers:[{...header,start_date:'2025-01-01',metadata:{revenue_share:{mode:'amount',value:100,currency:'EGP'}}}],lines:[{...line,metadata:{went_live:true,went_live_date:'2026-07-25'}},{...line,id:'aug',metadata:{went_live:true,went_live_date:'2026-08-25'}}]};
+  const report=(from:string,to:string)=>buildOverviewReport({...actual,filters:{...actual.filters,from,to}}).rows[0];
+  const jul=report('2026-07-01','2026-07-31'),aug=report('2026-08-01','2026-08-31'),both=report('2026-07-01','2026-08-31');
+  assert.equal(jul.revenue,1210);assert.equal(aug.cost,640);assert.equal(jul.revenueShare,50);assert.equal(jul.revenueShare+aug.revenueShare,both.revenueShare);
+  assert.equal(jul.revenue+aug.revenue,both.revenue);
 });
 test("column parsing and invalid dates have safe defaults", () => {
   const f = parseOverviewFilters({ columns: "gp,invalid,gp,campaign", asOf: "2099-01-01", from: "2026-02-30" }, "2026-11-13");
