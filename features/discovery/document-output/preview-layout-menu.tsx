@@ -130,7 +130,7 @@ export function PreviewLayoutMenu({ templates, value, onChange, onOpen, trigger,
         : option)
   })).filter(family => family.options.length > 0);
   const current = families.flatMap(f => f.options).find(o => o.id === value);
-  return <Popover open={open} onOpenChange={next => { openingPreview.current = false; setOpen(next); }}>
+  return <Popover open={open} onOpenChange={next => { openingPreview.current = false; if (next && families[0]?.options[0]) onChange(families[0].options[0].id); setOpen(next); }}>
     <PopoverTrigger asChild disabled={disabled}>{trigger}</PopoverTrigger>
     <PopoverContent ref={contentRef} className="qx-lay" align="end" collisionPadding={14}
       aria-labelledby={name + "-title"} aria-describedby={name + "-description"}

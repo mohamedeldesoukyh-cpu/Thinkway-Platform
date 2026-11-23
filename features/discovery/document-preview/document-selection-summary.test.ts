@@ -10,7 +10,7 @@ const items = [
 test("empty export selection has zero totals instead of silently summarizing everyone", () => {
  const summary = summarizeQuotationSelection(items, []);
  assert.equal(summary.selectedCreatorCount,0); assert.equal(summary.totalCreatorCount,2);
- for (const metric of summary.metrics.filter(metric => metric.scope)) assert.match(metric.value, /^(EGP 0|0\.0%)$/);
+ for (const metric of summary.metrics.filter(metric => metric.scope && metric.label !== "Markup on cost")) assert.match(metric.value, /^(EGP 0|0\.0%)$/);
  assert.equal(summarizeShortlistSelection([], []).selectedCreatorCount,0);
 });
 test("creator rows and overall summary share original line prices, variable fees and calculated GP", () => {
@@ -58,4 +58,12 @@ test("converted selection total combines mixed currencies and follows the select
  assert.equal(values(["aed","usd"],"USD",50)["Total incl. AF"],"USD 858");
  assert.equal(values(["aed"],"USD",50)["Total incl. AF"],"USD 308");
  assert.equal(values([],"AED",14)["Total incl. AF"],"AED 0");
+});
+
+test("markup uses cost as its denominator and never divides by zero", () => {
+ const metric=(rows:QuotationItemRow[])=>summarizeQuotationSelection(rows,rows.map(row=>row.id)).metrics.find(row=>row.label==="Markup on cost");
+ assert.equal(metric(items.slice(0,2))?.value,"70.0%");
+ assert.equal(metric([{...items[0],cost_egp:0}])?.value,"—");
+ assert.equal(metric([])?.value,"—");
+ assert.equal(metric(items)?.scope,"internal");
 });

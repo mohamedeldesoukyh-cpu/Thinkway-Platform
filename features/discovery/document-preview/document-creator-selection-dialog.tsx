@@ -2,10 +2,11 @@ import { loadQuotationProposalOptions, saveQuotationProposalOptions } from "@/fe
 import { parseProposalOptions, type ProposalOption } from "@/features/quotations/export/proposal-options";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDownIcon, CheckIcon, UsersIcon, XIcon, SearchIcon, LockKeyholeIcon } from "lucide-react";
+import { UsersIcon, XIcon, SearchIcon, LockKeyholeIcon } from "lucide-react";
 import { normalizeCreatorItemSelection, seedCreatorItemSelection, toggleCreatorItems } from "./creator-item-selection";
 
-import styles from "./creator-dialog.module.css";
+import "./creator-selection-design.css";
+import { SelectionCreatorRow, selectionMetric } from "./selection-creator-row";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,6 @@ import {
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { sortPlatformsStable } from "@/lib/creators/creator-centric";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
-import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
 import type { DocumentSelectionSummary } from "./document-selection-summary";
 import { QuotationConvertedTotal, type QuotationTotalSource } from "./quotation-converted-total";
 
@@ -78,14 +78,6 @@ function platformsForCreators(
   );
 }
 
-function initials(name: string, handle: string): string {
-  const source = name.trim() || handle.replace(/^@/, "").trim() || "?";
-  const parts = source.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
-  }
-  return source.slice(0, 2).toUpperCase();
-}
 
 export function DocumentCreatorSelectionDialog({
   open,
@@ -97,7 +89,7 @@ export function DocumentCreatorSelectionDialog({
   summarizeSelection,
   quotationTotalSource,
   title = "Select creators for preview",
-  description = "Only the creators and platforms selected here appear in the preview and the exports. Totals and numbering update as you change the selection.",
+  description = "Choose creators, service options and platforms for your preview and exports.",
   confirmLabel = "Open preview",
   confirmDisabled = false,
   onConfirm,
@@ -106,8 +98,8 @@ export function DocumentCreatorSelectionDialog({
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [optionsSaving, setOptionsSaving] = useState(false);
   const [optionsMessage, setOptionsMessage] = useState("");
-  const optionsRevision = useRef<string | null>(null);
-  const savedOptions = useRef("[]");
+  const [optionsRevision, setOptionsRevision] = useState<string | null>(null);
+  const [savedOptions, setSavedOptions] = useState("[]");
   const [activeOption, setActiveOption] = useState(0);
   const [selectionError, setSelectionError] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -116,9 +108,10 @@ export function DocumentCreatorSelectionDialog({
   );
   const platformsTouchedRef = useRef(false);
   const returnFocus = useRef<HTMLElement | null>(null);
-  const [expandedCreators, setExpandedCreators] = useState<Set<string>>(() => new Set());
   const [query, setQuery] = useState("");
-  const [failedAvatars, setFailedAvatars] = useState<Set<string>>(() => new Set());
+  const [railOpen, setRailOpen] = useState(false);
+  const [clearConfirm, setClearConfirm] = useState(false);
+
 
   const workspaceSelectionKey = JSON.stringify(workspaceItemIds ?? []);
   useEffect(() => {
@@ -126,12 +119,14 @@ export function DocumentCreatorSelectionDialog({
       platformsTouchedRef.current = false;
       return;
     }
+    // Seed the transient dialog draft only when opening or changing document.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuery("");
-    setExpandedCreators(new Set());
+    setRailOpen(false); setClearConfirm(false);
     setSelectionError("");
     setOptionsMessage("");
     setOptionsSaving(false);
-    optionsRevision.current = null;
+    setOptionsRevision(null);
     let cancelled = false;
     function applyOptions(saved: ProposalOption[]) {
       const allowed = new Set(creators.flatMap(creator => creator.itemIds));
@@ -152,8 +147,8 @@ export function DocumentCreatorSelectionDialog({
       loadQuotationProposalOptions(proposalStorageKey).then(result => {
         if (cancelled) return;
         if (!result.ok) {setSelectionError(result.message); return;}
-        optionsRevision.current = result.revision;
-        savedOptions.current = JSON.stringify(result.options ?? []);
+        setOptionsRevision(result.revision);
+        setSavedOptions(JSON.stringify(result.options ?? []));
         let saved = result.options;
         if (saved === null) {
           try {saved = parseProposalOptions(localStorage.getItem(`quotation-proposals:${proposalStorageKey}`));} catch {saved=[];}
@@ -163,6 +158,8 @@ export function DocumentCreatorSelectionDialog({
         .finally(()=>{if(!cancelled) setOptionsLoading(false);});
     }
     return () => {cancelled=true;};
+  // Linked-account enrichment must not reset edits in an already-open selector.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, workspaceSelectionKey, proposalStorageKey]);
 
   const selectedKeys = useMemo(() => new Set(creators.filter(creator => creator.itemIds.some(id => selectedIds.has(id))).map(creator => creator.creatorKey)), [creators, selectedIds]);
@@ -175,7 +172,7 @@ export function DocumentCreatorSelectionDialog({
     [creators, selectedIds]
   );
 
-  const currentOptions = proposalOptions.map((option, index) => index === activeOption ? { ...option, itemIds: selectedItemIds } : option);
+  const currentOptions = useMemo(() => proposalOptions.map((option, index) => index === activeOption ? { ...option, itemIds: selectedItemIds } : option), [proposalOptions, activeOption, selectedItemIds]);
   const showDeliverables = currentOptions.every(option => option.showDeliverables !== false);
   const rateCardActive = currentOptions[activeOption]?.kind === "rate_card";
   const optionLabel = (index: number) => currentOptions[index]?.kind === "rate_card" ? "Rate card" : `Option ${currentOptions.slice(0, index + 1).filter(option => option.kind !== "rate_card").length}`;
@@ -215,7 +212,7 @@ export function DocumentCreatorSelectionDialog({
 
   const availablePlatforms = useMemo(
     () => platformsForCreators(creators, proposalOptions.length ? new Set(creators.filter(creator => currentOptions.some(option => creator.itemIds.some(id => option.itemIds.includes(id)))).map(creator => creator.creatorKey)) : selectedKeys),
-    [creators, selectedKeys, proposalOptions]
+    [creators, selectedKeys, proposalOptions, currentOptions]
   );
 
   useEffect(() => {
@@ -279,16 +276,16 @@ export function DocumentCreatorSelectionDialog({
 
   async function persistOptions(proposals: ProposalOption[], force = false) {
     if (!proposalStorageKey) return true;
-    if (optionsLoading || optionsSaving || !optionsRevision.current) return false;
-    if (!force && JSON.stringify(proposals) === savedOptions.current) return true;
+    if (optionsLoading || optionsSaving || !optionsRevision) return false;
+    if (!force && JSON.stringify(proposals) === savedOptions) return true;
     setOptionsSaving(true);
     setSelectionError("");
     setOptionsMessage("");
     try {
-      const result = await saveQuotationProposalOptions(proposalStorageKey, proposals, optionsRevision.current);
+      const result = await saveQuotationProposalOptions(proposalStorageKey, proposals, optionsRevision);
       if (!result.ok) {setSelectionError(result.message);return false;}
-      optionsRevision.current = result.revision;
-      savedOptions.current = JSON.stringify(proposals);
+      setOptionsRevision(result.revision);
+      setSavedOptions(JSON.stringify(proposals));
       try {localStorage.removeItem(`quotation-proposals:${proposalStorageKey}`);} catch { /* Server is authoritative. */ }
       setOptionsMessage(proposals.length ? "Options saved to this quotation." : "Saved options cleared.");
       return true;
@@ -321,100 +318,61 @@ export function DocumentCreatorSelectionDialog({
   const clientMetrics = summary.metrics.filter(metric => metric.scope === "client");
   const internalMetrics = summary.metrics.filter(metric => metric.scope === "internal");
   const audienceMetrics = summary.metrics.filter(metric => !metric.scope && metric.label !== "Followers");
-  const figure = (value: string) => { const match = /^([A-Z]{3})\s+(.+)$/.exec(value); return match ? <><span className={styles.currency}>{match[1]}</span>{match[2]}</> : value; };
-  const metricList = (metrics: DocumentSelectionSummary["metrics"]) => <dl className={styles.figures}>{metrics.map(metric => <div key={metric.label} className={metric.label === "Total incl. AF" ? styles.totalFigure : undefined}><dt>{metric.label}</dt><dd>{metric.value.split(" · ").map(value => <span className={styles.moneyLine} key={value}>{value}</span>)}</dd></div>)}</dl>;
-
-  return <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className={`${styles.dialog} ${styles.selectionDialog}`} overlayClassName={styles.overlay} showCloseButton={false}
-      onOpenAutoFocus={() => { returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; }}
-      onCloseAutoFocus={event => { if (returnFocus.current?.isConnected) { event.preventDefault(); returnFocus.current.focus(); } }}>
-      <header className={styles.header}>
-        <div className={styles.heading}><div>
-          <DialogTitle className={styles.title}><UsersIcon size={18} aria-hidden="true" />{title}</DialogTitle>
-          <DialogDescription className={styles.subtitle} title={description}>Choose creators and platforms for your preview and exports.</DialogDescription>
-        </div><button type="button" className={styles.close} aria-label="Close creator selection" onClick={() => onOpenChange(false)}><XIcon size={16} aria-hidden="true" /></button></div>
+  const railButton = useRef<HTMLButtonElement>(null);
+  const railClose = useRef<HTMLButtonElement>(null);
+  const closeRail = () => {setRailOpen(false); railButton.current?.focus();};
+  const busy = optionsLoading || optionsSaving;
+  const money = clientMetrics.length > 0;
+  const blocked = confirmDisabled || noneSelected || noPlatformsSelected || invalidOptions || busy || Boolean(proposalStorageKey && !optionsRevision);
+  const metricsList = (metrics: DocumentSelectionSummary["metrics"]) => <dl className="cs-kv">{metrics.map(metric => <div key={metric.label} className={metric.label === "Total incl. AF" || metric.label === "Margin" ? "is-total" : undefined}><dt>{metric.label}</dt><dd>{metric.value}</dd></div>)}</dl>;
+  const scope = currentOptions.length ? optionLabel(activeOption) : "Current selection";
+  const optionDirty = JSON.stringify(currentOptions) !== savedOptions;
+  return <Dialog open={open} onOpenChange={next => {if (!optionsSaving) onOpenChange(next);}}>
+    <DialogContent className="cs cs-panel" showCloseButton={false}
+      onOpenAutoFocus={() => {returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;}}
+      onCloseAutoFocus={event => {if(returnFocus.current?.isConnected) {event.preventDefault(); returnFocus.current.focus();}}}
+      onEscapeKeyDown={event => {if(railOpen) {event.preventDefault(); closeRail();} else if(optionsSaving) event.preventDefault();}}>
+      <header className="cs-head"><div><DialogTitle className="cs-title"><UsersIcon size={18}/>{title}</DialogTitle><DialogDescription>{description}</DialogDescription></div>
+        {money && <span className="cs-head__int"><LockKeyholeIcon size={12}/> Internal figures stay private</span>}
+        <button type="button" className="cs-icon" aria-label="Close creator selection" disabled={optionsSaving} onClick={() => onOpenChange(false)}><XIcon size={16}/></button>
       </header>
-      <fieldset className={styles.selectionBody} disabled={optionsLoading || optionsSaving} style={{border:0,padding:0,margin:0,minWidth:0}}>
-        {proposalStorageKey && <section className={styles.proposalOptions} aria-label="Proposal options">
-          <div className={styles.proposalHeading}><strong>Proposal options</strong><span className={styles.optionsHint}>Creators can appear in multiple options.</span><button type="button" className={styles.button} disabled={proposalOptions.filter(option => option.kind !== "rate_card").length >= 12} onClick={addOption}>+ Add Options</button><button type="button" className={styles.button} disabled={proposalOptions.some(option => option.kind === "rate_card")} onClick={addRateCard}>+ Add rate card</button></div>
-          {optionsLoading && <p role="status">Loading saved options…</p>}
-          {optionsMessage && <p role="status">{optionsMessage}</p>}
-          {proposalOptions.length > 0 && <>
-            <div className={styles.optionTabs} role="tablist" aria-label="Choose proposal option">{currentOptions.map((option, index) => <div className={styles.optionTabGroup} key={index} role="presentation"><button type="button" role="tab" data-recommended={option.recommended || undefined} aria-selected={activeOption === index} className={styles.button} onClick={() => switchOption(index)}>{optionLabel(index)}{option.recommended ? " ★" : ""}</button><button type="button" className={styles.removeTab} aria-label={`Remove ${optionLabel(index)}`} title={`Remove ${optionLabel(index)}`} onClick={() => removeOption(index)}><XIcon size={13} aria-hidden="true" /></button></div>)}</div>
-            <div className={styles.optionActions}><strong>{selectedCount} creators</strong>{!rateCardActive && <button type="button" className={styles.button} aria-pressed={currentOptions[activeOption]?.recommended ?? false} onClick={() => setProposalOptions(currentOptions.map((option, index) => index === activeOption ? { ...option, recommended: !option.recommended } : option))}>{currentOptions[activeOption]?.recommended ? "★ Recommended" : "☆ Mark recommended"}</button>}</div>
-            {rateCardActive && <p className={styles.optionsHint}>All options for selected creators appear in the Rate card before the ending page. Prices are alternatives, not a combined package.</p>}
-            {invalidOptions && <p className={styles.selectionWarning}>Select at least one creator in every option before continuing.</p>}
-
-            <label className={styles.deliverablesToggle}><input type="checkbox" checked={showDeliverables} onChange={event => setProposalOptions(currentOptions.map(option => ({...option, showDeliverables:event.target.checked})))} />Show deliverables in comparison</label>
-            <div className={styles.optionSaveActions}><button type="button" className={styles.button} disabled={invalidOptions || !optionsRevision.current} onClick={()=>void persistOptions(currentOptions)}>Save options</button><button type="button" className={styles.button} disabled={!optionsRevision.current} onClick={()=>void clearOptions()}>Clear options</button></div>
-          </>}
-        </section>}
-        {selectionError && <p role="alert">{selectionError}</p>}
-        {!rateCardActive && (clientMetrics.length || internalMetrics.length) ? <div className={styles.zones}>
-          {clientMetrics.length ? <section className={`${styles.zone} ${styles.clientZone}`} aria-label="Client-facing totals"><h3>Client-facing &middot; quotation prices</h3>{metricList(clientMetrics)}</section> : null}
-          {internalMetrics.length ? <section className={`${styles.zone} ${styles.internalZone}`} aria-label="Internal totals"><h3><LockKeyholeIcon size={12} aria-hidden="true" />Internal &middot; never in client exports</h3>{metricList(internalMetrics)}</section> : null}
-          {open && quotationTotalSource && <QuotationConvertedTotal key={quotationTotalSource.currency} source={quotationTotalSource} itemIds={selectedItemIds} />}
-        </div> : null}
-        <div className={styles.selectionBar}>
-          <span className={styles.selectionCount} aria-live="polite">{selectedCount} <span>of {creators.length} creators selected</span></span>
-          <div className={styles.search}><SearchIcon size={14} aria-hidden="true" /><input type="search" aria-label="Search creators" placeholder="Search creators" value={query} onChange={event => setQuery(event.target.value)} /></div>
-          <button type="button" className={`${styles.button} ${styles.small}`} onClick={selectAll} disabled={allSelected || creators.length === 0}>Select all</button>
-          <button type="button" className={`${styles.button} ${styles.small} ${styles.ghost}`} onClick={selectNone} disabled={noneSelected}>Select none</button>
-          {audienceMetrics.length ? <p className={styles.audienceSummary}>{audienceMetrics.map(metric => `${metric.value} ${metric.label.toLowerCase()}`).join(" · ")}</p> : null}
+      <fieldset className="cs-body" disabled={busy} aria-busy={busy}>
+        <div className={`cs-list-pane${money ? "" : " cs-shortlist"}`}>
+          {currentOptions.length > 0 && <div className="cs-tabs" role="tablist" aria-label="Proposal options">{currentOptions.map((option,index) => <button key={index} type="button" role="tab" tabIndex={activeOption === index ? 0 : -1} aria-selected={activeOption === index} className={`cs-tab${index === activeOption ? " is-on" : ""}${!option.itemIds.length ? " is-empty" : ""}`} onClick={() => switchOption(index)} onKeyDown={event => {const target = event.key === "ArrowRight" ? (index+1)%currentOptions.length : event.key === "ArrowLeft" ? (index-1+currentOptions.length)%currentOptions.length : event.key === "Home" ? 0 : event.key === "End" ? currentOptions.length-1 : null; if(target !== null) {event.preventDefault(); switchOption(target); (event.currentTarget.parentElement?.children[target] as HTMLElement)?.focus();}}}>{optionLabel(index)}{option.recommended && " ★"}<i>{option.itemIds.length}</i></button>)}</div>}
+          <div className="cs-tools"><label className="cs-search"><SearchIcon size={16}/><input type="search" value={query} placeholder="Search name, handle or category" aria-label="Search creators" onChange={event => setQuery(event.target.value)} />{query && <button type="button" className="cs-icon" aria-label="Clear search" onClick={() => setQuery("")}><XIcon size={14}/></button>}</label>
+            <span className="cs-count" aria-live="polite"><b>{selectedCount}</b> of {creators.length} creators · <b>{selectedItemIds.length}</b> service lines</span>
+            <span className="cs-tool-acts"><button type="button" className="cs-link" onClick={selectAll} disabled={allSelected || !creators.length}>Select all {creators.length}</button>{query && visibleCreators.length > 0 && <button type="button" className="cs-link" onClick={() => setSelectedIds(previous => normalizeCreatorItemSelection(creators,[...previous,...visibleCreators.flatMap(creator => creator.itemIds)]))}>Add {visibleCreators.length} search results</button>}<button type="button" className="cs-link" onClick={selectNone} disabled={noneSelected}>Select none</button></span>
+          </div>
+          {optionsLoading && <p className="cs-note cs-note--bar" role="status">Loading saved proposal options…</p>}
+          {invalidOptions && <p className="cs-note cs-note--warn cs-note--bar" role="status">Select at least one creator in every proposal option before continuing.</p>}
+          <div className="cs-scroll"><div className="cs-rows">
+            <div className="cs-colhead" aria-hidden="true"><span/><span/><span>Creator</span><span className="cs-colhead__plats">Platforms &amp; followers</span><span className="cs-num">{!rateCardActive && "Client cost"}</span><span className="cs-num cs-colhead__int">{!rateCardActive && "Internal cost"}</span><span className="cs-num cs-colhead__int">{!rateCardActive && "Gross profit"}</span><span/></div>
+            {visibleCreators.map(creator => <SelectionCreatorRow key={creator.creatorKey} creator={creator} selected={selectedIds} platforms={selectedPlatforms} summary={creatorSummaries.get(creator.creatorKey)} summarize={summarizeSelection} hideMoney={Boolean(rateCardActive) || !money} readOnlyOptions={Boolean(rateCardActive)} onToggle={toggleCreator} onToggleItems={toggleItems} />)}
+          </div>{!visibleCreators.length && <div className="cs-empty"><h4>{creators.length ? `No creator matches “${query}”` : "No creators in this document yet"}</h4><p>{creators.length ? "Your selection has not changed." : "Add creators in the workspace, then reopen this dialog."}</p>{query && <button type="button" className="cs-btn" onClick={() => setQuery("")}>Clear search</button>}</div>}</div>
         </div>
-        {availablePlatforms.length > 0 ? <div className={styles.selectionBar}>
-          <span className={styles.platformLabel} title="Filters displayed accounts and metrics; selected lines and prices remain included.">Platforms</span>
-          <div className={styles.platforms}>{availablePlatforms.map(platform => <button key={platform} type="button" className={styles.platformToggle} aria-pressed={selectedPlatforms.has(platform)} onClick={() => togglePlatform(platform)}>
-            <CheckIcon size={12} aria-hidden="true" className={styles.platformTick} /><PlatformIcon platform={platform} size="xs" variant="logo" />{platformLabel(platform)}<span>{creators.filter(creator => selectedKeys.has(creator.creatorKey) && creator.platforms?.some(value => canonicalPlatformKey(value) === platform)).length}</span>
-          </button>)}<button type="button" className={`${styles.button} ${styles.small} ${styles.ghost}`} disabled={allPlatformsSelected} onClick={selectAllPlatforms}>All platforms</button></div>
-
-        </div> : null}
-        <div className={styles.selectionList}>
-        {noPlatformsSelected ? <p role="status" className={styles.selectionWarning}>No platform is included. Select at least one platform to continue.</p> : null}
-        <ul className={styles.selectionRows} aria-label="Creators to include">
-          {visibleCreators.map(creator => {
-            const checked = creator.itemIds.every(id => selectedIds.has(id));
-            const partial = !checked && creator.itemIds.some(id => selectedIds.has(id));
-            const options = creator.lineOptions ?? [];
-            const expandable = options.length > 1;
-            const expanded = expandedCreators.has(creator.creatorKey);
-            const selectedOptions = options.filter(option => option.itemIds.every(id => selectedIds.has(id))).length;
-            const metrics = creatorSummaries.get(creator.creatorKey)?.metrics ?? [];
-            const rowMetrics = metrics.filter(metric => (!rateCardActive && metric.label === "Client cost") || metric.label === "Est. reach");
-            return <li key={creator.creatorKey}><div className={styles.creatorChoiceHeader}><label className={`${styles.selectionRow} ${checked || partial ? styles.selectedRow : ""}`}>
-              <input type="checkbox" checked={checked} ref={element => { if (element) element.indeterminate = partial; }} onChange={() => toggleCreator(creator)} aria-label={`Include ${creator.name}`} />
-              <span className={styles.avatar}>{creator.avatarUrl && !failedAvatars.has(creator.avatarUrl) ? <img src={creator.avatarUrl} alt="" onError={() => setFailedAvatars(current => new Set(current).add(creator.avatarUrl!))} /> : initials(creator.name, creator.handle)}</span>
-              <span className={styles.selectionIdentity}><strong dir="auto">{creator.name}</strong>
-                {creator.handle !== "—" && creator.name.replace(/^@/, "") !== creator.handle.replace(/^@/, "") ? <small>{creator.handle}</small> : null}
-                <span className={styles.rowPlatforms}>{(creator.platforms ?? []).map(platform => <span key={platform} data-included={selectedPlatforms.has(canonicalPlatformKey(platform))}>{platformLabel(platform)}</span>)}{!creator.platforms?.length && creator.meta ? creator.meta : null}</span>
-                {expandable && <small className={styles.optionSelectionCount}>{rateCardActive ? "All options included when selected" : `${selectedOptions} of ${options.length} options selected`}</small>}
-              </span>
-              <span className={styles.rowFollowers} aria-label="Followers by platform">{(creator.platforms ?? []).map(platform => {
-                const count = creator.platformFollowers?.find(account => canonicalPlatformKey(account.platform) === canonicalPlatformKey(platform))?.followers;
-                return <span key={platform} className={styles.platformFollowers} title={`${platformLabel(platform)} followers`}><PlatformIcon platform={platform} size="xs" variant="logo" /><span>{formatCreatorCount(count)}</span></span>;
-              })}</span>
-              {rowMetrics.map(metric => <span key={metric.label} className={styles.rowFigure}><small>{metric.label}</small><b>{figure(metric.value)}</b></span>)}
-            </label>{expandable && <button type="button" className={styles.expandOptions} aria-label={`${expanded ? "Hide" : "Show"} options for ${creator.name}`} aria-expanded={expanded} onClick={() => setExpandedCreators(current => { const next = new Set(current); if (next.has(creator.creatorKey)) next.delete(creator.creatorKey); else next.add(creator.creatorKey); return next; })}><ChevronDownIcon size={16} aria-hidden="true" /><span>{expanded ? "Hide options" : rateCardActive ? "View options" : "Choose options"}</span></button>}</div>
-              {expandable && expanded && <ul className={styles.lineOptions} aria-label={`Options for ${creator.name}`}>{options.map(option => {
-                const included = option.itemIds.every(id => selectedIds.has(id));
-                const price = summarizeSelection(option.itemIds).metrics.find(metric => metric.label === "Client cost");
-                return <li key={option.key}><label className={`${styles.lineOption} ${included ? styles.includedOption : ""}`}>
-                  <input type="checkbox" checked={included} disabled={rateCardActive} onChange={() => toggleItems(option.itemIds)} aria-label={`Include ${option.label} for ${creator.name}`} />
-                  <span><strong>{option.label}</strong><small>{option.description || "No deliverables specified"}</small>{option.packageLabel && <small>Package: {option.packageLabel} · selected together</small>}</span>
-                  {price && <span className={styles.rowFigure}><small>Client cost</small><b>{figure(price.value)}</b></span>}
-                </label></li>;
-              })}</ul>}
-            </li>;
-          })}
-        </ul>
-        {visibleCreators.length === 0 ? <p className={styles.empty}>{creators.length === 0 ? "No creators available for this document." : `No creator matches “${query}”. Clear the search to see all ${creators.length}.`}</p> : null}
+        <div className={`cs-rail-wrap${railOpen ? " is-open" : ""}`}>
+          <button ref={railClose} type="button" className="cs-rail-x" aria-label="Back to creator list" onClick={closeRail}><XIcon size={18}/></button>
+          <aside className="cs-rail" aria-label="Selection context">
+            {money && <section className="cs-card"><h3 className="cs-card__h">Totals<em className="cs-scope">{scope}</em></h3>{rateCardActive ? <p className="cs-fine">Rate-card prices are alternatives. A combined total would be misleading, so totals are hidden here.</p> : <><div className="cs-sides"><div className="cs-side cs-side--client"><h4>Client-facing · quotation prices</h4>{metricsList(clientMetrics)}</div><div className="cs-side cs-side--int"><h4><LockKeyholeIcon size={12}/> Internal · never in client exports</h4>{metricsList(internalMetrics)}</div></div><p className="cs-fine">Fees are taken per line. Margin is gross profit ÷ client total; markup is gross profit ÷ creator cost.</p>{quotationTotalSource && <QuotationConvertedTotal source={quotationTotalSource} itemIds={selectedItemIds} compact />}</>}</section>}
+            <section className="cs-card"><h3 className="cs-card__h">Audience<em>{scope}</em></h3>{metricsList(audienceMetrics)}<p className="cs-fine">From the existing forecast for the selected lines.</p></section>
+            <section className="cs-card"><h3 className="cs-card__h">Platforms shown</h3><div className="cs-plat-list" role="group" aria-label="Platforms shown">{availablePlatforms.map(platform => <button key={platform} type="button" className={`cs-plat-btn${selectedPlatforms.has(platform) ? " is-on" : ""}`} aria-pressed={selectedPlatforms.has(platform)} onClick={() => togglePlatform(platform)}><PlatformIcon platform={platform} size="xs" variant="logo"/><span>{platformLabel(platform)}</span><i>{creators.filter(creator => (currentOptions.length ? currentOptions.some(option => creator.itemIds.some(id => option.itemIds.includes(id))) : selectedKeys.has(creator.creatorKey)) && creator.platforms?.some(value => canonicalPlatformKey(value) === platform)).length}</i></button>)}</div>
+              {availablePlatforms.length ? <button type="button" className="cs-link" disabled={allPlatformsSelected} onClick={selectAllPlatforms}>All platforms</button> : <p className="cs-fine">No linked accounts. Selected creators still appear in the output.</p>}
+              {confirmDisabled && <p className="cs-fine" role="status">Loading linked platforms…</p>}
+              <p className="cs-fine cs-platform-help">Platforms control displayed accounts and metrics. Selected services and prices stay included.</p>
+              {noPlatformsSelected && <p className="cs-note cs-note--bad" role="alert">Choose at least one platform or use All platforms.</p>}
+            </section>
+            {proposalStorageKey && <section className="cs-card"><h3 className="cs-card__h">Proposal options<em>{currentOptions.filter(option => option.kind !== "rate_card").length}/12</em></h3><p className="cs-fine">Alternative selections for the presentation. A creator can appear in more than one option.</p>
+              <ul className="cs-opt-list">{currentOptions.map((option,index) => {const details = summarizeSelection(option.itemIds);return <li key={index} className={`cs-opt-item${activeOption === index ? " is-active" : ""}${!option.itemIds.length ? " is-empty" : ""}`}><button type="button" className="cs-opt-item__go" aria-current={activeOption === index} onClick={() => switchOption(index)}><b>{optionLabel(index)}{option.recommended && <em className="cs-tag cs-tag--rec">★ Recommended</em>}</b><span className="cs-opt-item__m"><u>{option.itemIds.length} service lines</u>{!option.itemIds.length ? <em>Empty — select creators</em> : option.kind !== "rate_card" && <><b>{selectionMetric(details,"Total incl. AF")}</b><em>GP {selectionMetric(details,"Gross profit")} · {selectionMetric(details,"Margin")}</em></>}</span></button><span className="cs-opt-item__acts">{option.kind !== "rate_card" && <button type="button" className="cs-icon" aria-label={`Mark ${optionLabel(index)} recommended`} aria-pressed={option.recommended} onClick={() => setProposalOptions(currentOptions.map((entry,i) => i === index ? {...entry,recommended:!entry.recommended} : entry))}>☆</button>}<button type="button" className="cs-icon cs-icon--danger" aria-label={`Remove ${optionLabel(index)}`} onClick={() => removeOption(index)}><XIcon size={14}/></button></span></li>;})}</ul>
+              <div className="cs-opt-add"><button type="button" className="cs-btn" disabled={currentOptions.filter(option => option.kind !== "rate_card").length >= 12} onClick={addOption}>+ Add option</button><button type="button" className="cs-btn" disabled={currentOptions.some(option => option.kind === "rate_card")} onClick={addRateCard}>+ Add rate card</button></div>
+              {currentOptions.length > 0 && <><label className="cs-switch"><input type="checkbox" checked={showDeliverables} onChange={event => setProposalOptions(currentOptions.map(option => ({...option,showDeliverables:event.target.checked})))}/><span>Show deliverables in comparison</span></label><div className="cs-opt-save"><button type="button" className="cs-btn cs-btn--pri" disabled={invalidOptions || !optionsRevision} onClick={() => void persistOptions(currentOptions)}>Save options</button><button type="button" className="cs-btn cs-btn--danger" disabled={!optionsRevision} onClick={() => setClearConfirm(true)}>Clear options</button></div>{optionDirty && <p className="cs-fine cs-dirty">Unsaved options are saved before opening the preview.</p>}</>}
+              {clearConfirm && <div className="cs-confirm" role="group" aria-label="Confirm clearing saved options"><p>Clear saved proposal options for this quotation? Creator and service records will stay in the quotation.</p><div className="cs-confirm__a"><button type="button" className="cs-btn" onClick={() => setClearConfirm(false)}>Keep options</button><button type="button" className="cs-btn cs-btn--danger" onClick={async () => {await clearOptions(); setClearConfirm(false);}}>Clear saved options</button></div></div>}
+              {optionsMessage && <p className="cs-fine cs-ok" role="status">{optionsMessage}</p>}
+            </section>}
+          </aside>
         </div>
       </fieldset>
-      <footer className={`${styles.footer} ${styles.selectionFooter}`}>
-        <small>One selection drives the preview, PDF, PowerPoint, Excel and Word.</small>
-        <button type="button" className={styles.button} onClick={() => onOpenChange(false)}>Cancel</button>
-        <button type="button" className={`${styles.button} ${styles.primary}`} onClick={handleConfirm} disabled={confirmDisabled || noneSelected || noPlatformsSelected || invalidOptions || optionsLoading || optionsSaving || Boolean(proposalStorageKey && !optionsRevision.current)}>{optionsSaving ? "Saving options…" : optionsLoading ? "Loading options…" : confirmDisabled ? "Loading platforms…" : confirmLabel}{!confirmDisabled && selectedCount > 0 ? ` (${selectedCount})` : ""}</button>
-      </footer>
+      {selectionError && <p className="cs-note cs-note--bad cs-note--bar" role="alert">{selectionError}</p>}
+      <footer className="cs-foot"><button ref={railButton} type="button" className="cs-rail-open" aria-expanded={railOpen} onClick={() => {if(railOpen) closeRail(); else {setRailOpen(true); requestAnimationFrame(() => railClose.current?.focus());}}}>Totals &amp; tools</button><span className="cs-foot__sum"><b>{selectedCount}</b> creators · {selectedItemIds.length} lines<small>One selection for preview and all exports.</small></span><span className="cs-sp"/><span className="cs-foot__acts"><button type="button" className="cs-btn" disabled={optionsSaving} onClick={() => onOpenChange(false)}>Cancel</button><button type="button" className="cs-btn cs-btn--pri" disabled={blocked} onClick={handleConfirm}>{optionsSaving ? "Saving options…" : optionsLoading ? "Loading options…" : confirmDisabled ? "Loading platforms…" : `${confirmLabel} (${selectedCount})`}</button></span></footer>
     </DialogContent>
   </Dialog>;
 }

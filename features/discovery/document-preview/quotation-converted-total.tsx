@@ -15,7 +15,7 @@ export type QuotationTotalSource = {
   issueDate?: string | null;
 };
 
-export function QuotationConvertedTotal({ source, itemIds }: { source: QuotationTotalSource; itemIds: string[] }) {
+export function QuotationConvertedTotal({ source, itemIds, compact = false }: { source: QuotationTotalSource; itemIds: string[]; compact?: boolean }) {
   const [currency, setCurrency] = useState(() => (source.currency || "EGP").toUpperCase());
   const [resolved, setResolved] = useState<{ currency: string; date?: string | null; rate?: number; directRates?: Record<string, number>; error?: string } | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -44,6 +44,13 @@ export function QuotationConvertedTotal({ source, itemIds }: { source: Quotation
   ] : [];
   const currencies = [...new Set([...COMMERCIAL_CURRENCIES, (source.currency || "EGP").toUpperCase()])];
 
+  if (compact) return <details className="cs-det">
+    <summary>Currency · {currency}<em>{currency === source.currency.toUpperCase() ? "same as quotation" : "comparison only"}</em></summary>
+    <div className="cs-ccy"><label className="cs-field"><span>Compare in</span><select aria-label="Total currency" value={currency} onChange={event => setCurrency(event.target.value)}>{currencies.map(code => <option key={code} value={code}>{code}{code === source.currency.toUpperCase() ? " · Quotation currency" : ""}</option>)}</select></label>
+      {currency === source.currency.toUpperCase() ? <p className="cs-fine">Same as the quotation currency. Amounts above are unchanged.</p> : rate ? <><dl className="cs-kv">{metrics.map(metric => <div key={metric.label}><dt>{metric.label}</dt><dd>{metric.value}</dd></div>)}</dl><p className="cs-fine">{appliedRates.join(" · ")}</p></> : current?.error ? <p className="cs-note cs-note--bad" role="alert">{current.error}<button type="button" className="cs-link" onClick={() => {setResolved(null); setAttempt(value => value + 1);}}>Retry</button></p> : <p className="cs-fine" role="status">Loading {currency} total…</p>}
+      <p className="cs-fine">Comparison only. Saved prices and export currency stay unchanged.{source.issueDate ? " Rates dated " + source.issueDate.slice(0,10) + "." : ""}</p>
+    </div>
+  </details>;
   return <section className={styles.convertedZone} aria-label="Selected total in chosen currency">
     <div className={styles.convertedHeading}>
       <h3>Selected total · converted currency</h3>

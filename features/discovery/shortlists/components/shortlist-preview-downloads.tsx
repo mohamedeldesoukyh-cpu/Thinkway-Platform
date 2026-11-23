@@ -1,11 +1,5 @@
-import {
-  DownloadIcon,
-  FileSpreadsheetIcon,
-  FileTextIcon,
-  PresentationIcon,
-} from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { PreviewDownloadMenu } from "@/features/discovery/document-preview/preview-download-menu";
 import { appendPlatformsQueryParam } from "@/features/discovery/document-preview/document-export-selection";
 import {
   appendShortlistExportRevision,
@@ -54,64 +48,6 @@ export function ShortlistPreviewDownloads({
 }: ShortlistPreviewDownloadsProps) {
   const exportOptions = { itemIds, platforms, exportRevision };
 
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button size="sm" variant="outline" asChild>
-        <a
-          href={buildShortlistExportHref(shortlistId, "html", template, exportOptions)}
-          download
-        >
-          <FileTextIcon data-icon="inline-start" className="size-3.5" />
-          HTML
-        </a>
-      </Button>
-      <Button size="sm" variant="outline" asChild>
-        <a
-          href={buildShortlistExportHref(shortlistId, "pdf", template, exportOptions)}
-          download
-        >
-          <DownloadIcon data-icon="inline-start" className="size-3.5" />
-          PDF
-        </a>
-      </Button>
-      {template !== "creator-list" ? <>
-      <Button size="sm" variant="outline" asChild>
-        <a
-          href={buildShortlistExportHref(shortlistId, "word", template, exportOptions)}
-          download
-        >
-          <FileTextIcon data-icon="inline-start" className="size-3.5" />
-          Word
-        </a>
-      </Button>
-      <Button size="sm" variant="outline" asChild>
-        <a
-          href={buildShortlistExportHref(shortlistId, "excel", template, exportOptions)}
-          download
-        >
-          <FileSpreadsheetIcon data-icon="inline-start" className="size-3.5" />
-          Excel
-        </a>
-      </Button>
-      <Button size="sm" variant="outline" asChild>
-        <a
-          href={buildShortlistExportHref(shortlistId, "csv", template, exportOptions)}
-          download
-        >
-          <FileSpreadsheetIcon data-icon="inline-start" className="size-3.5" />
-          CSV
-        </a>
-      </Button>
-      <Button size="sm" variant="outline" asChild>
-        <a
-          href={buildShortlistExportHref(shortlistId, "pptx", template, exportOptions)}
-          download
-        >
-          <PresentationIcon data-icon="inline-start" className="size-3.5" />
-          PPTX
-        </a>
-      </Button>
-      </> : null}
-    </div>
-  );
+  const formats = [{format:"html",label:"HTML"},{format:"pdf",label:"PDF"},...(template !== "creator-list" ? [{format:"word",label:"Word"},{format:"excel",label:"Excel"},{format:"csv",label:"CSV"},{format:"pptx",label:"PowerPoint (PPTX)"}] : [])];
+  return <PreviewDownloadMenu formats={formats.map(entry => ({...entry,href:buildShortlistExportHref(shortlistId,entry.format,template,exportOptions)}))} />;
 }

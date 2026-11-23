@@ -169,16 +169,6 @@ export default async function ShortlistPreviewPage({
           creatorCount={creatorCount}
           toolbarLeft={
             <>
-              <PageBackButton
-                fallbackHref={shortlistDetailPath({
-                  id: detail.id,
-                  slug: detail.slug ?? null,
-                  name: detail.name,
-                  serial_number: detail.serial_number,
-                })}
-                label="Back to shortlist"
-                variant="text"
-              />
               <Suspense fallback={null}>
                 <ShortlistPreviewTemplateToggle
                   shortlistId={shortlistId}

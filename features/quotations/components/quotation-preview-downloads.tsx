@@ -2,15 +2,8 @@
 import { useRemovedReportPages } from "@/features/discovery/document-preview/report-page-selection-context";
 import { appendProposalOptions, type ProposalOption } from "@/features/quotations/export/proposal-options";
 import { isQuotationListTemplate } from "@/features/quotations/export/quotation-template";
-import {
-  DownloadIcon,
-  FileCodeIcon,
-  FileSpreadsheetIcon,
-  FileTextIcon,
-  PresentationIcon,
-} from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { PreviewDownloadMenu } from "@/features/discovery/document-preview/preview-download-menu";
 import { appendPlatformsQueryParam } from "@/features/discovery/document-preview/document-export-selection";
 import {
   appendQuotationExportRevision,
@@ -66,53 +59,6 @@ export function QuotationPreviewDownloads({
   const excludedPages = useRemovedReportPages();
   const exportOptions = { itemIds, platforms, exportRevision, proposalOptions, excludedPages };
 
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button size="sm" variant="outline" asChild>
-        <a
-          href={buildExportHref(quotationId, "html", template, exportOptions)}
-          download
-        >
-          <FileCodeIcon data-icon="inline-start" className="size-3.5" />
-          HTML
-        </a>
-      </Button>
-      <Button size="sm" variant="outline" asChild>
-        <a
-          href={buildExportHref(quotationId, "word", template, exportOptions)}
-          download
-        >
-          <FileTextIcon data-icon="inline-start" className="size-3.5" />
-          Word
-        </a>
-      </Button>
-      <Button size="sm" variant="outline" asChild>
-        <a
-          href={buildExportHref(quotationId, "pdf", template, exportOptions)}
-          download
-        >
-          <DownloadIcon data-icon="inline-start" className="size-3.5" />
-          PDF
-        </a>
-      </Button>
-      {!isQuotationListTemplate(template) && <Button size="sm" variant="outline" asChild>
-        <a
-          href={buildExportHref(quotationId, "excel", template, exportOptions)}
-          download
-        >
-          <FileSpreadsheetIcon data-icon="inline-start" className="size-3.5" />
-          Excel
-        </a>
-      </Button>}
-      <Button size="sm" variant="outline" asChild>
-        <a
-          href={buildExportHref(quotationId, "pptx", template, exportOptions)}
-          download
-        >
-          <PresentationIcon data-icon="inline-start" className="size-3.5" />
-          PPTX
-        </a>
-      </Button>
-    </div>
-  );
+  const formats = [{format:"html",label:"HTML"},{format:"word",label:"Word"},{format:"pdf",label:"PDF"},...(!isQuotationListTemplate(template) ? [{format:"excel",label:"Excel"}] : []),{format:"pptx",label:"PowerPoint (PPTX)"}];
+  return <PreviewDownloadMenu formats={formats.map(entry => ({...entry,href:buildExportHref(quotationId,entry.format,template,exportOptions)}))} />;
 }

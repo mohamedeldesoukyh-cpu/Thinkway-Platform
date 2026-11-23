@@ -197,15 +197,6 @@ export default async function QuotationPreviewPage({
           creatorCount={creatorCount}
           toolbarLeft={
             <>
-              <PageBackButton
-                fallbackHref={quotationDetailPath({
-                  id: detail.id,
-                  name: detail.name,
-                  serial_number: detail.serial_number,
-                })}
-                label="Back to quotation"
-                variant="text"
-              />
               <Suspense fallback={null}>
                 <QuotationPreviewTemplateToggle
                   compact

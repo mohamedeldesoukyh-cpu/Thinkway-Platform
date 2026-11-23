@@ -1,0 +1,1216 @@
+/* ==========================================================================
+   Creator selection dialog — scoped stylesheet.
+
+   Every rule is under `.cs`. Tokens are declared on `.cs`, never on :root,
+   so dropping this file into the application cannot restyle anything else.
+   Dark mode is a second token block, not an inversion filter.
+
+   Layout rules are CONTAINER queries on the panel, not viewport media
+   queries: the dialog can be narrow on a wide screen (and is, inside a
+   preview pane), and a viewport query would get that wrong.
+   ========================================================================== */
+
+/* -------------------------------------------------------------- tokens */
+.cs {
+  --blue: #0057FF;
+  --blue-d: #0042C4;
+  --blue-s: #EBF1FF;      /* selected row wash */
+  --blue-b: #B9CEFF;
+
+  --ink: #0E1729;
+  --ink-2: #33415C;
+  --mut: #5C6B82;         /* AA on white and on --soft */
+  --fnt: #5E6A80;       /* 11px labels; AA on every surface and on --line-2 */
+
+  --soft: #F2F5FA;
+  --surf: #FFFFFF;
+  --surf-2: #F8FAFD;
+  --line: #DCE3EE;
+  --line-2: #EAEFF6;
+
+  --amb: #7A4E00;         /* internal-only, AA on --amb-s */
+  --amb-s: #FFF6E6;
+  --amb-b: #F0D7A8;
+  --grn: #166534;
+  --grn-s: #E8F6EC;
+  --red: #B3261E;
+  --red-s: #FDECEA;
+  --red-b: #F2C2BE;
+
+  --r: 8px;
+  --r-s: 6px;
+  --sp: 4px;
+
+  /* One step down from the first pass: the figures carried too much weight
+     for a dialog whose job is scanning twenty-plus rows. 10.5px is used only
+     for all-caps column labels, which read larger than their nominal size. */
+  --fs-xs: 10.5px;
+  --fs-sm: 11.5px;
+  --fs: 12.5px;
+  --fs-md: 13px;
+  --fs-lg: 15px;
+  --fs-xl: 17px;
+
+  --sans: Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans Arabic', sans-serif;
+
+  --shadow: 0 1px 2px rgba(14, 23, 41, .06), 0 12px 32px rgba(14, 23, 41, .16);
+  --ring: 0 0 0 2px var(--surf), 0 0 0 4px var(--blue);
+
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  font-family: var(--sans);
+  font-size: var(--fs);
+  line-height: 1.5;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.dark .cs {
+  --blue: #5B8CFF;
+  --blue-d: #7BA3FF;
+  --blue-s: #15203A;
+  --blue-b: #2D4476;
+
+  --ink: #EAF0FA;
+  --ink-2: #C3CEE0;
+  --mut: #9AA8BF;
+  --fnt: #8795AD;
+
+  --soft: #0B1220;
+  --surf: #111A2B;
+  --surf-2: #16202F;
+  --line: #27334A;
+  --line-2: #1D2839;
+
+  --amb: #F0C675;
+  --amb-s: #2A2010;
+  --amb-b: #4A3A17;
+  --grn: #7BD99B;
+  --grn-s: #11241A;
+  --red: #FF9A91;
+  --red-s: #2C1513;
+  --red-b: #5A2521;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 16px 44px rgba(0, 0, 0, .55);
+  --ring: 0 0 0 2px var(--surf), 0 0 0 4px var(--blue);
+}
+
+/* -------------------------------------------------------------- shell */
+.cs .cs-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(14, 23, 41, .46);
+  /* a 2px blur reads as "behind glass" without the cost of a real blur */
+  backdrop-filter: blur(2px);
+}
+.dark .cs .cs-backdrop { background: rgba(2, 6, 14, .66); }
+
+.cs .cs-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(1320px, 100%);
+  max-height: min(900px, 100%);
+  /* dvh so a mobile browser bar cannot clip the footer */
+  height: min(900px, 100dvh - 48px);
+  background: var(--surf);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  container-type: inline-size;
+  container-name: csp;
+}
+
+/* -------------------------------------------------------------- header */
+.cs .cs-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surf);
+}
+.cs .cs-head h2 {
+  margin: 0;
+  font-size: var(--fs-xl);
+  font-weight: 650;
+  letter-spacing: -.01em;
+}
+.cs .cs-head p {
+  margin: 3px 0 0;
+  max-width: 68ch;
+  font-size: var(--fs-sm);
+  color: var(--mut);
+}
+.cs .cs-head__int {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-inline-start: auto;
+  flex: none;
+  padding: 3px 8px;
+  border: 1px solid var(--amb-b);
+  border-radius: 999px;
+  background: var(--amb-s);
+  color: var(--amb);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------- body */
+.cs .cs-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+.cs .cs-list-pane {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* -------------------------------------------------------------- tabs */
+.cs .cs-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 12px 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.cs .cs-tab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--r-s) var(--r-s) 0 0;
+  background: none;
+  color: var(--mut);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.cs .cs-tab:hover { color: var(--ink); background: var(--surf-2); }
+.cs .cs-tab.is-on {
+  color: var(--blue);
+  background: var(--blue-s);
+  border-color: var(--blue-b);
+}
+.cs .cs-tab > i {
+  font-style: normal;
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--line-2);
+  color: var(--ink-2);
+}
+/* empty option: a dotted underline AND the count, not colour alone */
+.cs .cs-tab.is-empty {
+  text-decoration: underline dotted var(--amb);
+  text-underline-offset: 3px;
+}
+.cs .cs-tab.is-empty > i { background: var(--amb-s); color: var(--amb); }
+.cs .cs-tab > svg { color: var(--amb); }
+
+/* -------------------------------------------------------------- toolbar */
+.cs .cs-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surf);
+}
+.cs .cs-search {
+  flex: 1 1 240px;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  background: var(--surf-2);
+  color: var(--mut);
+}
+.cs .cs-search:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-s); }
+.cs .cs-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink);
+  outline: none;
+}
+.cs .cs-search input::placeholder { color: var(--fnt); }
+.cs .cs-search input::-webkit-search-cancel-button { display: none; }
+
+.cs .cs-count {
+  font-size: var(--fs-sm);
+  color: var(--mut);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.cs .cs-count b { color: var(--ink); font-weight: 650; }
+
+.cs .cs-tool-acts { display: inline-flex; align-items: center; gap: 12px; }
+
+/* -------------------------------------------------------------- the list */
+/* The figures are labelled ONCE, in a sticky column header, rather than
+   twice per row. The header consumes the same track list as the rows (see
+   .cs-colhead below) so the two cannot drift apart. */
+.cs .cs-colhead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surf-2);
+  font-size: var(--fs-xs);
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: var(--fnt);
+}
+.cs .cs-colhead > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs .cs-colhead .cs-num { justify-items: end; }
+.cs .cs-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--soft);
+}
+.cs .cs-rows { display: flex; flex-direction: column; }
+
+/* Separation between creators.
+   The first pass used --line-2 (the faintest rule in the palette), which the
+   blue selected-row wash swallowed completely, so a run of selected creators
+   read as one block. Now: a full-strength rule, and selected rows carry a
+   3px accent on the leading edge so each one has a visible start. */
+.cs .cs-row {
+  position: relative;
+  border-bottom: 1px solid var(--line);
+  background: var(--surf);
+}
+.cs .cs-row:last-child { border-bottom: 0; }
+.cs .cs-row:hover { background: var(--surf-2); }
+.cs .cs-row.is-sel { background: var(--blue-s); }
+.cs .cs-row.is-sel:hover { background: var(--blue-s); }
+.cs .cs-row.is-sel::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background: var(--blue);
+}
+/* an expanded creator is one unit: tie its options to its row */
+.cs .cs-row.is-open { box-shadow: inset 0 0 0 1px var(--blue-b); }
+
+.cs .cs-rows { --cols: 34px 40px minmax(0, 1.5fr) minmax(0, 1fr)
+    108px 112px 112px 132px; }
+.cs .cs-colhead { grid-template-columns: var(--cols); gap: 8px; }
+.cs .cs-row__main {
+  display: grid;
+  grid-template-columns: var(--cols);
+  align-items: center;
+  gap: 8px;
+  min-height: 64px;
+  padding: 0 12px;
+}
+
+/* checkbox: visually 18px, 44px of hit area */
+.cs .cs-check {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 44px;
+  cursor: pointer;
+}
+.cs .cs-check input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.cs .cs-check > span {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--line);
+  border-radius: 5px;
+  background: var(--surf);
+  color: transparent;
+}
+.cs .cs-check input:checked + span {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+.cs .cs-check input:indeterminate + span {
+  border-color: var(--blue);
+  color: transparent;
+  background:
+    linear-gradient(var(--blue), var(--blue)) center / 9px 2.5px no-repeat,
+    var(--surf);
+}
+.cs .cs-check input:focus-visible + span { box-shadow: var(--ring); }
+
+.cs .cs-av {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surf-2);
+  color: var(--mut);
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  overflow: hidden;
+}
+.cs .cs-av img { width: 100%; height: 100%; object-fit: cover; }
+
+.cs .cs-id { min-width: 0; display: grid; gap: 1px; }
+.cs .cs-id b {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* handle and category give way; the reach figure does not */
+.cs .cs-sub {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--mut);
+}
+.cs .cs-sub__t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs .cs-sub__t::after { content: ' ·'; }
+.cs .cs-reach {
+  flex: none;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.cs .cs-id > span {
+  font-size: var(--fs-sm);
+  color: var(--mut);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs .cs-plats { display: flex; flex-wrap: wrap; gap: 4px 10px; min-width: 0; }
+.cs .cs-plat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.cs .cs-plat i {
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  /* keeps "167.1K" from being reordered inside an RTL row */
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.cs .cs-muted { font-size: var(--fs-sm); color: var(--fnt); }
+
+.cs .cs-num { display: grid; gap: 1px; justify-items: end; text-align: end; }
+/* hidden while the column header is present; shown again when rows stack */
+.cs .cs-num u {
+  display: none;
+  text-decoration: none;
+  font-size: var(--fs-xs);
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: var(--fnt);
+}
+.cs .cs-num b {
+  font-size: var(--fs-md);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.cs .cs-num b i {
+  font-style: normal;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--mut);
+  margin-inline-end: 3px;
+}
+
+/* The internal side of a row. Amber ink and an amber hairline, so a figure
+   that must never reach a client export is never mistaken for one that can. */
+.cs .cs-num--int b, .cs .cs-num--gp b { color: var(--amb); }
+.cs .cs-num--int b em, .cs .cs-num--gp b em {
+  font-style: normal;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  margin-inline-start: 5px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  background: var(--amb-s);
+}
+/* one dashed rule marks where client-facing ends and internal begins */
+.cs .cs-num--int, .cs .cs-colhead__int:first-of-type {
+  border-inline-start: 1px dashed var(--amb-b);
+  padding-inline-start: 8px;
+}
+.cs .cs-colhead__int { color: var(--amb); }
+
+.cs .cs-disc {
+  justify-self: end;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  background: var(--surf);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cs .cs-disc:hover { border-color: var(--blue-b); color: var(--blue); }
+/* a creator with a single plain option has no disclosure; the cell is kept
+   so every row's columns line up */
+.cs .cs-disc--gap { border-color: transparent; background: none; min-height: 0; }
+.cs .cs-row.is-open .cs-disc svg { transform: rotate(180deg); }
+.cs .cs-disc svg { transition: transform .15s ease; }
+
+/* -------------------------------------------------------------- options */
+.cs .cs-opts {
+  display: grid;
+  gap: 4px;
+  padding: 2px 12px 10px calc(12px + 34px + 8px);
+  border-top: 1px dashed var(--line);
+  background: var(--surf-2);
+}
+.cs .cs-opts__ro {
+  margin: 8px 0 2px;
+  padding: 6px 9px;
+  border: 1px solid var(--amb-b);
+  border-radius: var(--r-s);
+  background: var(--amb-s);
+  color: var(--amb);
+  font-size: var(--fs-sm);
+}
+.cs .cs-opt {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  background: var(--surf);
+  cursor: pointer;
+}
+.cs .cs-opt.is-sel { border-color: var(--blue-b); background: var(--blue-s); }
+.cs .cs-opt:has(input:disabled) { cursor: default; opacity: .9; }
+.cs .cs-opt input { width: 16px; height: 16px; margin: 0; accent-color: var(--blue); }
+.cs .cs-opt__t { min-width: 0; display: grid; gap: 1px; }
+.cs .cs-opt__t b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs);
+  font-weight: 600;
+}
+.cs .cs-opt__t > span { font-size: var(--fs-sm); color: var(--mut); }
+.cs .cs-opt__p {
+  display: grid;
+  gap: 1px;
+  justify-items: end;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.cs .cs-opt__p b { font-size: var(--fs-md); font-weight: 650; }
+.cs .cs-opt__p em { font-style: normal; font-size: var(--fs-xs); color: var(--amb); }
+.cs .cs-opt__p i {
+  font-style: normal;
+  font-size: var(--fs-xs);
+  color: var(--mut);
+  margin-inline-end: 3px;
+}
+
+.cs .cs-tag {
+  font-style: normal;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--line-2);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.cs .cs-tag--rec {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--amb-s);
+  color: var(--amb);
+}
+
+/* -------------------------------------------------------------- empty / skeleton */
+.cs .cs-empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 56px 24px;
+  text-align: center;
+}
+.cs .cs-empty h4 { margin: 0; font-size: var(--fs-md); font-weight: 650; }
+.cs .cs-empty p { margin: 0; max-width: 46ch; font-size: var(--fs-sm); color: var(--mut); }
+.cs .cs-empty .cs-btn { margin-top: 6px; }
+
+.cs .cs-row--skel {
+  display: grid;
+  grid-template-columns: 34px 44px minmax(0, 1.5fr) 120px;
+  align-items: center;
+  gap: 8px;
+  min-height: 64px;
+  padding: 0 12px;
+}
+.cs .cs-row--skel span {
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--line-2), var(--line), var(--line-2));
+  background-size: 200% 100%;
+  animation: csShimmer 1.2s linear infinite;
+}
+.cs .cs-row--skel span:nth-child(2) { height: 40px; border-radius: 50%; }
+.cs .cs-skel { display: grid; gap: 6px; }
+.cs .cs-skel span {
+  height: 30px;
+  border-radius: var(--r-s);
+  background: var(--line-2);
+}
+@keyframes csShimmer { to { background-position: -200% 0; } }
+@keyframes csSpin { to { transform: rotate(360deg); } }
+
+/* -------------------------------------------------------------- rail */
+.cs .cs-rail-wrap {
+  border-inline-start: 1px solid var(--line);
+  background: var(--surf-2);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+.cs .cs-rail { display: grid; gap: 1px; }
+.cs .cs-rail-x, .cs .cs-rail-open { display: none; }
+
+.cs .cs-card {
+  position: relative;        /* the info tooltip anchors here, not to the
+                                14px icon, so it can never overflow the rail */
+  padding: 12px 14px;
+  background: var(--surf-2);
+  border-bottom: 1px solid var(--line-2);
+}
+.cs .cs-card__h {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+  color: var(--fnt);
+}
+.cs .cs-card__h em {
+  margin-inline-start: auto;
+  font-style: normal;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--mut);
+}
+
+/* Both sides, always visible, describing the same selection. */
+.cs .cs-scope {
+  margin-inline-start: auto;
+  font-style: normal;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 650;
+  color: var(--blue);
+}
+.cs .cs-sides { display: grid; gap: 8px; }
+.cs .cs-side {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  background: var(--surf);
+}
+.cs .cs-side h4 {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 6px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.cs .cs-side--client h4 { color: var(--blue); }
+.cs .cs-side--int { border-color: var(--amb-b); background: var(--amb-s); }
+.cs .cs-side--int h4 { color: var(--amb); }
+.cs .cs-side--int .cs-kv dt { color: var(--amb); }
+.cs .cs-side--int .cs-kv dd { color: var(--amb); }
+.cs .cs-side .cs-kv > div.is-total {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--line-2);
+}
+.cs .cs-side--int .cs-kv > div.is-total { border-top-color: var(--amb-b); }
+.cs .cs-side .is-total dt { font-weight: 650; color: var(--ink); }
+.cs .cs-side--int .is-total dt { color: var(--amb); }
+.cs .cs-side .is-total dd { font-size: var(--fs-lg); font-weight: 680; }
+.cs .cs-side .is-total dd i {
+  font-style: normal;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--mut);
+  margin-inline-end: 4px;
+}
+.cs .cs-side--int .is-total dd i { color: var(--amb); }
+
+.cs .cs-kv { margin: 0; display: grid; gap: 3px; }
+.cs .cs-kv > div { display: flex; align-items: baseline; gap: 8px; }
+.cs .cs-kv dt {
+  font-size: var(--fs-sm);
+  color: var(--mut);
+}
+.cs .cs-kv dd {
+  margin: 0 0 0 auto;
+  font-size: var(--fs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.cs:dir(rtl) .cs-kv dd { margin: 0 auto 0 0; }
+.cs .cs-kv > div.is-strong dt { color: var(--ink); font-weight: 600; }
+.cs .cs-kv > div.is-strong dd { font-weight: 700; }
+.cs .cs-kv--conv { padding-top: 6px; border-top: 1px dashed var(--line); }
+
+.cs .cs-fine {
+  margin: 8px 0 0;
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  color: var(--mut);
+}
+.cs .cs-ok { color: var(--grn); font-weight: 600; }
+.cs .cs-dirty { color: var(--amb); font-weight: 600; font-style: normal; }
+
+.cs .cs-det {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  background: var(--surf);
+}
+.cs .cs-det > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  list-style: none;
+}
+.cs .cs-det > summary::-webkit-details-marker { display: none; }
+.cs .cs-det > summary em { font-style: normal; font-weight: 400; color: var(--mut); }
+.cs .cs-det > summary svg:last-child {
+  margin-inline-start: auto;
+  transition: transform .15s ease;
+  color: var(--mut);
+}
+.cs .cs-det[open] > summary svg:last-child { transform: rotate(180deg); }
+.cs .cs-det > summary:focus-visible { box-shadow: var(--ring); border-radius: var(--r-s); }
+.cs .cs-det > *:not(summary) { padding: 0 10px 10px; }
+.cs .cs-det--int { border-color: var(--amb-b); background: var(--amb-s); }
+.cs .cs-det--int > summary { color: var(--amb); }
+
+.cs .cs-field { display: grid; gap: 4px; font-size: var(--fs-sm); color: var(--mut); }
+.cs .cs-field select {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  background: var(--surf);
+  color: var(--ink);
+  font: inherit;
+}
+.cs .cs-field select:focus-visible { outline: none; box-shadow: var(--ring); }
+.cs .cs-ccy { display: grid; gap: 8px; }
+
+/* -------------------------------------------------------------- platforms */
+.cs .cs-plat-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.cs .cs-plat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surf);
+  color: var(--mut);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.cs .cs-plat-btn:hover { border-color: var(--blue-b); }
+/* selected is marked by fill, border AND a tick-weight label — not hue alone */
+.cs .cs-plat-btn.is-on {
+  border-color: var(--blue-b);
+  background: var(--blue-s);
+  color: var(--ink);
+}
+.cs .cs-plat-btn:not(.is-on) { text-decoration: line-through; }
+.cs .cs-plat-btn i {
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-xs);
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--line-2);
+  color: var(--ink-2);
+}
+.cs .cs-plat-btn:focus-visible { outline: none; box-shadow: var(--ring); }
+
+.cs .cs-info { position: relative; display: inline-grid; place-items: center; color: var(--mut); }
+.cs .cs-tip {
+  position: absolute;
+  top: 26px;
+  inset-inline: 12px;
+  z-index: 3;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  background: var(--surf);
+  box-shadow: var(--shadow);
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.45;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease;
+}
+.cs .cs-info:hover .cs-tip, .cs .cs-info:focus-visible .cs-tip { opacity: 1; }
+
+/* -------------------------------------------------------------- options list */
+.cs .cs-opt-list { margin: 0 0 8px; padding: 0; list-style: none; display: grid; gap: 4px; }
+.cs .cs-opt-item {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  background: var(--surf);
+}
+.cs .cs-opt-item.is-active { border-color: var(--blue-b); background: var(--blue-s); }
+.cs .cs-opt-item.is-empty { border-color: var(--amb-b); }
+.cs .cs-opt-item__go {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  padding: 7px 9px;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: start;
+  color: var(--ink);
+  cursor: pointer;
+}
+.cs .cs-opt-item__go b {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  font-size: var(--fs);
+  font-weight: 600;
+}
+.cs .cs-opt-item__go > span { font-size: var(--fs-xs); color: var(--mut); }
+.cs .cs-opt-item__m {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.cs .cs-opt-item__m u { text-decoration: none; color: var(--mut); }
+.cs .cs-opt-item__m b { font-size: var(--fs-sm); font-weight: 650; color: var(--ink); }
+.cs .cs-opt-item__m em { font-style: normal; font-weight: 600; color: var(--amb); }
+.cs .cs-opt-item.is-empty .cs-opt-item__go > span { color: var(--amb); font-weight: 600; }
+.cs .cs-opt-item__acts { display: flex; gap: 2px; padding-inline-end: 5px; }
+.cs .cs-opt-empty, .cs .cs-opt-add, .cs .cs-opt-save { display: flex; gap: 6px; flex-wrap: wrap; }
+.cs .cs-opt-save { margin-top: 10px; }
+
+.cs .cs-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  margin-top: 6px;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.cs .cs-switch input { width: 16px; height: 16px; margin: 0; accent-color: var(--blue); }
+
+/* -------------------------------------------------------------- notes */
+.cs .cs-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 8px 0 0;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+.cs .cs-note svg { flex: none; margin-top: 1px; }
+.cs .cs-note--bad { border-color: var(--red-b); background: var(--red-s); color: var(--red); }
+.cs .cs-note--warn { border-color: var(--amb-b); background: var(--amb-s); color: var(--amb); }
+.cs .cs-note--bar {
+  margin: 0;
+  border-radius: 0;
+  border-inline: 0;
+  border-top: 0;
+}
+
+/* -------------------------------------------------------------- buttons */
+.cs .cs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  background: var(--surf);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs);
+  font-weight: 600;
+  cursor: pointer;
+}
+.cs .cs-btn:hover { border-color: var(--mut); }
+.cs .cs-btn--pri {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+.dark .cs .cs-btn--pri { color: #06101F; }
+.cs .cs-btn--pri:hover { background: var(--blue-d); border-color: var(--blue-d); }
+.cs .cs-btn--danger { color: var(--red); border-color: var(--red-b); background: var(--red-s); }
+.cs .cs-btn:disabled {
+  cursor: not-allowed;
+  opacity: 1;
+  background: var(--line-2);
+  border-color: var(--line);
+  color: var(--fnt);
+}
+.cs .cs-btn:focus-visible { outline: none; box-shadow: var(--ring); }
+
+.cs .cs-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.cs .cs-link:focus-visible { outline: none; box-shadow: var(--ring); border-radius: 3px; }
+
+.cs .cs-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border: 0;
+  border-radius: var(--r-s);
+  background: none;
+  color: var(--mut);
+  font: inherit;
+  font-size: var(--fs-md);
+  cursor: pointer;
+}
+.cs .cs-icon:hover { background: var(--line-2); color: var(--ink); }
+.cs .cs-icon--danger:hover { background: var(--red-s); color: var(--red); }
+.cs .cs-icon--lg { width: 32px; height: 32px; }
+.cs .cs-icon:focus-visible { outline: none; box-shadow: var(--ring); }
+.cs .cs-icon[aria-pressed='true'] { color: var(--amb); background: var(--amb-s); }
+
+/* -------------------------------------------------------------- footer */
+.cs .cs-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: var(--surf);
+}
+.cs .cs-foot__acts { display: flex; align-items: center; gap: 10px; }
+.cs .cs-sp { flex: 1; }
+.cs .cs-foot__sum {
+  font-size: var(--fs-sm);
+  color: var(--mut);
+  font-variant-numeric: tabular-nums;
+}
+.cs .cs-foot__sum b { color: var(--ink); font-weight: 650; }
+.cs .cs-foot__why {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 44ch;
+  font-size: var(--fs-sm);
+  color: var(--amb);
+}
+
+.cs .cs-confirm {
+  position: absolute;
+  inset-inline: 16px;
+  bottom: 70px;
+  z-index: 4;
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--red-b);
+  border-radius: var(--r);
+  background: var(--surf);
+  box-shadow: var(--shadow);
+}
+.cs .cs-confirm p { margin: 0; font-size: var(--fs); max-width: 76ch; }
+.cs .cs-confirm__a { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ==========================================================================
+   Narrow panel: the rail becomes a sheet reached from the footer.
+   The Radix dialog fills the viewport below these breakpoints.
+   ========================================================================== */
+@media (max-width:1148px) {
+  .cs .cs-body { grid-template-columns: minmax(0, 1fr) 300px; }
+  .cs .cs-rows { --cols: 34px 40px minmax(0, 1fr) 104px 108px 108px 128px; }
+  /* platform followers are the first secondary detail to go — the header
+     cell goes with it, or the header would label a column that is not there
+     and every cell after it would sit one track out */
+  .cs .cs-plats, .cs .cs-colhead__plats { display: none; }
+}
+
+@media (max-width:1148px) {
+  /* Below this width the rail would squeeze the creator name to nothing,
+     so it becomes a sheet over the list. Its containing block is the BODY,
+     not the panel, so the footer and its primary action stay reachable. */
+  .cs .cs-body { grid-template-columns: minmax(0, 1fr); position: relative; }
+  .cs .cs-rail-wrap {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    border: 0;
+    background: var(--surf);
+    transform: translateY(100%);
+    visibility: hidden;
+    transition: transform .22s ease, visibility .22s;
+  }
+  .cs .cs-rail-wrap.is-open { transform: none; visibility: visible; }
+  .cs .cs-rail-x {
+    display: grid;
+    place-items: center;
+    position: sticky;
+    top: 0;
+    inset-inline-start: auto;
+    margin-inline-start: auto;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    background: var(--surf);
+    color: var(--mut);
+    cursor: pointer;
+  }
+  .cs .cs-rail-open {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-s);
+    background: var(--surf);
+    color: var(--ink);
+    font: inherit;
+    font-size: var(--fs);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .cs .cs-head p { display: none; }
+}
+
+@media (max-width:650px) {
+  .cs .cs-rows { --cols: 34px 40px minmax(0, 1fr) 140px; }
+  /* stacked rows carry their own labels, so the column header goes away */
+  .cs .cs-colhead { display: none; }
+  .cs .cs-row__main {
+    grid-template-areas: 'chk av id disc' 'chk cost cost cost'
+      'chk int int gp';
+    row-gap: 4px;
+    padding-bottom: 8px;
+    padding-top: 8px;
+  }
+  .cs .cs-check { grid-area: chk; align-self: start; }
+  .cs .cs-av { grid-area: av; width: 40px; height: 40px; }
+  .cs .cs-id { grid-area: id; }
+  .cs .cs-disc { grid-area: disc; }
+  /* stacked rows carry their own labels, inline with the figure so a row
+     stays four lines, not six */
+  .cs .cs-num {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+  }
+  .cs .cs-num u { display: block; flex: none; }
+  .cs .cs-num b { font-size: var(--fs); }
+  .cs .cs-num--cost { grid-area: cost; justify-content: flex-start; }
+  .cs .cs-num--int { grid-area: int; justify-content: flex-start; }
+  .cs .cs-num--gp { grid-area: gp; justify-content: flex-end; }
+  .cs .cs-head h2 { font-size: var(--fs-lg); }
+  .cs .cs-opts { padding-inline-start: 12px; }
+  .cs .cs-tools { gap: 8px; }
+  .cs .cs-count { flex: 1 0 100%; order: 3; }
+  /* the primary action gets its own full-width row rather than wrapping */
+  .cs .cs-sp { display: none; }
+  .cs .cs-foot__acts { flex: 1 0 100%; }
+  .cs .cs-foot__acts .cs-btn--pri { flex: 1; }
+  .cs .cs-foot__why { flex: 1 0 100%; order: -1; }
+}
+
+/* mobile: a full-height sheet, not a floating card */
+.cs .cs--sheet { padding: 0; }
+.cs .cs--sheet .cs-panel {
+  width: 100%;
+  height: 100dvh;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+}
+
+/* -------------------------------------------------------------- misc */
+/* no blanket `outline: none` — anything without an explicit ring below
+   keeps the platform's own focus indicator */
+.cs .cs-scroll:focus-visible { box-shadow: inset var(--ring); }
+
+@media (prefers-reduced-motion: reduce) {
+  .cs *, .cs *::before, .cs *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+/* Radix owns the overlay and focus boundary; the supplied panel owns layout. */
+.cs.cs-panel[data-slot="dialog-content"] { position:fixed; inset:auto; top:50%; left:50%; z-index:110; display:flex; padding:0; gap:0; width:min(1320px,calc(100vw - 48px)); max-width:none; height:min(900px,calc(100dvh - 48px)); max-height:calc(100dvh - 48px); border-radius:12px; background:var(--surf); color:var(--ink); container: csp / inline-size; }
+.cs .cs-body { border:0; padding:0; margin:0; min-width:0; }
+.cs .cs-av img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.cs .cs-title { display:flex; align-items:center; gap:8px; }
+.cs .cs-kv dd,.cs .cs-num b { overflow-wrap:anywhere; }
+.cs .cs-row__main .cs-num i { font-style:normal; }
+.cs .cs-platform-help { margin-top:8px; }
+.cs .cs-confirm { margin:8px 12px; }
+.cs .cs-rail-wrap details summary { cursor:pointer; }
+.cs .cs-shortlist .cs-rows { --cols:34px 40px minmax(0,1fr) minmax(100px,1fr) 128px; }
+.cs .cs-shortlist .cs-num { display:none; }
+.cs .cs-empty p { color:var(--mut); }
+.cs button:disabled { cursor:not-allowed; opacity:.5; }
+.cs .cs-foot { flex-shrink:0; }
+@media (max-width:1148px) { .cs .cs-shortlist .cs-rows { --cols:34px 40px minmax(0,1fr) 128px; } }
+@media (max-width:650px) { .cs .cs-shortlist .cs-rows { --cols:28px 40px minmax(0,1fr) 90px; } .cs .cs-rows { --cols:28px 40px minmax(0,1fr) 100px; } .cs .cs-head__int { display:none; } .cs .cs-num b { white-space:normal; } }
+@media(max-width:620px) { .cs.cs-panel[data-slot="dialog-content"] { width:100%; height:100dvh; max-height:100dvh; border-radius:0; } .cs .cs-foot { padding-bottom:max(12px,env(safe-area-inset-bottom)); } }
+
+.cs.cs-panel[data-slot="dialog-content"] { overflow:hidden; border:1px solid var(--line); box-shadow:var(--shadow); }
+.cs .cs-head > div { flex:1; min-width:0; }
+.cs .cs-foot__sum small { display:block; color:var(--mut); font-size:11px; }
+.cs .cs-confirm { position:static; }
+@media (max-width:1148px) { .cs .cs-body:has(.cs-rail-wrap.is-open) .cs-list-pane { visibility:hidden; } }
+
+.cs.cs-panel[data-slot="dialog-content"] { flex-direction:column; align-items:stretch; justify-content:normal; }
+.cs .cs-plat img { width:14px !important; height:14px !important; min-width:0 !important; min-height:0 !important; }
+.cs .cs-plat-btn img { width:16px !important; height:16px !important; min-width:0 !important; min-height:0 !important; }
+.cs .cs-rail-x { z-index:6; }
+@media(max-width:650px) {
+ .cs .cs-rows,.cs .cs-shortlist .cs-rows { --cols:28px 40px minmax(0,1fr) 80px; }
+ .cs .cs-row__main { grid-template-areas:'chk av id disc' 'chk cost cost cost' 'chk int int int' 'chk gp gp gp'; }
+ .cs .cs-num--gp { justify-content:flex-start; }
+ .cs .cs-num { min-width:0; }
+ .cs .cs-num b { flex:1; min-width:0; text-align:start; }
+ .cs .cs-num u { width:92px; }
+ .cs .cs-disc { width:100%; min-width:0; white-space:normal; font-size:10.5px; line-height:1.3; padding:4px; }
+ .cs .cs-disc svg { flex:none; width:12px; }
+ .cs .cs-opt { grid-template-columns:20px minmax(0,1fr); }
+ .cs .cs-opt__p { grid-column:2; justify-items:start; text-align:start; }
+ .cs .cs-sub { flex-wrap:wrap; gap:0 5px; }
+ .cs .cs-id > span { white-space:normal; }
+ .cs .cs-tag { white-space:normal; }
+}
+/* Keep workspace-wide modal scrolling rules from adding a second scrollbar. */
+.cs.cs-panel[data-slot="dialog-content"] { overflow:hidden !important; }
+@media(max-width:620px) {
+ .cs.cs-panel[data-slot="dialog-content"] { height:100dvh !important; max-height:100dvh !important; }
+}

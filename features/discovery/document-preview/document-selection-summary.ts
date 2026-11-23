@@ -152,6 +152,9 @@ export function summarizeQuotationSelection(
   ];
   metrics.push({label: "Gross profit", value: money(gpEgp, "gp_value"), scope: "internal"},
     {label: "Margin", value: `${(projected ? projected.marginPct : revenueEgp + afEgp > 0 ? gpEgp / (revenueEgp + afEgp) * 100 : 0).toFixed(1)}%`, scope: "internal"});
+  const markupCost = projected ? projected.cost : costEgp;
+  const markupProfit = projected ? projected.margin : gpEgp;
+  metrics.push({label: "Markup on cost", value: markupCost > 0 ? (markupProfit / markupCost * 100).toFixed(1) + "%" : "—", scope: "internal"});
   const er = formatEr(forecast.averageEngagementRate);
   if (er) metrics.push({ label: "Avg ER", value: er });
 
