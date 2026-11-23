@@ -1,8 +1,12 @@
-/** Bound database fan-out while preserving the queue's original campaign order. */
+/** Keep four requests active without waiting for the slowest campaign in each batch. */
 export async function mapBillingCampaigns<T, R>(items: readonly T[], load: (item: T) => Promise<R>): Promise<R[]> {
-  const results: R[] = [];
-  for (let offset = 0; offset < items.length; offset += 4) {
-    results.push(...await Promise.all(items.slice(offset, offset + 4).map(load)));
-  }
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(4, items.length) }, async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await load(items[index]);
+    }
+  }));
   return results;
 }

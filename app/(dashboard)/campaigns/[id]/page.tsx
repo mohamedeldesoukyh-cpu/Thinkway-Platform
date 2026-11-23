@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { PageAlert } from "@/components/ui/page-alert";
@@ -27,11 +27,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   resolveCampaignWorkspaceTab,
 } from "@/features/campaigns/constants/campaign-workspace-tab-order";
-import {
-  campaignProcessCueFromWorkspace,
-} from "@/features/campaigns/lifecycle/campaign-process-presentation";
-import { resolveBareCampaignEntryRedirect } from "@/features/campaigns/lifecycle/campaign-workspace-entry-routing";
-import { campaignDetailPath, campaignDetailPathWithTab } from "@/lib/routing/entity-paths";
+import { campaignDetailPath } from "@/lib/routing/entity-paths";
 import {
   metadataTitleForEntity,
   redirectToCanonicalEntityRoute,
@@ -119,16 +115,7 @@ export default async function CampaignWorkspacePage({
       error instanceof Error ? error.message : "Failed to load campaign workspace.";
   }
 
-  // Lifecycle OS: bare /campaigns/[id] (no ?tab=) enters the recommended business stage.
-  // Any explicit ?tab= must stay — never bounce the user away from a chosen workspace.
-  // Keep outside try/catch so redirect() is not swallowed.
-  if (workspace) {
-    const entryStage = campaignProcessCueFromWorkspace(workspace).entryStageId;
-    const redirectTab = resolveBareCampaignEntryRedirect(tab, entryStage);
-    if (redirectTab) {
-      redirect(campaignDetailPathWithTab(workspace, redirectTab));
-    }
-  }
+  // Bare campaign URLs render Assignments directly; explicit tab links remain supported.
 
   if (!workspace && !errorMessage) {
     traceCampaignRoute("page:not-found", { campaignId, reason: "workspace-null" });

@@ -79,7 +79,7 @@ type CampaignWorkspaceViewProps = {
 
 function CampaignWorkspaceViewBody({
   workspace,
-  defaultTab = "overview",
+  defaultTab = "lines",
   initialAssignmentHierarchy,
 }: CampaignWorkspaceViewProps) {
   const pathname = usePathname();

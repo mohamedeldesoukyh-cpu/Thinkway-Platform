@@ -31,10 +31,9 @@ import {
 } from "@/features/campaigns/lifecycle/campaign-stage-policy";
 import {
   buildCampaignWorkspaceTabUrl,
-  resolveBareCampaignEntryRedirect,
 } from "@/features/campaigns/lifecycle/campaign-workspace-entry-routing";
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
-import { CAMPAIGN_WORKSPACE_DEFAULT_TAB_ORDER } from "@/features/campaigns/constants/campaign-workspace-tab-order";
+import { CAMPAIGN_WORKSPACE_DEFAULT_TAB_ORDER, resolveCampaignWorkspaceTab } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 
 function base(overrides: Partial<CampaignProcessSignals> = {}): CampaignProcessSignals {
   return {
@@ -149,17 +148,13 @@ describe("Campaign Workspace Lifecycle OS — regression (baseline v1)", () => {
       assert.equal(lifecycle.nextAction, lifecycle.decisionCenter.primaryAction);
     });
 
-    it("never redirects away from any explicit ?tab= (all workspaces stick)", () => {
+    it("opens Assignments by default and preserves explicit workspace links", () => {
+      assert.equal(resolveCampaignWorkspaceTab(undefined), "lines");
+      assert.equal(resolveCampaignWorkspaceTab(""), "lines");
+      assert.equal(resolveCampaignWorkspaceTab("unknown"), "lines");
       for (const tab of CAMPAIGN_WORKSPACE_DEFAULT_TAB_ORDER) {
-        assert.equal(
-          resolveBareCampaignEntryRedirect(tab, "client-io"),
-          null,
-          `explicit ?tab=${tab} must not redirect`
-        );
+        assert.equal(resolveCampaignWorkspaceTab(tab), tab);
       }
-      assert.equal(resolveBareCampaignEntryRedirect("  ", "client-io"), "client-io");
-      assert.equal(resolveBareCampaignEntryRedirect(undefined, "client-io"), "client-io");
-      assert.equal(resolveBareCampaignEntryRedirect(undefined, "overview"), null);
     });
 
     it("keeps ?tab= in shareable URLs for every workspace (including overview)", () => {
@@ -209,7 +204,7 @@ describe("Campaign Workspace Lifecycle OS — regression (baseline v1)", () => {
       }
     });
 
-    it("labels Finance/Performance as out-of-band while stage is Client IO", () => {
+    it("keeps Finance available while Performance follows the Client IO stage", () => {
       const lifecycle = deriveLifecycleForTest(
         base({
           lineCount: 2,
@@ -218,9 +213,9 @@ describe("Campaign Workspace Lifecycle OS — regression (baseline v1)", () => {
         })
       );
       assert.equal(lifecycle.businessStageId, "client-io");
-      assert.equal(buildWorkspaceGuidance(lifecycle, "billing").outOfBand, true);
+      assert.equal(buildWorkspaceGuidance(lifecycle, "billing").outOfBand, false);
       assert.equal(buildWorkspaceGuidance(lifecycle, "publications").outOfBand, true);
-      assert.ok(buildWorkspaceGuidance(lifecycle, "billing").unlockHint);
+      assert.equal(buildWorkspaceGuidance(lifecycle, "billing").unlockHint, null);
     });
   });
 
