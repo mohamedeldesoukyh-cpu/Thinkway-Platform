@@ -1,5 +1,6 @@
 // Engineering evidence is test metadata, not part of the browser navigation bundle.
 export const navigationEvidence:Record<string,string>={
+  "amgad": "FinanceAssistantWorkspace: bilingual read-only accounting statements/P&L with scoped report evidence; no email or posting actions.",
   "journals": "JournalDesk: balanced drafts, posting, reversal and preview.",
   "expenses": "JournalDesk expenses mode.",
   "invoices": "InvoiceDesk: Media invoices, post/unpost/repost; creation stays in Media.",
