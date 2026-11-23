@@ -1,4 +1,5 @@
 "use client";
+import { campaignDisplayName } from "@/lib/documents/download-filename";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
 
@@ -326,7 +327,7 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
           <DiscoverySuiteCell className="tw-id">{serial}</DiscoverySuiteCell>
           <DiscoverySuiteCell>
             <Link href={quotationDetailPath(row)} className="tw-nm quotation-register-name" style={REGISTER_NAME_STYLE}>
-              {row.name.replace(/^Quotation\s*[—–:-]\s*/i, "") || row.name}
+              {campaignDisplayName(row.name)}
             </Link>
           </DiscoverySuiteCell>
           <DiscoverySuiteCell className={brand ? "tw-br" : "tw-miss"}>
