@@ -61,7 +61,7 @@ export async function viewAccountingAttachment(journalId: string, attachmentId: 
     const { db } = await invoiceAccess(journalId);
     const { data: proof, error } = await db.from('tw_accounting_attachments').select('storage_path').eq('id', attachmentId).eq('journal_id', journalId).is('removed_at', null).not('uploaded_at', 'is', null).single();
     if (error || !proof) throw new Error('This attachment is unavailable or has been removed.');
-    const signed = await db.storage.from('tw-accounting-attachments').createSignedUrl(proof.storage_path, 60);
+    const signed = await db.storage.from('tw-accounting-attachments').createSignedUrl(proof.storage_path, 300);
     if (signed.error) throw new Error(signed.error.message);
     return { ok: true as const, url: signed.data.signedUrl };
   } catch (e) { return failure(e); }

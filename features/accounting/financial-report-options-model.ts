@@ -18,7 +18,7 @@ export function financialReportSections(source:FinancialSource,chart:Account[],m
   else {const groups=new Map<string,{name:string;type:string;amount:bigint}>();for(const a of visible){const account=chart.find(c=>c.code===a.code),parent=chart.find(c=>c.code===account?.parent),key=parent?.code??a.type;const g=groups.get(key)??{name:parent?.name??a.type,type:a.type,amount:BigInt(0)};g.amount+=amount(a);groups.set(key,g);}for(const [code,g]of groups)rows.push([code,g.name,g.type,money(g.amount)]);}
   const totals=financialTotals(all);
   if(mode==='balance')rows.push(['','Unclosed earnings','Equity',totals.earnings]);
-  rows.push(...(mode==='profit'?[['','Net profit / (loss)','Total',totals.profit]]:[['','Total assets','Total',totals.assets],['','Total liabilities','Total',totals.liabilities],['','Equity including unclosed earnings','Total',money(cents(totals.equity)+cents(totals.earnings))],['','Balance difference','Total',totals.difference]]));
+  rows.push(...(mode==='profit'?[['','Net profit / (loss)','Total',totals.profit]]:[['','Total assets','Total',totals.assets],['','Total liabilities','Total',totals.liabilities],['','Equity including unclosed earnings','Total',totals.equityIncludingEarnings],['','Balance difference','Total',totals.difference]]));
   return {heading:currency+' · '+(byAuxiliary?'Account and auxiliary detail':byAccount?'Account detail':'Summary'),columns:['Code','Name','Classification',mode==='profit'?'Income / (expense)':'Balance'],rows};
  });
 }
