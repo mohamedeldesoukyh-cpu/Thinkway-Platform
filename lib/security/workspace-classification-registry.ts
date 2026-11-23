@@ -52,6 +52,7 @@ export const PAGE_PREFIX_CLASSIFICATIONS: Array<{
 /** Exact API path templates (Next dynamic segments kept as [id] style). */
 export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
   "/api/accounting/assistant": "internal_workspace",
+  "/api/accounting/assistant/mail": "internal_workspace",
   "/api/accounting/setup": "internal_workspace",
   "/api/accounting/journals": "internal_workspace",
   "/api/accounting/monthly-accruals": "internal_workspace",
