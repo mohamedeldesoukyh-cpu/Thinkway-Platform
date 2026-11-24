@@ -57,7 +57,11 @@ export async function deliverAutomaticReply(deps: {
   if (!candidate) return { sent: 0 };
   const job = preparedReplySchema.parse(candidate);
   let payload: ReturnType<typeof automaticReplyPayload>;
-  try { const evidence = await deps.load(job); payload = automaticReplyPayload(job, evidence.mail, evidence.received); }
+  let evidence: Awaited<ReturnType<typeof deps.load>>;
+  // A provider outage is retryable. A received but invalid identity is not.
+  try { evidence = await deps.load(job); }
+  catch { await deps.pending(job); return { sent: 0, pending: true }; }
+  try { payload = automaticReplyPayload(job, evidence.mail, evidence.received); }
   catch { await deps.hold(job, "automatic_reply_safety_review"); return { sent: 0, review: true }; }
   try {
     const receipt = await deps.send(job, payload, `amgad-auto-${job.id}`);
