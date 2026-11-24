@@ -3,14 +3,14 @@
    scroll away: a frozen desktop masthead can fill an entire iPhone viewport. */
 @media (max-width: 1023px) {
   .discovery-suite .tw-frozen[data-discovery-frozen],
-  .campaign-detail-suite.thinkway-campaign-workspace .tw-frozen {
+  .twcd.thinkway-campaign-workspace .tw-frozen {
     position: static;
     flex-shrink: 0;
     min-width: 0;
     max-width: 100%;
   }
   .discovery-suite .tw-frozen[data-discovery-frozen] .tw-mr,
-  .campaign-detail-suite.thinkway-campaign-workspace .tw-frozen.is-mini .tw-mr {
+  .twcd.thinkway-campaign-workspace .tw-frozen.is-mini .tw-mr {
     display: flex;
     flex-wrap: wrap;
     min-width: 0;
@@ -21,7 +21,7 @@
     flex-wrap: wrap;
   }
   .discovery-suite .tw-frozen[data-discovery-frozen] .tw-ms2 i,
-  .campaign-detail-suite.thinkway-campaign-workspace .tw-ms2 i {
+  .twcd.thinkway-campaign-workspace .tw-ms2 i {
     white-space: normal;
     overflow-wrap: anywhere;
   }
@@ -35,25 +35,25 @@
   .discovery-suite .tw-sc { max-width: 100%; touch-action: pan-x pan-y; }
 
   /* One vertical scrollport on mobile; desktop keeps its pinned chrome. */
-  .campaign-detail-suite.thinkway-campaign-workspace [data-campaign-persistent-shell] > .thinkway-aurora-wrap {
+  .twcd.thinkway-campaign-workspace [data-campaign-persistent-shell] > .thinkway-aurora-wrap {
     overflow-y: auto;
     overflow-x: hidden;
   }
-  .campaign-detail-suite.thinkway-campaign-workspace [data-campaign-shell="chrome"],
-  .campaign-detail-suite.thinkway-campaign-workspace [data-campaign-shell="content"] {
+  .twcd.thinkway-campaign-workspace [data-campaign-shell="chrome"],
+  .twcd.thinkway-campaign-workspace [data-campaign-shell="content"] {
     flex: none;
     min-height: auto;
   }
-  .campaign-detail-suite.thinkway-campaign-workspace [data-campaign-shell="content"] {
+  .twcd.thinkway-campaign-workspace [data-campaign-shell="content"] {
     overflow: visible;
     padding-bottom: calc(12rem + env(safe-area-inset-bottom, 0px));
   }
-  .campaign-detail-suite.thinkway-campaign-workspace .tw-step2 .enterprise-tabs-list {
+  .twcd.thinkway-campaign-workspace .tw-step2 .enterprise-tabs-list {
     flex-wrap: nowrap;
     overflow-x: auto;
     justify-content: flex-start;
   }
-  .campaign-detail-suite.thinkway-campaign-workspace .tw-step2 .enterprise-tab { flex-shrink: 0; }
+  .twcd.thinkway-campaign-workspace .tw-step2 .enterprise-tab { flex-shrink: 0; }
 
   /* Custom calculator is not a Radix dialog. Let the whole panel scroll so
      the totals and Apply/Cancel remain reachable on short Safari viewports. */
@@ -82,7 +82,7 @@
   .discovery-selection-flyout__bar { scrollbar-width: thin; }
   .discovery-selection-flyout__bar button,
   .discovery-suite .tw-b,
-  .campaign-detail-suite.thinkway-campaign-workspace .tw-selbar-btn { min-height: 44px; }
+  .twcd.thinkway-campaign-workspace .tw-selbar-btn { min-height: 44px; }
 }
 
 @media (max-width: 1023px) {
@@ -178,7 +178,7 @@ html[data-companion-window="1"] .mobile-app-navigation { display: none; }
 @media (pointer: coarse) {
   [data-slot="button"], [data-slot="dialog-close"], [data-slot="sheet-close"], [role="tab"], .discovery-top-nav-tabs a, .cw .tab, .cw .signout, .tw-review .btn { min-height: 44px; }
   [data-slot="button"]:has(> svg:only-child), [data-slot="dialog-close"], [data-slot="sheet-close"] { min-width: 44px; }
-  :is(.finance-suite, .client-detail-suite, .vendor-detail-suite, .vendors-list-suite, .campaigns-list-suite, .campaign-detail-suite, .discovery-suite) .tw-b {
+  :is(.finance-suite, .client-detail-suite, .vendor-detail-suite, .vendors-list-suite, .campaigns-list-suite, .twcd, .discovery-suite) .tw-b {
     min-height: 44px;
   }
 }

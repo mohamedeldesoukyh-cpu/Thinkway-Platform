@@ -208,3 +208,28 @@ evidence, mismatched source contents, autoresponder suppression, dev-send denial
 stable retry keys and uncertain-delivery handling. All 46 assistant tests passed;
 TypeScript and focused lint passed. Dev retains Vercel protection, disabled webhook
 and disabled outgoing mail. Production activation is separate and not performed.
+
+
+## Release checks and statement opening behavior (2026-11-24)
+
+The real retained owner email passed the authenticated automatic-reply safety
+check on dev. Sender evidence matched; no email was sent. Client email and Amgad
+accounting approvals remain owner-only. The 46 assistant tests are now a
+required CI step. Queue rollback tests again passed for delegation, owner-only
+access, removed-sender deduplication, leases and uncertain-delivery expiry.
+
+Three internal CSS scope classes are shortened consistently in selectors and
+rendering sources: campaign-detail-suite -> twcd, workspace-redesign -> twwr,
+campaign-studio-ref -> twcs. Stylesheet file paths, declarations, rule order,
+specificity, breakpoints and selector relationships are preserved. An inverse
+rewrite restored each modified file byte for byte before committing. Local
+compiled CSS decreases from 1574.6 to 1546.4 KiB across 51 files, below the
+unchanged 1550 KiB hard limit. No budget, baseline or collector was changed.
+
+Statement of Account previously queried all accounts on mount with blank filters.
+Normal statement screens now wait for View on screen or Preview. Editing filters
+hides stale results/exports until a new submission; aborted requests cannot
+replace a later response. Pagination clears the previous page while loading.
+Mini statements still load their explicitly selected account/party. No ledger
+data or accounting permission changes are involved. Dev browser verification
+of this follow-up is recorded in the handover and PR verification notes.

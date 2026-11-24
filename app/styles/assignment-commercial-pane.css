@@ -59,11 +59,11 @@
 .assignment-commercial-pane .acp-heading { padding:4px 10px; gap:10px; }
 
 /* Keep the totals/actions outside the independently scrolling fields at every size. */
-.workspace-redesign .assignment-commercial-pane .acp-heading { padding:4px 10px !important; gap:8px; }
-.workspace-redesign .assignment-commercial-pane .acp-form { display:grid; grid-template-rows:minmax(0,1fr) auto; overflow:hidden; }
-.workspace-redesign .assignment-commercial-pane .acp-scroll { overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; }
-.workspace-redesign .assignment-commercial-pane .acp-footer { padding:5px 10px; gap:8px; }
-.workspace-redesign .assignment-commercial-pane .acp-footer > div { max-width:none; }
+.twwr .assignment-commercial-pane .acp-heading { padding:4px 10px !important; gap:8px; }
+.twwr .assignment-commercial-pane .acp-form { display:grid; grid-template-rows:minmax(0,1fr) auto; overflow:hidden; }
+.twwr .assignment-commercial-pane .acp-scroll { overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; }
+.twwr .assignment-commercial-pane .acp-footer { padding:5px 10px; gap:8px; }
+.twwr .assignment-commercial-pane .acp-footer > div { max-width:none; }
 .assignment-commercial-pane .acp-pinned-totals { display:flex; flex-wrap:wrap; gap:4px 18px; }
 .assignment-commercial-pane .acp-pinned-totals strong { display:block; color:#17243b; font-size:12px; font-variant-numeric:tabular-nums; }
 .assignment-commercial-pane .acp-lock { display:inline-flex; border:1px solid #d8e0ee; border-radius:5px; padding:1px 5px; margin-inline:5px; color:#64748b; font-size:10px; font-weight:500; cursor:help; }
