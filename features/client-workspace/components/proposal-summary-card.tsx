@@ -118,7 +118,7 @@ export function ProposalSummaryCard({
     lockedIds
   );
   const calc = selectionCalculator(view.creators, resolvedSelection);
-  const strategicOnly = view.review.source === "studio";
+  const strategicOnly = view.review.source === "studio" || Boolean(view.entitlement?.hiddenTabs?.includes("commercial"));
   const currency = view.commercial.currency;
   const showCostAndFees = clientShowsCostAndFees(Boolean(view.hideCostAndFees));
   const clientCost = calc.pricedInvestment;
@@ -170,7 +170,7 @@ export function ProposalSummaryCard({
   const emptyHint =
     calc.selectedCount === 0 && view.canDecide && !confirmed
       ? "Select creators to build your campaign quotation."
-      : calc.unpricedMessage;
+      : strategicOnly ? null : calc.unpricedMessage;
 
   function openSection(
     event: React.MouseEvent<HTMLAnchorElement>,

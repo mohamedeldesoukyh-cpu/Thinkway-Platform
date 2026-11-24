@@ -10,6 +10,8 @@ import type {
 } from "../constants";
 import type { ClientWorkspaceSectionId } from "../constants";
 import type { ClientWorkspaceNavSection } from "../entitlement";
+import { redactHiddenCommercialData } from "../entitlement";
+import { loadEntitlementForReview } from "../load-entitlement";
 import type { ClientContentDecision } from "../content-approval";
 import { recordClientContentDecision } from "../content-decisions";
 import { freezeCreatorBriefIfNeeded, briefFromSnapshotCreator } from "../creator-brief";
@@ -141,12 +143,15 @@ export async function loadCreatorBriefAction(input: {
     (creator) => creator.creatorId === input.creatorId
   );
   if (!snapshotCreator) return { ok: false, message: "Creator not found in this review." };
+  const access = await loadEntitlementForReview(service, resolved.review);
+  if (access.entitlement.closed) return { ok: false, message: "This workspace is unavailable." };
+  const project = (brief: ClientCreatorBrief) => access.entitlement.hiddenTabs?.includes("commercial") ? redactHiddenCommercialData(brief) : brief;
   try {
     const brief = await freezeCreatorBriefIfNeeded(resolved.review, input.creatorId);
-    if (brief) return { ok: true, brief };
-    return { ok: true, brief: briefFromSnapshotCreator(snapshotCreator) };
+    if (brief) return { ok: true, brief: project(brief) };
+    return { ok: true, brief: project(briefFromSnapshotCreator(snapshotCreator)) };
   } catch {
-    return { ok: true, brief: briefFromSnapshotCreator(snapshotCreator) };
+    return { ok: true, brief: project(briefFromSnapshotCreator(snapshotCreator)) };
   }
 }
 

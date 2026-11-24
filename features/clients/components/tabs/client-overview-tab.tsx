@@ -717,6 +717,7 @@ export function ClientOverviewTab({
 
         <ClientRateCardSection clientId={client.id} />
         <ClientWorkspaceEntitlementFields
+          clientId={client.id}
           enabled={workspaceEnabled}
           packageId={workspacePackage}
           overrides={workspaceOverrides}
