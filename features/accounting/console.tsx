@@ -51,7 +51,7 @@ export function AccountingConsole({initial}:{initial:AccountingSetup}) {
   const [closingDraft,setClosingDraft]=useState<ClosingDraft|null>(null);
   const [cashNew,setCashNew] = useState(false);
   function setView(next:View) {if(next===view||journalBusy)return;if(journalDirty&&!window.confirm("Discard unsaved journal changes?"))return;setJournalDirty(false);setClosingDraft(null);setCurrentView(next);}
-  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.defaultPrevented||document.querySelector('[role="dialog"]'))return;if(e.ctrlKey&&e.altKey&&e.key.toLowerCase()==='p'){const button=Array.from(document.querySelectorAll<HTMLButtonElement>('[data-accounting-preview]')).find(b=>!b.disabled&&b.getClientRects().length);if(button){e.preventDefault();button.click();}}else if(e.key==='Escape'&&view!=='home'){e.preventDefault();setView('home');}};document.addEventListener('keydown',close);return()=>document.removeEventListener('keydown',close);},[view,journalBusy,journalDirty]);
+  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.defaultPrevented||document.querySelector('[role="dialog"], [role="menu"][data-state="open"]'))return;if(e.ctrlKey&&e.altKey&&e.key.toLowerCase()==='p'){const button=Array.from(document.querySelectorAll<HTMLButtonElement>('[data-accounting-preview]')).find(b=>!b.disabled&&b.getClientRects().length);if(button){e.preventDefault();button.click();}}else if(e.key==='Escape'&&view!=='home'){e.preventDefault();setView('home');}};document.addEventListener('keydown',close);return()=>document.removeEventListener('keydown',close);},[view,journalBusy,journalDirty]);
   const [busy,setBusy] = useState(false);
   const [message,setMessage] = useState("");
   useEffect(()=>{setMessage("");},[view]);
