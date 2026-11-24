@@ -12,6 +12,7 @@ import { loadFinanceEmail,loadFinanceSenderEvidence,financeInboxRequest,verifyFi
 import { deliverAutomaticReply } from "./auto-reply-policy";
 import { financeMailRequest } from "./mail-request";
 import { EXPIRED_PREPARATION_RESPONSE, failedMailPreparation, prepareFinanceMailContent, type PreparationStage } from "./mail-preparation";
+import { financeLanguage, hasUnprocessedDocuments, type FinanceLanguage } from "./presentation";
 import { FINANCE_OWNER } from "./approval-policy";
 
 const jobSchema=z.object({id:z.string().uuid(),email_id:z.string().uuid(),thread_id:z.string().uuid(),sender:z.string(),company_id:z.string().uuid(),year_id:z.string().uuid(),lease_id:z.string().uuid(),attempts:z.number()});
@@ -59,11 +60,14 @@ export async function runFinanceMailWorker(){
   const job=jobSchema.parse(claimed[0]);
   let stage:PreparationStage="load";
   let outcome;
+  let language:FinanceLanguage="en";
   try{
     const mail=await loadFinanceEmail(job.thread_id,job.email_id);
     if(reportRecipient(mail)!==job.sender)throw new Error("Sender changed");
+    language=financeLanguage(mail.text??mail.subject);
     stage="request";
     const request=financeMailRequest(mail.text,mail.subject);
+    language=financeLanguage(request.message);
     stage="scope";
     const setup=await reportSetup(db,job);
     const apiKey=process.env.FINANCE_AI_API_KEY?.trim()||process.env.OPENAI_API_KEY?.trim();
@@ -76,9 +80,9 @@ export async function runFinanceMailWorker(){
       execute:plan=>executeFinanceReport(delegatedReports(db,job),setup,job.year_id,plan),
     });
     stage="pdf";
-    outcome={status:"prepared",...await prepareFinanceMailContent(reply,mail.attachments?.length??0,financeReportPdf),error_code:null};
+    outcome={status:"prepared",...await prepareFinanceMailContent(reply,hasUnprocessedDocuments(mail.attachments),financeReportPdf,language),error_code:null};
   }catch(error){
-    outcome=failedMailPreparation(error,stage,job.attempts);
+    outcome=failedMailPreparation(error,stage,job.attempts,language);
   }
   // Persistence/lease failures must surface, not be swallowed as preparation errors.
   const updated=await db.from("tw_finance_mail_jobs").update({...outcome,lease_id:null,lease_until:null,updated_at:new Date().toISOString()}).eq("id",job.id).eq("lease_id",job.lease_id).eq("status","processing").select("id");

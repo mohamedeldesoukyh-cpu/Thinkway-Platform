@@ -3,6 +3,7 @@ import { z } from "zod";
 import { accountingContext,loadAccountingSetup } from "@/features/accounting/setup-server";
 import { financeInboxRequest,financeMailKey,loadFinanceEmail,verifyFinanceInbox } from "@/features/finance-assistant/mail-server";
 import { financeEmailHtml,isFinanceRequester,mailSchema,reportRecipient,signMailApproval,verifyMailApproval } from "@/features/finance-assistant/mail-policy";
+import { financeLanguage, hasUnprocessedDocuments } from "@/features/finance-assistant/presentation";
 import { prepareFinanceMailContent } from "@/features/finance-assistant/mail-preparation";
 import { financeReportPdf } from "@/features/finance-assistant/report-pdf";
 import { runFinanceAssistant } from "@/features/finance-assistant/assistant";
@@ -78,7 +79,7 @@ export async function POST(request:Request) {
       context:JSON.stringify({company:setup.company?.name,baseCurrency:setup.company?.base_currency,yearFrom:year?.start_date,yearTo:year?.end_date,attachmentsProcessed:false}),
       execute:plan=>executeFinanceReport(ctx.db,setup,input.yearId,plan),
     });
-    const {response_text:body,attachments}=await prepareFinanceMailContent(reply,mail.attachments?.length??0,financeReportPdf);
+    const {response_text:body,attachments}=await prepareFinanceMailContent(reply,hasUnprocessedDocuments(mail.attachments),financeReportPdf,financeLanguage(financeRequest.message));
     const approval=signMailApproval({userId:ctx.user.id,threadId:input.threadId,emailId:input.emailId,recipient,text:body,attachments,expires:Date.now()+10*60*1000,nonce:randomUUID()},financeMailKey());
     return json({recipient,text:body,approval,hasPdf:attachments.length>0,sendEnabled:process.env.VERCEL_ENV==="production"&&process.env.FINANCE_MAIL_SEND_ENABLED==="true"});
   }catch(error){return json({error:error instanceof Error?error.message:"Unable to process email."},error instanceof FinanceMailRequestError?422:502);}
