@@ -673,6 +673,8 @@ export async function loadClientWorkspace(
   }
   view.visibleSections = visibleClientWorkspaceSections(view);
   const entitlementForView = await loadEntitlementForReview(db as never, {
+    id: activeReview.id,
+    journeyId: activeReview.journeyId,
     quotationId: view.journey.quotationId ?? activeReview.quotationId,
     shortlistId: view.journey.shortlistId ?? activeReview.shortlistId,
     campaignHeaderId: view.journey.campaignHeaderId ?? activeReview.campaignHeaderId,

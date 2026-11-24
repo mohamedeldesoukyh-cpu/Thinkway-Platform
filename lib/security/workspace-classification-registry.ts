@@ -139,6 +139,7 @@ export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
   "/api/review/quotation": "public",
   // Handler validates the signed workspace link and Commercial entitlement.
   "/api/review/client-io": "public",
+  "/api/review/performance": "public",
   "/api/review/brand-logo": "public",
   // Signed-token authorization is enforced by the image handler. Register this
   // for signed-in users too; middleware denies unclassified APIs for sessions.

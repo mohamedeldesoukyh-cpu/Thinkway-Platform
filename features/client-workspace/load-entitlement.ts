@@ -10,6 +10,8 @@ import {
 } from "./entitlement";
 import { loadLegalEntityIdsForReview } from "./identity-logo";
 import type { ClientReviewRecord } from "./types";
+import { loadHiddenWorkspaceTabs } from "./load-tab-visibility";
+import { applyWorkspaceTabVisibility } from "./tab-visibility";
 
 const ENTITLEMENT_COLUMNS =
   "id, client_workspace_enabled, client_workspace_package, client_workspace_tab_overrides, client_workspace_grandfathered, client_workspace_preview_started_at, client_workspace_preview_expires_at, client_workspace_preview_previous_package";
@@ -82,14 +84,16 @@ export async function loadEntitlementForReview(
   review: Pick<
     ClientReviewRecord,
     "quotationId" | "shortlistId" | "campaignHeaderId" | "clientLabel" | "brandName" | "campaignName" | "sourceSnapshot"
-  >
+  > & Partial<Pick<ClientReviewRecord, "id" | "journeyId">>
 ): Promise<{ clientId: string | null; entitlement: ClientWorkspaceEntitlementView }> {
   const clientId = await resolveReviewLegalEntityId(supabase, review);
   if (!clientId) {
     return entitlementForResolvedLegalEntity(null, null);
   }
+  const workspaceId = review.journeyId || review.id;
+  const hiddenTabs = workspaceId ? await loadHiddenWorkspaceTabs(supabase, workspaceId) : [];
   return {
     clientId,
-    entitlement: await loadClientWorkspaceEntitlementByClientId(supabase, clientId),
+    entitlement: applyWorkspaceTabVisibility(await loadClientWorkspaceEntitlementByClientId(supabase, clientId), hiddenTabs),
   };
 }

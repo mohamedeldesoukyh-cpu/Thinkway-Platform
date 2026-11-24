@@ -83,3 +83,13 @@ export async function enqueuePublicationMetricsBulk(
 export function isMetricsQueueAvailable(): boolean {
   return Boolean(getRedisUrl());
 }
+
+/** Stable IDs make retries of a reserved client refresh safe without spending another credit. */
+export async function enqueueClientWorkspaceMetrics(jobs: PublicationMetricsJobData[], requestId: string): Promise<void> {
+  const q = getQueue();
+  if (!q) throw new Error("Metrics refresh is temporarily unavailable.");
+  await q.addBulk(jobs.map((data) => ({
+    name: "collect-metrics", data,
+    opts: { ...JOB_OPTIONS, jobId: `client-${requestId}-${data.publicationId}`, removeOnComplete: false, removeOnFail: false },
+  })));
+}

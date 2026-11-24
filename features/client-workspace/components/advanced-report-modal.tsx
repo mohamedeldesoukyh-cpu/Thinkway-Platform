@@ -1,4 +1,5 @@
 "use client";
+import { useClientWorkspaceState } from "./client-workspace-state";
 
 import { useEffect, useState } from "react";
 
@@ -227,6 +228,7 @@ function OverviewSection({
   deliverableItems?: ClientDeliverableItem[];
 }) {
   const handle = view?.handle || creator.handle;
+  const pricingVisible = !useClientWorkspaceState().view.entitlement?.hiddenTabs?.includes("commercial");
   const platformRows = breakdownForCreator(creator, view);
   const bio = view?.bio || creator.bio;
   const fit = view?.campaignFit || creator.fitExplanation;
@@ -309,12 +311,13 @@ function OverviewSection({
         ) : null}
         <p className="desc">{fit?.trim() || TO_BE_CONFIRMED}</p>
       </div>
-      <div className="rp-sec">
+      {pricingVisible && <div className="rp-sec">
         <p className="st">Investment</p>
         <p className="rp-big">
           <span className="n">{investment}</span>
         </p>
       </div>
+      }
       <div className="rp-sec">
         <p className="st">Recent content</p>
         <ContentFeatureGrid posts={posts} token={token} deliverableItems={deliverableItems} />
