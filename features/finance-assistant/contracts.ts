@@ -16,6 +16,25 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
 }, "Invalid calendar date");
 
 export const financePlanSchema = z.discriminatedUnion("action", [
+  z.object({action:z.literal("accounting_controls"),from:date.nullable(),to:date.nullable(),section:z.enum(["budget","close","bank_reconciliation"])}).strict(),
+  z.object({action:z.literal("accounting_analysis"),title:z.string().trim().min(1).max(100),
+    from:date.nullable(),to:date.nullable(),display:z.enum(["local","USD","foreign"]),
+    area:z.enum(["all","profitability","revenue","direct_cost","expenses","banking","tax","fixed_assets","receivables","payables"]),
+    groupBy:z.array(z.enum(["client","vendor","campaign","account","month","type"])).min(1).max(3),
+    measures:z.array(z.enum(["revenue","cost","gross_profit","margin","debit","credit","net"])).min(1).max(7),
+    accounts:z.array(z.string().regex(/^\d{1,6}$/)).max(20).default([]),
+    clientName:z.string().trim().min(2).max(120).nullable().default(null),
+    includeTransactions:z.boolean().default(false),
+  }).strict(),
+  z.object({action:z.literal("financial_position"),mode:z.enum(["balance","trial"]),
+    from:date.nullable(),to:date.nullable(),display:z.enum(["local","USD","foreign"]),byAccount:z.boolean().default(true),
+  }).strict(),
+  z.object({action:z.literal("supplier_statement"),clientName:z.string().trim().min(2).max(120),
+    from:date.nullable(),to:date.nullable(),display:z.enum(["local","USD","foreign"]),
+  }).strict(),
+  z.object({action:z.literal("supplier_outstanding"),clientName:z.string().trim().min(2).max(120),
+    currency:z.string().regex(/^[A-Z]{3}$/),from:z.null(),to:z.null(),
+  }).strict(),
   z.object({ action: z.literal("reply"), reply: z.string().min(1).max(6000) }).strict(),
   z.object({
     action: z.literal("revenue_by_client"),

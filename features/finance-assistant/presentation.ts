@@ -26,6 +26,8 @@ export function financeReportCaption(evidence: FinanceEvidence, retrievedAt: str
   if(typeof facts.comparisonFrom==="string"&&typeof facts.comparisonTo==="string")parts.push(`Compared with ${date(facts.comparisonFrom)} – ${date(facts.comparisonTo)}`);
   if(typeof facts.currency==="string")parts.push(facts.currency);
   parts.push(facts.currentOnly?"Current unsettled invoices":"Posted transactions, including unlocked entries");
+  if(facts.provisional)parts.push(`Provisional client allocation: ${facts.unassignedEntries} entries remain unassigned`);
+  if(facts.area==="profitability")parts.push("GP before overheads and tax");
   return parts.join(" · ");
 }
 
