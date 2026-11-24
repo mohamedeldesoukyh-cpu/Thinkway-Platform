@@ -10,13 +10,13 @@ import { randomUUID } from "node:crypto";
 const reply:FinanceReply={content:"November client revenue summary.",retrievedAt:"2026-11-24T14:00:00Z",sources:[{title:"Revenue by client",scope:"November 2026, EGP",href:"/accounting",facts:{},tables:[{heading:"Clients",columns:["Client","Revenue"],rows:[["Client A","10.00"]]}]}]};
 test("report email contains concise explanation and PDF, not duplicated rows",async()=>{
  let called=0;
- const result=await prepareFinanceMailContent(reply,0,async evidence=>{called++;assert.equal(evidence,reply.sources[0]);return Buffer.from("%PDF-fixture");});
+ const result=await prepareFinanceMailContent(reply,false,async evidence=>{called++;assert.equal(evidence,reply.sources[0]);return Buffer.from("%PDF-fixture");});
  assert.equal(called,1);assert.equal(result.attachments.length,1);
  assert.match(result.response_text,/PDF is attached/);assert.doesNotMatch(result.response_text,/Client A/);
 });
 test("clarifications have no PDF claim and attachments are explicitly unprocessed",async()=>{
- const result=await prepareFinanceMailContent({...reply,sources:[]},1,async()=>{throw Error("must not render");});
- assert.equal(result.attachments.length,0);assert.doesNotMatch(result.response_text,/PDF is attached/);assert.match(result.response_text,/Incoming attachments were not processed/);
+ const result=await prepareFinanceMailContent({...reply,sources:[]},true,async()=>{throw Error("must not render");});
+ assert.equal(result.attachments.length,0);assert.doesNotMatch(result.response_text,/PDF is attached/);assert.match(result.response_text,/have not reviewed the attached documents/);
 });
 test("PDF failure never returns a partial successful reply",async()=>{
  await assert.rejects(prepareFinanceMailContent(reply,0,async()=>{throw Error("renderer failed");}));

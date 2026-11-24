@@ -21,19 +21,21 @@ test("client aggregation retains offsetting, negative and unassigned activity an
 });
 
 test("200 source entries become named client totals and total row, with detail only on explicit request",async()=>{
- const rows=Array.from({length:200},(_,i)=>row(i+1,i<100?"CLT-1":"CLT-2",i%2?"0":"10.01",i%2?"0.01":"0"));
+ const rows=Array.from({length:200},(_,i)=>row(i+1,i<100?"CLT-000001":"CLT-000002",i%2?"0":"10.01",i%2?"0.01":"0"));
  const calls:{name:string;args:Record<string,unknown>}[]=[];
  const db={rpc:async(name:string,args:Record<string,unknown>)=>{
   calls.push({name,args});
-  return {error:null,data:name==="tw_finance_statement_snapshot"?{count:200,rows,accounts:[{currency:"EGP",credit:"1001.00",debit:"1.00"}]}:[{id:"exact",code:"121001",shared_code:args.p_search,name:args.p_search==="CLT-1"?"Mind Share":"Fresh"},{id:"wrong",code:args.p_search,shared_code:"CLT-10",name:"Wrong partial match"}]};
+  return {error:null,data:name==="tw_finance_statement_snapshot"?{count:200,rows,accounts:[{currency:"EGP",credit:"1001.00",debit:"1.00"}]}:[{id:"exact",code:"121001",shared_code:args.p_search,name:args.p_search==="CLT-000001"?"Mind Share":"Fresh"},{id:"wrong",code:args.p_search,shared_code:"CLT-10",name:"Wrong partial match"}]};
  }};
  const evidence=await executeFinanceReport(db,setup,null,plan);
  assert.equal(calls[0].args.p_account,"410000");assert.equal(calls[0].args.p_company,company);
  assert.equal(evidence.tables?.length,1);assert.equal(evidence.tables?.[0].orientation,"portrait");
- assert.deepEqual(evidence.tables?.[0].rows,[["CLT-1","Mind Share","500.00"],["CLT-2","Fresh","500.00"],["","Total","1000.00"]]);
+ assert.deepEqual(evidence.tables?.[0].rows,[["1","Mind Share","500.00"],["2","Fresh","500.00"],["","Total","1000.00"]]);
  assert.equal(evidence.facts.ledgerReconciled,true);assert.equal(evidence.facts.transactionCount,200);
  const detailed=await executeFinanceReport(db,setup,null,{...plan,includeTransactions:true});
  assert.equal(detailed.tables?.length,2);assert.equal(detailed.tables?.[1].rows.length,200);
+ assert.equal(detailed.tables?.[1].rows[0][2],"1");
+ assert.ok(calls.some(call=>call.args.p_search==="CLT-000001"));
 });
 
 test("mismatched snapshot totals fail closed and never produce a misleading summary",async()=>{

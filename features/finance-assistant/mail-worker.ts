@@ -12,6 +12,7 @@ import { loadFinanceEmail,loadFinanceSenderEvidence,financeInboxRequest,verifyFi
 import { deliverAutomaticReply } from "./auto-reply-policy";
 import { financeMailRequest } from "./mail-request";
 import { EXPIRED_PREPARATION_RESPONSE, failedMailPreparation, prepareFinanceMailContent, type PreparationStage } from "./mail-preparation";
+import { financeLanguage, hasUnprocessedDocuments, type FinanceLanguage } from "./presentation";
 import { FINANCE_OWNER } from "./approval-policy";
 
 const jobSchema=z.object({id:z.string().uuid(),email_id:z.string().uuid(),thread_id:z.string().uuid(),sender:z.string(),company_id:z.string().uuid(),year_id:z.string().uuid(),lease_id:z.string().uuid(),attempts:z.number()});
@@ -37,10 +38,10 @@ function delegatedReports(db:SupabaseClient,job:Job):FinanceReportClient{
   return {rpc:async(name,args)=>{
     try{
       if(args.p_company!==job.company_id)throw new Error("Wrong company");
-      const operation=name==="tw_accounting_party_lookup"?"party_lookup":name==="tw_finance_statement_snapshot"?"statement":name==="tw_accounting_open_items"?"outstanding":null;
+      const operation=name==="tw_finance_accounting_controls"?"controls":name==="tw_finance_analysis_snapshot"?"analysis":name==="tw_accounting_party_lookup"?"party_lookup":name==="tw_finance_statement_snapshot"?"statement":name==="tw_accounting_open_items"?"outstanding":null;
       if(!operation)throw new Error("Unsupported report operation");
-      const options=args.p_options as {reportMode?:string;display?:string}|undefined;
-      const parameters=operation==="party_lookup"?{search:args.p_search}:operation==="outstanding"?{party:args.p_party,currency:args.p_currency}:{action:options?.reportMode==="profit"?"pnl":args.p_kind==="all"?"custom_ledger":"client_statement",account:args.p_account,display:options?.display,from:args.p_from,to:args.p_to,party:args.p_party,offset:args.p_offset};
+      const options=args.p_options as {reportMode?:string;display?:string;summaryOnly?:boolean}|undefined;
+      const parameters=operation==="controls"?{from:args.p_from,to:args.p_to,section:args.p_section}:operation==="analysis"?{account:args.p_accounts,display:args.p_display,from:args.p_from,to:args.p_to}:operation==="party_lookup"?{search:args.p_search,kind:args.p_kind}:operation==="outstanding"?{party:args.p_party,currency:args.p_currency,kind:args.p_kind}:{action:options?.summaryOnly?"financial_position":options?.reportMode==="profit"?"pnl":args.p_kind==="all"?"custom_ledger":args.p_kind==="vendor"?"supplier_statement":"client_statement",account:args.p_account,display:options?.display,from:args.p_from,to:args.p_to,party:args.p_party,offset:args.p_offset};
       return {data:await rpc(db,"tw_finance_mail_read",{p_job:job.id,p_lease:job.lease_id,p_operation:operation,p_args:parameters}),error:null};
     }catch{return {data:null,error:"Delegated report unavailable"};}
   }};
@@ -59,11 +60,14 @@ export async function runFinanceMailWorker(){
   const job=jobSchema.parse(claimed[0]);
   let stage:PreparationStage="load";
   let outcome;
+  let language:FinanceLanguage="en";
   try{
     const mail=await loadFinanceEmail(job.thread_id,job.email_id);
     if(reportRecipient(mail)!==job.sender)throw new Error("Sender changed");
+    language=financeLanguage(mail.text??mail.subject);
     stage="request";
     const request=financeMailRequest(mail.text,mail.subject);
+    language=financeLanguage(request.message);
     stage="scope";
     const setup=await reportSetup(db,job);
     const apiKey=process.env.FINANCE_AI_API_KEY?.trim()||process.env.OPENAI_API_KEY?.trim();
@@ -76,9 +80,9 @@ export async function runFinanceMailWorker(){
       execute:plan=>executeFinanceReport(delegatedReports(db,job),setup,job.year_id,plan),
     });
     stage="pdf";
-    outcome={status:"prepared",...await prepareFinanceMailContent(reply,mail.attachments?.length??0,financeReportPdf),error_code:null};
+    outcome={status:"prepared",...await prepareFinanceMailContent(reply,hasUnprocessedDocuments(mail.attachments),financeReportPdf,language),error_code:null};
   }catch(error){
-    outcome=failedMailPreparation(error,stage,job.attempts);
+    outcome=failedMailPreparation(error,stage,job.attempts,language);
   }
   // Persistence/lease failures must surface, not be swallowed as preparation errors.
   const updated=await db.from("tw_finance_mail_jobs").update({...outcome,lease_id:null,lease_until:null,updated_at:new Date().toISOString()}).eq("id",job.id).eq("lease_id",job.lease_id).eq("status","processing").select("id");

@@ -9,6 +9,9 @@ import { mediaAccountingReview } from "./media-review";
 import { readLedgerDetails } from "./ledger-details";
 import { compareProfitReports } from "./comparison";
 import { cents, decimal } from "@/features/accounting/journal-model";
+import { partyCode } from "@/features/accounting/party-code";
+import { accountingAnalysis } from "./accounting-analysis";
+import { accountingControls } from "./accounting-controls";
 import { revenueByClient } from "./revenue-by-client";
 
 const amount = z.string().regex(/^-?\d+(\.\d+)?$/);
@@ -31,16 +34,21 @@ export async function executeFinanceReport(
       scope:`${current.scope} Comparison: ${plan.comparisonFrom} to ${plan.comparisonTo}. Change = current minus comparison; signed expenses reduce profit. Percentages use positive comparison balances only and truncate to two decimals. Periods may differ in length. Figures show variance, not its underlying business cause. Reports are retrieved sequentially; rerun after postings change.`,
       facts:{company:company.name,currentFrom:plan.from,currentTo:plan.to,comparisonFrom:plan.comparisonFrom,comparisonTo:plan.comparisonTo,tables}};
   }
+  const supplier=plan.action==="supplier_statement"||plan.action==="supplier_outstanding";
+  const outstanding=plan.action==="client_outstanding"||plan.action==="supplier_outstanding";
+  const kind=supplier?"vendor":"client";
   const year = setup.years.find(y => y.id === yearId);
-  if (plan.action !== "client_outstanding" && (!plan.from || !plan.to) && !year) throw new Error("Select a fiscal year or specify both dates.");
+  if (!outstanding && (!plan.from || !plan.to) && !year) throw new Error("Select a fiscal year or specify both dates.");
   const from = plan.from ?? year?.start_date ?? "", to = plan.to ?? year?.end_date ?? "";
   if (from > to) throw new Error("Invalid reporting period.");
+  if (plan.action === "accounting_controls") return accountingControls(db,setup,yearId,{...plan,from,to});
+  if (plan.action === "accounting_analysis") return accountingAnalysis(db,setup,{...plan,from,to},yearId);
   if (plan.action === "revenue_by_client") return revenueByClient(db,setup,{...plan,from,to},yearId);
   if (plan.action === "media_accounting_review") return {...await mediaAccountingReview(db,company.id,company.name,from,to,plan.documentType),reportPlan:{...plan,from,to}};
   let partyId: string | null = null;
   let partyName: string | null = null;
-  if (plan.action === "client_statement" || plan.action === "client_outstanding") {
-    const found = await db.rpc("tw_accounting_party_lookup", {p_company:company.id,p_kind:"client",p_search:plan.clientName,p_selected:null});
+  if (plan.action === "client_statement" || plan.action === "client_outstanding" || supplier) {
+    const found = await db.rpc("tw_accounting_party_lookup", {p_company:company.id,p_kind:kind,p_search:plan.clientName,p_selected:null});
     if (found.error) throw new Error("Client lookup unavailable.");
     const candidates = partySchema.parse(found.data);
     if (candidates.length !== 1) return {
@@ -50,8 +58,8 @@ export async function executeFinanceReport(
     };
     partyId = candidates[0].id; partyName = candidates[0].name;
   }
-  if (plan.action === "client_outstanding") {
-    const result=await db.rpc("tw_accounting_open_items",{p_company:company.id,p_kind:"client",p_party:partyId,p_currency:plan.currency,p_account:null});
+  if (plan.action === "client_outstanding" || plan.action === "supplier_outstanding") {
+    const result=await db.rpc("tw_accounting_open_items",{p_company:company.id,p_kind:kind,p_party:partyId,p_currency:plan.currency,p_account:null});
     if(result.error)throw Error("Outstanding items unavailable.");
     const items=z.array(z.object({id:z.string(),number:z.string(),date:z.string(),due:z.string().nullable(),total:amount,settled:amount,adjustments:amount.optional(),outstanding:amount,currency:z.string(),account:z.string()})).max(1000).parse(result.data);
     if(items.some(i=>i.currency!==plan.currency))throw Error("Unexpected item currency.");
@@ -61,12 +69,12 @@ export async function executeFinanceReport(
       tables:[{heading:`${partyName} · ${plan.currency}`,columns:["Document","Date","Due","Account","Total","Settled","Adjustments","Outstanding"],rows:[...items.map(i=>[i.number,i.date,i.due??"Not specified",i.account,i.total,i.settled,i.adjustments??"0.00",i.outstanding]),["Total outstanding","","","","","","",total]]}],
       facts:{company:company.name,client:partyName,currency:plan.currency,count:items.length,outstanding:total,currentOnly:true}};
   }
-  const options = {includeAuxiliary:false,includeThirdParties:false,reportMode:plan.action === "pnl" ? "profit" : "statement",
+  const options = {summaryOnly:plan.action==="financial_position",includeAuxiliary:false,includeThirdParties:false,reportMode:plan.action === "pnl" ? "profit" : "statement",
     dateBasis:"journal",excludeClosing:plan.action === "pnl",display:plan.display,accountStatus:"all",types:[],includeUnlocked:true,
     excludeReversals:false,skipZero:false,skipInactivePeriod:false};
   const args = {
     p_options:options,p_auxiliary:null,p_company:company.id,p_from:from,p_to:to,p_account:null,
-    p_kind:partyId ? "client" : "all",p_party:partyId,p_currency:null,p_offset:0,
+    p_kind:partyId ? kind : "all",p_party:partyId,p_currency:null,p_offset:0,
   };
   const queryArgs={...args,p_account:plan.action==="custom_ledger"?plan.accounts.join(",")||null:null};
   const result = await db.rpc("tw_finance_statement_snapshot", queryArgs);
@@ -75,13 +83,17 @@ export async function executeFinanceReport(
   const params = new URLSearchParams({company:company.id});
   if (year) params.set("year",year.id);
   const scope = `${company.name} · ${from} to ${to} · Journal dates · Posted transactions including unlocked entries · ${plan.display === "foreign" ? "Foreign currencies shown separately" : plan.display === "USD" ? "Second local: USD" : "Company base currency: " + company.base_currency}. ${plan.action === "pnl" ? "Closing entries excluded. Ledger-based income and expenses; completeness depends on recorded entries, not certified IFRS financial statements." : "Opening balances, debits, credits and closing balances from the accounting statement."} Report link opens the accounting screen; use the dates and display shown here.`;
+  if(plan.action==="financial_position"){
+    const tables=financialReportSections({...report,auxiliaries:[]},setup.accounts,plan.mode,plan.byAccount,false);
+    return {title:plan.mode==="balance"?"Balance Sheet":"Trial Balance",href:`/accounting?${params}#financial-statements`,scope,reportPlan:{...plan,from,to},tables,facts:{company:company.name,from,to,display:plan.display,tables}};
+  }
   if(plan.action==="custom_ledger"){
     const rows=await readLedgerDetails(db,queryArgs,result.data);
     const columns=[...new Set(plan.columns)];
     if(!columns.includes("report_currency"))columns.push("report_currency");
-    const captions:Record<string,string>={date:"Date",number:"JV",reference:"Reference",account:"Account",name:"Account name",description:"Description",party:"Party",report_currency:"Currency",debit:"Debit",credit:"Credit",balance:"Account balance"};
+    const captions:Record<string,string>={date:"Date",number:"Journal reference",transaction_type:"Type",document_number:"Document",campaign:"Campaign",reference:"Reference",account:"Account",name:"Account name",description:"Description",party:"Party",report_currency:"Currency",debit:"Debit",credit:"Credit",balance:"Account balance"};
     return {title:plan.title,href:`/accounting?${params}#statements`,scope:scope+` Account prefixes: ${plan.accounts.join(", ")||"all"}. Balance is the running account balance within each currency, not a combined total.`,reportPlan:{...plan,from,to},
-      tables:[{heading:plan.title,columns:columns.map(c=>captions[c]),rows:rows.map(row=>columns.map(c=>String(row[c]??"")))}],facts:{company:company.name,from,to,count:rows.length,accounts:plan.accounts,columns}};
+      tables:[{heading:plan.title,columns:columns.map(c=>captions[c]),rows:rows.map(row=>columns.map(c=>c==="party"?partyCode(row.party):String(row[c]??"")))}],facts:{company:company.name,from,to,count:rows.length,accounts:plan.accounts,columns}};
   }
   if (plan.action === "pnl") {
     const sections = financialReportSections({...report,auxiliaries:[]},setup.accounts,"profit",false,false);
@@ -90,7 +102,7 @@ export async function executeFinanceReport(
   }
   const groups = statementGroups({...report,rows:[],count:report.count??0} as Statement);
   const details=await readLedgerDetails(db,queryArgs,result.data);
-  const document=statementDocument({...report,party:report.party?{code:report.party.code??undefined,address:report.party.address??undefined,taxId:report.party.taxId??undefined}:null,count:details.length,rows:details.map(r=>({...r,currency:r.currency??r.report_currency,auxiliary:r.auxiliary??null,foreign_debit:r.foreign_debit??null,foreign_credit:r.foreign_credit??null}))},{title:'Statement of Account',company:company.name,from,to,dateBasis:'Journal date',party:partyName??'',kind:'client',consolidate:true,details:true});
+  const document=statementDocument({...report,party:report.party?{code:report.party.code??undefined,address:report.party.address??undefined,taxId:report.party.taxId??undefined}:null,count:details.length,rows:details.map(r=>({...r,currency:r.currency??r.report_currency,auxiliary:r.auxiliary??null,foreign_debit:r.foreign_debit??null,foreign_credit:r.foreign_credit??null}))},{title:'Statement of Account',company:company.name,from,to,dateBasis:'Journal date',party:partyName??'',kind:supplier?"vendor":"client",consolidate:true,details:true});
   return {title:`${partyName} — account statement`,href:`/accounting?${params}#client-statements`,scope,
     statementDocument:document,
     reportPlan:{...plan,from,to},tables:document.sections,
