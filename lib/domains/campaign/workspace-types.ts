@@ -299,6 +299,7 @@ export type CampaignActivityItem = {
 
 export type CampaignWorkspace = {
   currency_rates?: Record<string, number>;
+  currency_custom_rates?: Record<string, number>;
   /** Source currency to campaign display currency, resolved directly from FX Rates. */
   currency_pair_rates?: Record<string, number>;
   id: string;
