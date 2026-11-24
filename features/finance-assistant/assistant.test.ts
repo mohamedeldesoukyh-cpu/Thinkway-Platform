@@ -11,6 +11,19 @@ function provider(replies: string[], requests: LlmCompletionRequest[] = []): Llm
   } };
 }
 
+test("automatic owner emails use delivery-aware instructions during planning and explanation",async()=>{
+ const requests:LlmCompletionRequest[]=[];
+ const evidence={title:"P&L",href:"/accounting",scope:"EGP, posted ledger",facts:{},tables:[{heading:"EGP",columns:["Account","Net"],rows:[["Revenue","100.00"]]}]};
+ await runFinanceAssistant({message:"Send November P&L as PDF",history:[],companyId:"11111111-1111-4111-8111-111111111111",yearId:null},{channel:"automatic_email",provider:provider([JSON.stringify({action:"pnl",from:"2026-11-01",to:"2026-11-30",display:"local"}),JSON.stringify({reply:"Revenue is EGP100."})],requests),execute:async()=>evidence});
+ assert.equal(requests.length,2);
+ for(const request of requests){
+  assert.match(request.messages[0].content,/Response channel: automatic owner email/);
+  assert.match(request.messages[0].content,/Do not ask the owner to confirm/);
+  assert.match(request.messages[0].content,/adds the attachment notice after PDF generation/);
+  assert.match(request.messages[0].content,/Client emails and accounting changes still require explicit/);
+ }
+});
+
 test("empty posting-gap results never certify that Media and Accounting agree",async()=>{
  for(const message of ["Review Media and Accounting differences","راجع الفرق بين الميديا والمحاسبة"]){
   const requests:LlmCompletionRequest[]=[];
