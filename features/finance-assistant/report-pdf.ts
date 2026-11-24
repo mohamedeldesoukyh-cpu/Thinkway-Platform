@@ -4,6 +4,7 @@ import path from "node:path";
 import { formattedReportHtml } from "@/features/accounting/formatted-report-model";
 import { renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
 import type { FinanceEvidence } from "./contracts";
+import { financeReportCaption } from "./presentation";
 
 export async function financeReportPdf(evidence:FinanceEvidence,retrievedAt:string){
  if(!evidence.tables?.length)throw Error("Choose a verified report before downloading a PDF.");
@@ -14,7 +15,7 @@ export async function financeReportPdf(evidence:FinanceEvidence,retrievedAt:stri
   css=css.replaceAll(`/report-assets/${name}`,`data:font/woff2;base64,${bytes.toString("base64")}`);
  }
  const logo=await readFile(path.join(process.cwd(),"public/report-assets/statement-brand.png"));
- const html=formattedReportHtml(evidence.statementDocument??{title:evidence.title,company:String(evidence.facts.company??"Thinkway"),caption:`${evidence.scope} Generated ${retrievedAt}.`,sections:evidence.tables})
+ const html=formattedReportHtml(evidence.statementDocument??{title:evidence.title,company:String(evidence.facts.company??"Thinkway"),caption:financeReportCaption(evidence,retrievedAt),sections:evidence.tables})
   .replace('<link rel="stylesheet" href="/report-assets/statement-shared.css">',`<style>${css}${evidence.statementDocument?'':`\ntd{overflow-wrap:anywhere}td,th{font-size:10px}.page tbody td{padding:5px 8px}.page thead th{padding:7px 8px}.page .band{padding:16px 24px}.page .body{padding:16px 24px}.page .sum{margin:10px 0}.page .tile{padding:8px 12px}.page tr:has(+tr.total){break-after:avoid}.page tr.total{break-before:avoid}h1,h2,p,td{unicode-bidi:plaintext}`}
 </style>`)
   .replaceAll('/report-assets/statement-brand.png',`data:image/png;base64,${logo.toString("base64")}`);

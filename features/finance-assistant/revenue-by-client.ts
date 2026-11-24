@@ -4,6 +4,7 @@ import type { AccountingSetup } from "@/features/accounting/setup-types";
 import type { FinanceEvidence, FinancePlan } from "./contracts";
 import type { FinanceReportClient } from "./report-tools";
 import { readLedgerDetails, type LedgerRow } from "./ledger-details";
+import { partyCode } from "@/features/accounting/party-code";
 
 type Plan = Extract<FinancePlan,{action:"revenue_by_client"}> & {from:string;to:string};
 const amount = z.string().regex(/^-?\d+(\.\d{1,2})?$/);
@@ -24,7 +25,7 @@ export function groupClientRevenue(rows:LedgerRow[], names:Map<string,string>){
     clients.set(code,group);
   }
   return [...currencies].sort(([a],[b])=>a.localeCompare(b)).map(([currency,clients])=>{
-    const groups=[...clients].map(([code,g])=>({code,name:code?(names.get(code)??`Name unavailable (${code})`):"Unassigned client",...g}));
+    const groups=[...clients].map(([code,g])=>({code,name:code?(names.get(code)??`Name unavailable (${partyCode(code)})`):"Unassigned client",...g}));
     groups.sort((a,b)=>{const difference=(b.credit-b.debit)-(a.credit-a.debit);return difference>BigInt(0)?1:difference<BigInt(0)?-1:a.code.localeCompare(b.code);});
     const total=groups.reduce((sum,g)=>sum+g.credit-g.debit,BigInt(0));
     return {currency,total,groups};
@@ -62,13 +63,13 @@ export async function revenueByClient(db:FinanceReportClient,setup:AccountingSet
   const tables:NonNullable<FinanceEvidence["tables"]>=grouped.map(({currency,total,groups})=>({
     orientation:"portrait",heading:`Service revenue by client · ${currency}`,
     columns:["Client code","Client name","Net revenue amount"],
-    rows:[...groups.map(g=>[g.code,g.name,decimal(g.credit-g.debit)]),["","Total",decimal(total)]],
+    rows:[...groups.map(g=>[partyCode(g.code),g.name,decimal(g.credit-g.debit)]),["","Total",decimal(total)]],
   }));
   if(!tables.length)tables.push({orientation:"portrait",heading:"Service revenue by client",columns:["Client code","Client name","Net revenue amount"],rows:[]});
-  if(plan.includeTransactions)for(const {currency} of grouped)tables.push({orientation:"landscape",heading:`Requested transaction detail · ${currency}`,columns:["Date","Document","Client code","Client name","Description","Debit","Credit"],rows:rows.filter(r=>r.report_currency===currency&&r.transaction_type!=="closing").map(r=>[r.date,r.document_number??r.number,r.party??"",r.party?(names.get(r.party)??"Name unavailable"):"Unassigned client",r.description,r.debit,r.credit])});
+  if(plan.includeTransactions)for(const {currency} of grouped)tables.push({orientation:"landscape",heading:`Requested transaction detail · ${currency}`,columns:["Date","Document","Client code","Client name","Description","Debit","Credit"],rows:rows.filter(r=>r.report_currency===currency&&r.transaction_type!=="closing").map(r=>[r.date,r.document_number??r.number,partyCode(r.party),r.party?(names.get(r.party)??"Name unavailable"):"Unassigned client",r.description,r.debit,r.credit])});
   const params=new URLSearchParams({company:company.id});if(yearId)params.set("year",yearId);
   return {title:"Service revenue by client",href:`/accounting?${params}#amgad`,reportPlan:plan,tables,
     scope:`${company.name} · ${plan.from} to ${plan.to} · Posted service-revenue ledger entries including unlocked entries. Net revenue = credits minus debits; adjustments and reversals retained, closing entries excluded. ${plan.display==="foreign"?"Currencies shown separately.":`Currency: ${plan.display==="USD"?"USD (second local)":company.base_currency}.`} Zero-net clients with activity are retained.`,
     facts:{company:company.name,from:plan.from,to:plan.to,transactionCount:rows.filter(r=>r.transaction_type!=="closing").length,groupedBy:"client",ledgerReconciled:true,includeTransactions:plan.includeTransactions,
-      totals:grouped.map(g=>({currency:g.currency,netRevenue:decimal(g.total)})),clients:grouped.flatMap(g=>g.groups.map(c=>({code:c.code,name:c.name,currency:g.currency,netRevenue:decimal(c.credit-c.debit),transactionCount:c.count})))}};
+      totals:grouped.map(g=>({currency:g.currency,netRevenue:decimal(g.total)})),clients:grouped.flatMap(g=>g.groups.map(c=>({code:partyCode(c.code),name:c.name,currency:g.currency,netRevenue:decimal(c.credit-c.debit),transactionCount:c.count})))}};
 }

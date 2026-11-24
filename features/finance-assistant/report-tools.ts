@@ -9,6 +9,7 @@ import { mediaAccountingReview } from "./media-review";
 import { readLedgerDetails } from "./ledger-details";
 import { compareProfitReports } from "./comparison";
 import { cents, decimal } from "@/features/accounting/journal-model";
+import { partyCode } from "@/features/accounting/party-code";
 import { revenueByClient } from "./revenue-by-client";
 
 const amount = z.string().regex(/^-?\d+(\.\d+)?$/);
@@ -81,7 +82,7 @@ export async function executeFinanceReport(
     if(!columns.includes("report_currency"))columns.push("report_currency");
     const captions:Record<string,string>={date:"Date",number:"JV",reference:"Reference",account:"Account",name:"Account name",description:"Description",party:"Party",report_currency:"Currency",debit:"Debit",credit:"Credit",balance:"Account balance"};
     return {title:plan.title,href:`/accounting?${params}#statements`,scope:scope+` Account prefixes: ${plan.accounts.join(", ")||"all"}. Balance is the running account balance within each currency, not a combined total.`,reportPlan:{...plan,from,to},
-      tables:[{heading:plan.title,columns:columns.map(c=>captions[c]),rows:rows.map(row=>columns.map(c=>String(row[c]??"")))}],facts:{company:company.name,from,to,count:rows.length,accounts:plan.accounts,columns}};
+      tables:[{heading:plan.title,columns:columns.map(c=>captions[c]),rows:rows.map(row=>columns.map(c=>c==="party"?partyCode(row.party):String(row[c]??"")))}],facts:{company:company.name,from,to,count:rows.length,accounts:plan.accounts,columns}};
   }
   if (plan.action === "pnl") {
     const sections = financialReportSections({...report,auxiliaries:[]},setup.accounts,"profit",false,false);

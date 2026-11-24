@@ -35,7 +35,7 @@ test("approval binds exact recipient, body, user and expiry",()=>{
   const modified=JSON.parse(Buffer.from(payload,"base64url").toString());modified.text="Changed report";
   assert.throws(()=>verifyMailApproval(`${Buffer.from(JSON.stringify(modified)).toString("base64url")}.${signature}`,secret,userId,now));
 });
-test("email includes verified report tables and scope rather than only model prose",()=>{
+test("email without a PDF retains verified tables without internal scope boilerplate",()=>{
   const text=financeEmailText({content:"Your report",retrievedAt:"2026-11-24",sources:[{title:"P&L",href:"/accounting",scope:"Posted ledger, EGP",facts:{},tables:[{heading:"Total",columns:["Currency","Profit"],rows:[["EGP","123.45"]]}]}]});
-  assert.match(text,/Posted ledger, EGP/);assert.match(text,/EGP \| 123.45/);assert.match(text,/AI Finance Assistant/);
+  assert.doesNotMatch(text,/Posted ledger, EGP/);assert.match(text,/EGP \| 123.45/);assert.match(text,/AI Finance Assistant/);
 });
