@@ -1,7 +1,7 @@
 
 import { Loader2Icon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { queuePlatformAddition, splitPlatformLinks } from "@/features/discovery/enrichment/platform-add-queue";
+import { createPlatformDialogSession, queuePlatformAddition, splitPlatformLinks } from "@/features/discovery/enrichment/platform-add-queue";
 import { toast } from "sonner";
 import { PlatformOwnerConflict } from "./platform-owner-conflict";
 
@@ -70,7 +70,7 @@ export function AddCreatorPlatformDialog({
   const [mergeBusy, setMergeBusy] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const isPending = pendingCount > 0;
-  const openRef = useRef(open);
+  const dialogSession = useRef(createPlatformDialogSession());
 
   const parsed = useMemo(() => {
     const links = splitPlatformLinks(profileUrl);
@@ -78,7 +78,7 @@ export function AddCreatorPlatformDialog({
     return links;
   }, [profileUrl]);
 
-  const canConfirm = parsed != null && !mergeBusy && !conflict;
+  const canConfirm = parsed != null && !isPending && !mergeBusy && !conflict;
 
   const linkedSummary =
     existingPlatforms.length > 0
@@ -86,21 +86,25 @@ export function AddCreatorPlatformDialog({
       : null;
 
   useEffect(() => {
-    openRef.current = open;
+    const session = dialogSession.current;
+    if (open) session.open();
+    else session.close();
     if (!open) {
       setProfileUrl("");
       setError(null); setConflict(null);
+      setPendingCount(0);
     }
-    return () => { openRef.current = false; };
+    return () => { session.close(); };
   }, [open]);
 
   function handleOpenChange(next: boolean) {
     // Always allow dismiss — enrichment continues in the background after link.
-    openRef.current = next;
+    if (!next) dialogSession.current.close();
     onOpenChange(next);
   }
 
   function handleConfirm() {
+    if (!canConfirm) return;
     const links = splitPlatformLinks(profileUrl);
     if (!links.length || links.some(link => !parseProfileInput(link))) {
       setError("Enter a valid Instagram, TikTok, YouTube, Snapchat, Facebook, or X profile link.");
@@ -110,6 +114,7 @@ export function AddCreatorPlatformDialog({
     setError(null); setConflict(null);
     setProfileUrl("");
     setPendingCount(count => count + links.length);
+    const canUpdateDialog = dialogSession.current.capture();
     for (const trimmed of links) void queuePlatformAddition(influencerId ?? unifiedId, async () => {
       try {
         // Admission is creator-wide: wait for existing work before linking the next
@@ -131,14 +136,17 @@ export function AddCreatorPlatformDialog({
         });
 
         if (!result.ok) {
-          if (openRef.current) {
+          if (canUpdateDialog()) {
             setError(result.message); setConflict(result.conflictingCreator ?? null);
           }
-          toast.error(result.message);
+          toast.error(`${creatorName}: ${result.message}`, { description: trimmed });
           return;
         }
 
-        toast.success(result.message);
+        // Linking is saved and queue admission has returned. Close before polling;
+        // the creator-scoped queue continues even if this dialog unmounts.
+        if (canUpdateDialog()) handleOpenChange(false);
+        toast.success(`${creatorName}: ${result.message}`);
         if (onSuccess) onSuccess(result.creator, result.platformAccountId);
         else onCreatorUpdated?.(result.creator);
 
@@ -160,9 +168,9 @@ export function AddCreatorPlatformDialog({
               },
               onComplete: (syncStatus) => {
                 if (syncStatus === "completed") {
-                  toast.success("Platform profile enriched");
+                  toast.success(`${creatorName}: Platform profile enriched`);
                 } else if (syncStatus === "failed") {
-                  toast.error("Enrichment failed", {
+                  toast.error(`${creatorName}: Enrichment failed`, {
                     description: "Apify enrichment did not complete successfully.",
                   });
                 }
@@ -173,10 +181,10 @@ export function AddCreatorPlatformDialog({
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Could not link platform. Please try again.";
-        if (openRef.current) setError(message);
-        toast.error(message);
+        if (canUpdateDialog()) setError(message);
+        toast.error(`${creatorName}: ${message}`, { description: trimmed });
       } finally {
-        setPendingCount(count => Math.max(0, count - 1));
+        if (canUpdateDialog()) setPendingCount(count => Math.max(0, count - 1));
       }
     });
   }
@@ -193,8 +201,8 @@ export function AddCreatorPlatformDialog({
               Add platform
             </DialogTitle>
             <DialogDescription className={DISCOVERY_DIALOG_DESC_CLASS}>
-              Link another social profile to {creatorName}. Enrichment runs in the background —
-              you can close this and keep working.
+              Link another social profile to {creatorName}. This dialog closes after linking;
+              enrichment continues in the background while you work on other creators.
               {linkedSummary ? (
                 <span className="mt-1 block text-xs">
                   Already linked: {linkedSummary}
@@ -229,7 +237,7 @@ export function AddCreatorPlatformDialog({
           ) : isPending ? (
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2Icon className="size-3.5 animate-spin" />
-              {pendingCount} platform(s) queued or enriching. You can add more or close this dialog.
+              Adding {pendingCount} platform(s). You can close this dialog; queued work will continue.
             </p>
           ) : parsed ? (
             <p className="text-xs text-emerald-600 dark:text-emerald-400">
