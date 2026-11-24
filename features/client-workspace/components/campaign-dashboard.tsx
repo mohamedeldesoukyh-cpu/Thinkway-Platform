@@ -96,6 +96,7 @@ export function CampaignDashboard({
   if (!dashboard.ready) {
     return (
       <>
+        {inCampaign && <ClientPerformanceControls token={token} historical={historical} />}
         <CampaignPageHead
           campaignName={campaignName}
           clientLabel={clientLabel}
@@ -121,6 +122,7 @@ export function CampaignDashboard({
 
   return (
     <>
+      {inCampaign && <ClientPerformanceControls token={token} historical={historical} />}
       <CampaignPageHead
         campaignName={campaignName}
         clientLabel={clientLabel}

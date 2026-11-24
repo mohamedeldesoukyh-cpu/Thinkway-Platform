@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /** The same authenticated HTML used by downloads, without navigating away. */
@@ -35,7 +36,8 @@ export function ReviewSchedulePreview({ campaignId, token, onDownload, downloadi
   return <>
     <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>Preview schedule</Button>
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent aria-describedby={undefined} className="flex flex-col gap-0 overflow-hidden p-0" style={{ width: "94vw", maxWidth: "1440px", height: "92dvh" }}>
+      <DialogContent showCloseButton={false} aria-describedby={undefined} className="flex flex-col gap-0 overflow-hidden p-0" style={{ width: "94vw", maxWidth: "1440px", height: "92dvh" }}>
+        <DialogClose asChild><Button type="button" variant="ghost" size="icon" className="absolute right-3 top-2 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700" aria-label="Close preview"><X /></Button></DialogClose>
         <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-4 py-3 pr-16">
           <DialogTitle className="text-base">Schedule preview</DialogTitle>
           <div className="flex gap-2" aria-label="Schedule downloads">
