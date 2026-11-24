@@ -168,3 +168,9 @@ Artifacts are in `C:/thinkway-platform/.tmp/finance-assistant-release/`:
 `amgad-preview-access-revoked.png`, and `amgad-webhook-restored.png`.
 Live remains unchanged. All outgoing mail is disabled on dev. The pre-existing
 CSS release gate remains unresolved; no thresholds were changed.
+
+The owner subsequently chose to keep dev protected and process requests manually.
+The Resend webhook was disabled and verified in the provider UI. Gmail forwarding
+and authenticated inbox reads remain available. Queue delegation stays enabled
+for explicit administrator processing; no continuous receipt or sending is active.
+Prepared PDF downloads use a direct authenticated link to stream the stored bytes.
