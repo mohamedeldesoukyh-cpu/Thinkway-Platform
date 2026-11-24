@@ -35,5 +35,5 @@ export async function POST(request:Request){
   const retrievedAt=new Date().toISOString();
   if(input.pdf)return new Response(new Uint8Array(await financeReportPdf(evidence,retrievedAt)),{headers:{"Content-Type":"application/pdf","Content-Disposition":'attachment; filename="Amgad-reconciliation.pdf"',"Cache-Control":"private, no-store"}});
   return json({content:"Reconciliation prepared. Review the balance controls and every unmatched or ambiguous entry. No accounting records were changed.",sources:[evidence],retrievedAt});
- }catch(e){return json({error:e instanceof Error?e.message:"Reconciliation failed."},400);}
+ }catch(e){return json({error:e instanceof z.ZodError?"Complete the account, currency, valid start/end dates and balances before reconciling.":e instanceof Error?e.message:"Reconciliation failed."},400);}
 }

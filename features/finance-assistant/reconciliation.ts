@@ -3,6 +3,7 @@ import { parseBankCsv } from "@/features/accounting/bank-model";
 import { cents, decimal } from "@/features/accounting/journal-model";
 import type { LedgerRow } from "./ledger-details";
 import type { FinanceEvidence } from "./contracts";
+import { reconciliationDifferences } from "./reconciliation-differences";
 
 export const reconciliationSchema=z.object({
   companyId:z.string().uuid(),yearId:z.string().uuid().nullable(),
@@ -29,20 +30,26 @@ export function reconcileStatement(input:ReconciliationInput,ledger:LedgerRow[],
   const key=(date:string,reference:string,amount:bigint)=>JSON.stringify([date,normalize(reference),amount.toString()]);
   const statementKeys=rows.map(r=>key(r.date,r.reference,cents(r.amount)*direction));
   const ledgerKeys=ledger.map(r=>key(r.date,r.reference,cents(r.debit)-cents(r.credit)));
-  const used=new Set<number>();let matched=0,ambiguous=0;
+  const used=new Set<number>(),matchedRows=new Set<number>();let matched=0,ambiguous=0;
   const details=rows.map((r,index)=>{
     const candidates=ledgerKeys.flatMap((k,i)=>k===statementKeys[index]?[i]:[]);
     const duplicate=statementKeys.filter(k=>k===statementKeys[index]).length>1;
     const unique=!!r.reference.trim()&&!duplicate&&candidates.length===1;
-    if(unique){used.add(candidates[0]);matched++;}else if(duplicate||candidates.length>1)ambiguous++;
+    if(unique){used.add(candidates[0]);matchedRows.add(index);matched++;}else if(duplicate||candidates.length>1)ambiguous++;
     return [String(index+2),r.date,r.reference,r.description,r.amount,decimal(cents(r.amount)*direction),unique?"Matched candidate":duplicate||candidates.length>1?"Ambiguous — review":"Unmatched — review",candidates.map(i=>`${ledger[i].number} / ${ledger[i].line}`).join(", ")];
   });
   const openingDifference=cents(input.opening)*direction-cents(ledgerOpening);
   const closingDifference=cents(input.closing)*direction-cents(ledgerClosing);
+  const differences=reconciliationDifferences(rows,ledger,matchedRows,used,direction,input.to);
+  const bridge=openingDifference+differences.statementTotal-differences.ledgerTotal;
+  if(bridge!==closingDifference)throw Error("Ledger detail movements do not reconcile to the reported balances. Refresh the report and check its scope before proceeding.");
   return {title:"Statement reconciliation",href:"/accounting#statements",
     scope:`${input.account} · ${input.currency} · ${input.from} to ${input.to}. Statement signs ${input.direction==="same"?"agree with":"are inverted to match"} ledger debit-minus-credit. Exact date/reference/amount matching only; timing differences, combined payments and missing references require review. Matches are proposals, not bank clearing, allocations or posted corrections.`,
     tables:[{heading:"Balance control",columns:["Control",input.currency],rows:[["Statement opening (ledger sign)",decimal(cents(input.opening)*direction)],["Ledger opening",ledgerOpening],["Opening difference",decimal(openingDifference)],["Statement closing (ledger sign)",decimal(cents(input.closing)*direction)],["Ledger closing",ledgerClosing],["Closing difference",decimal(closingDifference)]]},
+      {heading:"Difference bridge",columns:["Component",input.currency],rows:[["Opening difference carried forward — investigate prior-period reconciliation",decimal(openingDifference)],["Unmatched / ambiguous statement entries (ledger sign)",decimal(differences.statementTotal)],["Subtract unmatched / ambiguous ledger entries",decimal(-differences.ledgerTotal)],["Explained closing difference",decimal(bridge)],["Unexplained arithmetic residual",decimal(closingDifference-bridge)]]},
+      {heading:"Individual difference contributions",columns:["Source entry","Date","Reference","Description","Contribution to difference","Age at period end (days)"],rows:differences.details.map(row=>row.slice(0,6))},
+      {heading:"Difference explanations and proposed actions",columns:["Source entry","Observed evidence","Possible cause (not confirmed)","Proposed action (review required)","Related candidates (not allocated)"],rows:differences.details.map(row=>[row[0],...row.slice(6)])},
       {heading:"Statement entries",columns:["CSV row","Date","Reference","Description","Statement amount","Ledger-sign amount","Result","JV / line candidates"],rows:details},
       {heading:"Ledger entries without a unique match",columns:["Date","JV","Line","Reference","Description","Amount"],rows:ledger.flatMap((r,i)=>used.has(i)?[]:[[r.date,r.number,String(r.line),r.reference,r.description,decimal(cents(r.debit)-cents(r.credit))]])}],
-    facts:{statementEntries:rows.length,ledgerEntries:ledger.length,matched,ambiguous,unmatched:rows.length-matched-ambiguous,unmatchedLedger:ledger.length-used.size,openingDifference:decimal(openingDifference),closingDifference:decimal(closingDifference),currency:input.currency,executed:false}};
+    facts:{statementEntries:rows.length,ledgerEntries:ledger.length,matched,ambiguous,unmatched:rows.length-matched-ambiguous,unmatchedLedger:ledger.length-used.size,openingDifference:decimal(openingDifference),closingDifference:decimal(closingDifference),differenceBridge:decimal(bridge),causesConfirmed:false,currency:input.currency,executed:false}};
 }

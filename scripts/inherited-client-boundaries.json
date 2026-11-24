@@ -1475,5 +1475,11 @@
       "features/finance-assistant/workspace.tsx"
     ],
     "file": "features/finance-assistant/voice-input.tsx"
+  },
+  {
+    "parents": [
+      "features/finance-assistant/workspace.tsx"
+    ],
+    "file": "features/finance-assistant/document-journal-workspace.tsx"
   }
 ]

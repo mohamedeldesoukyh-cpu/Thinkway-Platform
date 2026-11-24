@@ -37,6 +37,24 @@ test("duplicate candidates, duplicate statement entries and missing references n
  assert.equal(reconcileStatement(base,[{...line,date:"2026-11-02"}],"0","100").facts.unmatched,1);
  assert.equal(reconciliationSchema.safeParse({...base,account:"121"}).success,false);
 });
+test("difference bridge accounts for every unmatched side without double counting diagnostic candidates",()=>{
+ const report=reconcileStatement({...base,opening:"25",closing:"125"},[{...line,date:"2026-11-02",debit:"80",balance:"80"}],"10","90");
+ assert.equal(report.facts.differenceBridge,"35.00");
+ const contributions=report.tables!.find(t=>t.heading==="Individual difference contributions")!.rows;
+ assert.deepEqual(contributions.map(r=>r[4]),["100.00","-80.00"]);
+ const diagnosis=report.tables!.find(t=>t.heading==="Difference explanations and proposed actions")!.rows;
+ assert.match(diagnosis[0][1],/20.00/);assert.match(diagnosis[0][2],/not confirmed/);
+ assert.equal(report.facts.matched,0);assert.equal(report.facts.causesConfirmed,false);
+ assert.throws(()=>reconcileStatement(base,[line],"0","90"),/detail movements/);
+});
+test("timing candidates and fee descriptions remain unconfirmed while signs stay exact",()=>{
+ const timing=reconcileStatement(base,[{...line,date:"2026-11-02"}],"0","100");
+ const rows=timing.tables!.find(t=>t.heading==="Difference explanations and proposed actions")!.rows;
+ assert.match(rows[0][1],/dates differ/);assert.equal(timing.facts.matched,0);assert.equal(timing.facts.differenceBridge,"0.00");
+ const fees=reconcileStatement({...base,direction:"opposite",csv:base.csv.replace("Invoice","Bank fee")},[],"0","0");
+ assert.equal(fees.facts.differenceBridge,"-100.00");
+ assert.match(fees.tables!.find(t=>t.heading==="Difference explanations and proposed actions")!.rows[0][2],/unconfirmed/);
+});
 test("comparison aligns accounts, separates currencies and avoids zero-base growth",()=>{
  const evidence=(tables:NonNullable<FinanceEvidence['tables']>):FinanceEvidence=>({title:"P&L",href:"/",scope:"",facts:{},tables});
  const previous=evidence([{heading:"EGP",columns:[],rows:[["4","Revenue","Revenue","1,000.00"],["6","Expense","Expense","-100.00"]]}]);

@@ -12,11 +12,13 @@ import { FinanceReportDownload } from "./report-download";
 import { FinanceSavedReports } from "./saved-reports";
 import { FinanceReconciliationWorkspace } from "./reconciliation-workspace";
 import { FinanceVoiceInput } from "./voice-input";
+import {FinanceDocumentJournal} from "./document-journal-workspace";
+import type {ClosingDraft} from "@/features/accounting/pl-closing-model";
 
 type Message = { role: "user" | "assistant"; content: string; reply?: FinanceReply };
 const suggestions = ["Show the P&L for the selected fiscal year", "هات كشف حساب عميل", "Why is there a difference between Media and Accounting?"];
 
-export function FinanceAssistantWorkspace({companyId,yearId}:{companyId:string;yearId:string|null}) {
+export function FinanceAssistantWorkspace({companyId,yearId,onDraft}:{companyId:string;yearId:string|null;onDraft?:(draft:ClosingDraft)=>void}) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -79,11 +81,12 @@ export function FinanceAssistantWorkspace({companyId,yearId}:{companyId:string;y
       </form>
       <FinanceSavedReports key={companyId} companyId={companyId} onRun={reply=>setMessages(previous=>[...previous,{role:"assistant",content:reply.content,reply}])}/>
       <FinanceReconciliationWorkspace key={`reconcile:${companyId}:${yearId}`} companyId={companyId} yearId={yearId} onRun={reply=>setMessages(previous=>[...previous,{role:"assistant",content:reply.content,reply}])}/>
+      {onDraft&&<FinanceDocumentJournal key={`document:${companyId}:${yearId}`} companyId={companyId} yearId={yearId} onDraft={onDraft}/>}
     </section>
     <aside className="space-y-5 text-sm">
       <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">Connected to TW Accounting</h2><p className="mt-2 leading-relaxed text-muted-foreground">Client account statements and ledger-based P&L. Reports include posted, unlocked entries and use journal dates. Source details show the exact scope.</p></section>
       <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">Google Workspace + Resend</h2><p className="mt-2 break-words">amgad@thinkwaymedia.com</p><p className="mt-2 leading-relaxed text-muted-foreground">Forwarding is configured with Gmail copies retained. Use the inbox below to check connectivity and prepare replies for the approved finance team.</p></section>
-      <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">Reports and operational review</h2><p className="mt-2 leading-relaxed text-muted-foreground">Compare P&L periods, download PDFs, save custom ledger reports, reconcile uploaded statements, and prepare client emails with To/CC. Eligible Media posting corrections require document-specific approval. Document-to-transaction creation, full Media profitability reconciliation and maintained IFRS references are not enabled yet. Dictation is available in supported browsers.</p></section>
+      <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">Reports and operational review</h2><p className="mt-2 leading-relaxed text-muted-foreground">Compare P&L periods, download PDFs, save custom ledger reports, reconcile uploaded statements, and prepare client emails with To/CC. Eligible Media posting corrections require document-specific approval. Document proposals open in the existing journal editor for review, saving and approval. Full Media profitability reconciliation and maintained IFRS references are not enabled yet. Dictation is available in supported browsers.</p></section>
     </aside>
   </div><FinanceMailWorkspace key={`${companyId}:${yearId}`} companyId={companyId} yearId={yearId}/><FinanceAutomationWorkspace key={`automation:${companyId}:${yearId}`} companyId={companyId} yearId={yearId}/></>;
 }
