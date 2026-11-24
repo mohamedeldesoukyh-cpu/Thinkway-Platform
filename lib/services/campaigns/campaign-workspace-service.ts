@@ -2,6 +2,7 @@ import { readRevenueShare, revenueShareAmount } from "@/lib/campaigns/revenue-sh
 import { loadVendorIoReopenEligibility } from "@/lib/io/vendor-io-query-helpers";
 import { creatorFxAmount } from "@/lib/commercial/creator-fx";
 import { resolveQuotationDisplayRates } from "@/lib/commercial/quotation-fx-server";
+import { applyCampaignFxRates, readCampaignFxRates } from "@/lib/campaigns/campaign-fx-rates";
 import { getCampaignPoFxTotals, resolveFxPoSummary } from "@/lib/finance/po/fx-totals";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildCampaignApprovalRegister } from "@/lib/campaigns/campaign-approval-register";
@@ -469,13 +470,16 @@ export async function getCampaignWorkspace(
   for (const invoice of invoices) currenciesNeeded.add(invoice.currency.trim().toUpperCase());
   for (const io of vendorIos ?? []) currenciesNeeded.add(io.currency_code);
   for (const payment of payments) currenciesNeeded.add(payment.currency);
+  const campaignFxRates = readCampaignFxRates(headerCurrency.metadata);
+  for (const code of Object.keys(campaignFxRates)) currenciesNeeded.add(code);
   const rateToEgpByCurrency = new Map<string, number>();
   await Promise.all(
     [...currenciesNeeded].map(async (code) => {
-      rateToEgpByCurrency.set(code, await resolveRateToEgp(supabase, code));
+      rateToEgpByCurrency.set(code, campaignFxRates[code] ?? await resolveRateToEgp(supabase, code));
     })
   );
-  const { directRates } = await resolveQuotationDisplayRates(supabase, workspaceCurrency);
+  const { directRates: systemDirectRates } = await resolveQuotationDisplayRates(supabase, workspaceCurrency);
+  const directRates = applyCampaignFxRates(campaignFxRates, workspaceCurrency, rateToEgpByCurrency, systemDirectRates);
   const displayFinancials = aggregateCampaignDisplayFinancials({
     lines,
     displayCurrency: workspaceCurrency,
@@ -830,6 +834,7 @@ export async function getCampaignWorkspace(
     status: headerRow.status,
     currency_code: workspaceCurrency,
     currency_pair_rates: directRates,
+    currency_custom_rates: campaignFxRates,
     currency_rates: Object.fromEntries([...rateToEgpByCurrency].sort(([a], [b]) => a.localeCompare(b))),
     start_date: headerRow.start_date,
     end_date: headerRow.end_date,
