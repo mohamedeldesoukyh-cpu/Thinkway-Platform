@@ -354,9 +354,9 @@ test("the dialog names the operation it is running", () => {
 
 test("the Studio width fix is preserved", () => {
   const css = read("features/campaign-studio/styles/campaign-studio-ref.css");
-  const wrap = css.slice(css.indexOf(".campaign-studio-ref .cs-wrap {"));
+  const wrap = css.slice(css.indexOf(".twcs .cs-wrap {"));
   assert.match(wrap.slice(0, wrap.indexOf("}")), /max-width:\s*none/);
-  const doc = css.slice(css.indexOf(".campaign-studio-ref .cs-doc {"));
+  const doc = css.slice(css.indexOf(".twcs .cs-doc {"));
   assert.match(doc.slice(0, doc.indexOf("}")), /max-width:\s*none/);
   assert.match(read(SECTION), /xl:grid-cols-\[minmax\(0,1fr\)_320px\]/);
 });

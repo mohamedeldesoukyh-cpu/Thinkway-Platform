@@ -248,6 +248,7 @@
     "server-only": "0.0.1",
     "sharp": "^0.35.3",
     "sonner": "^2.0.7",
+    "svix": "^2.11.1",
     "tailwind-merge": "^3.6.0",
     "tsx": "^4.23.1",
     "tus-js-client": "^4.3.1",

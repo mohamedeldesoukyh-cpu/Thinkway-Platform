@@ -13,7 +13,7 @@ export const accountingGroups = [
   {id:'settings',en:'Settings',ar:'الإعدادات'},
 ] as const;
 export type AccountingGroup = typeof accountingGroups[number]['id'];
-export type AccountingView = 'home'|'expense-vendors'|'monthly-accruals'|'staff'|'pl-closing'|'customer-advances'|'vendor-advances'|'balance-sheet'|'cash-flow'|'vendor-aging'|'auxiliary-statements'|'client-statements'|'vendor-statements'|'unsettled-receivables'|'unsettled-payables'|'closing'|'audit-viewer'|'budget-setup'|'budget-control'|'budget-reports'|'financial-statements'|'aging'|'payment-preparation'|'cheques'|'banks'|'reconciliation'|'bank-movements'|'recurring'|'scheduled-reversal'|'opening'|'transfers'|'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
+export type AccountingView = 'amgad'|'home'|'expense-vendors'|'monthly-accruals'|'staff'|'pl-closing'|'customer-advances'|'vendor-advances'|'balance-sheet'|'cash-flow'|'vendor-aging'|'auxiliary-statements'|'client-statements'|'vendor-statements'|'unsettled-receivables'|'unsettled-payables'|'closing'|'audit-viewer'|'budget-setup'|'budget-control'|'budget-reports'|'financial-statements'|'aging'|'payment-preparation'|'cheques'|'banks'|'reconciliation'|'bank-movements'|'recurring'|'scheduled-reversal'|'opening'|'transfers'|'approvals'|'transaction-locks'|'approval-policy'|'journals'|'expenses'|'invoices'|'costs'|'moves'|'receipts'|'payments'|'parties'|'vendors'|'chart'|'auxiliaries'|'years'|'periods'|'ledger'|'trial'|'statements'|'users'|'company'|'mapping';
 export type NavigationItem = {
   id:string; parent:AccountingGroup; en:string; ar:string; status:'Ready'|'Partial'|'Pending';
   view?:AccountingView; route?:string; permission:'accounting'|'admin'; navigation:boolean;
@@ -24,6 +24,7 @@ const pending = (id:string,parent:AccountingGroup,en:string,ar:string):Navigatio
   ({id,parent,en,ar,status:'Pending',permission:'accounting',navigation:false});
 // Array order is display order; embedded capabilities deliberately have no duplicate navigation.
 export const accountingNavigation:readonly NavigationItem[] = [
+  ready('amgad','reports','Amgad · AI Finance','أمجد · المساعد المالي'),
   ready('journals','transactions','General JV','القيود العامة'),
   ready('expenses','transactions','Expenses JV','قيود المصروفات'),
   ready('invoices','transactions','Platform invoice posting','ترحيل فواتير المنصة'),

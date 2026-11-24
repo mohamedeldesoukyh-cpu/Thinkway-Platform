@@ -16,6 +16,11 @@ export async function GET(request: Request) {
     if (!access.media || 'error' in permission) return reply({ error: 'Media Finance access required' }, 403);
     const q = new URL(request.url).searchParams;
     const company = z.string().uuid().parse(q.get('company'));
+    if (q.get('mode') === 'source') {
+      const r = await db.rpc('tw_accounting_media_source', { p_company: company, p_type: type.parse(q.get('type')), p_id: z.string().uuid().parse(q.get('id')) });
+      if (r.error) throw Error(r.error.message);
+      return reply(r.data);
+    }
     if (q.get('mode') === 'allocations') {
       const r = await db.rpc('tw_accounting_note_allocation_read', { p_company: company, p_type: type.parse(q.get('type')), p_id: z.string().uuid().parse(q.get('id')) });
       if (r.error) throw Error(r.error.message);

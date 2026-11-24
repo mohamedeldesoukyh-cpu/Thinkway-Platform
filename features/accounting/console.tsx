@@ -1,4 +1,5 @@
 "use client";
+import { FinanceAssistantWorkspace } from '@/features/finance-assistant/workspace';
 import { ExpenseVendorsDesk } from './expense-vendors-desk';
 import {MonthlyAccrualDesk} from './monthly-accrual-desk';
 import {StaffDesk} from './staff-desk';
@@ -50,7 +51,7 @@ export function AccountingConsole({initial}:{initial:AccountingSetup}) {
   const [closingDraft,setClosingDraft]=useState<ClosingDraft|null>(null);
   const [cashNew,setCashNew] = useState(false);
   function setView(next:View) {if(next===view||journalBusy)return;if(journalDirty&&!window.confirm("Discard unsaved journal changes?"))return;setJournalDirty(false);setClosingDraft(null);setCurrentView(next);}
-  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.defaultPrevented||document.querySelector('[role="dialog"]'))return;if(e.ctrlKey&&e.altKey&&e.key.toLowerCase()==='p'){const button=Array.from(document.querySelectorAll<HTMLButtonElement>('[data-accounting-preview]')).find(b=>!b.disabled&&b.getClientRects().length);if(button){e.preventDefault();button.click();}}else if(e.key==='Escape'&&view!=='home'){e.preventDefault();setView('home');}};document.addEventListener('keydown',close);return()=>document.removeEventListener('keydown',close);},[view,journalBusy,journalDirty]);
+  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.defaultPrevented||document.querySelector('[role="dialog"], [role="menu"][data-state="open"]'))return;if(e.ctrlKey&&e.altKey&&e.key.toLowerCase()==='p'){const button=Array.from(document.querySelectorAll<HTMLButtonElement>('[data-accounting-preview]')).find(b=>!b.disabled&&b.getClientRects().length);if(button){e.preventDefault();button.click();}}else if(e.key==='Escape'&&view!=='home'){e.preventDefault();setView('home');}};document.addEventListener('keydown',close);return()=>document.removeEventListener('keydown',close);},[view,journalBusy,journalDirty]);
   const [busy,setBusy] = useState(false);
   const [message,setMessage] = useState("");
   useEffect(()=>{setMessage("");},[view]);
@@ -108,6 +109,7 @@ export function AccountingConsole({initial}:{initial:AccountingSetup}) {
     {company && (view==='closing'||view==='audit-viewer') && <FiscalDesk key={company.id+view} setup={data} audit={view==='audit-viewer'} onBusyChange={setJournalBusy}/>}
     {company && (view==='budget-setup'||view==='budget-control'||view==='budget-reports') && <BudgetDesk key={company.id+view} setup={data} edit={view==='budget-setup'} onDirtyChange={setJournalDirty} onBusyChange={setJournalBusy}/>}
     {company && view==='monthly-accruals' && <MonthlyAccrualDesk setup={data} onBusyChange={setJournalBusy}/>}
+    {company && view==='amgad' && <FinanceAssistantWorkspace key={company.id+(selectedYear?.id??'')} companyId={company.id} yearId={selectedYear?.id??null} onDraft={transactionData.access.manage?draft=>{setClosingDraft(draft);setJournalEpoch(n=>n+1);setCurrentView('journals');}:undefined}/>}
     {company && (view==='financial-statements'||view==='balance-sheet'||view==='trial') && <FinancialStatement key={company.id+view} setup={data} mode={view==='balance-sheet'?'balance':view==='trial'?'trial':'profit'}/>}
     {company && ['cash-flow','aging','vendor-aging'].includes(view) && <FinancialReports key={company.id+view} setup={data} aging={view==='aging'||view==='vendor-aging'} partyKind={view==='vendor-aging'?'vendor':'client'}/>}
     {company && view==='ledger' && <StatementDesk key={company.id+view} setup={data} preset="account" reportTitle="General Ledger" onBusyChange={setJournalBusy}/>}

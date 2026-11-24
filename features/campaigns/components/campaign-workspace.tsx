@@ -422,7 +422,7 @@ function CampaignWorkspaceViewBody({
       reloadAssignmentHierarchy={reloadAssignmentHierarchy}
       reloadVendorIos={reloadVendorIos}
     >
-    <div className="campaign-detail-suite thinkway-campaign-workspace flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+    <div className="twcd thinkway-campaign-workspace flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <Tabs
         value={activeTab}
         onValueChange={handleTabChange}

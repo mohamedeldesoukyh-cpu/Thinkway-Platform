@@ -553,7 +553,7 @@ export function AssignmentInfluencerDetailSheet({
         showCloseButton={false}
         showOverlay
         overlayClassName="campaign-detail-creator-scrim"
-        className="campaign-detail-creator-modal campaign-detail-suite"
+        className="campaign-detail-creator-modal twcd"
       >
         {!hasDetail || !line || !row || !group ? (
           <div className="tw-cm__w">

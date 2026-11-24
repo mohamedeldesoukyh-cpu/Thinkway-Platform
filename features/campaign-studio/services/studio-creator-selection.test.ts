@@ -231,7 +231,7 @@ test("B. a failed generation keeps the selection and allows a retry", () => {
 
 test("C. Studio uses the Shortlist/Quotation container treatment", () => {
   const css = read("features/campaign-studio/styles/campaign-studio-ref.css");
-  const wrap = css.slice(css.indexOf(".campaign-studio-ref .cs-wrap {"));
+  const wrap = css.slice(css.indexOf(".twcs .cs-wrap {"));
   const rule = wrap.slice(0, wrap.indexOf("}"));
 
   // `DiscoveryPageShell` — behind Shortlist and Quotation — is full width with a
@@ -240,7 +240,7 @@ test("C. Studio uses the Shortlist/Quotation container treatment", () => {
   assert.match(rule, /margin:\s*0;/);
   assert.match(rule, /padding:\s*16px 16px/);
 
-  const doc = css.slice(css.indexOf(".campaign-studio-ref .cs-doc {"));
+  const doc = css.slice(css.indexOf(".twcs .cs-doc {"));
   assert.match(doc.slice(0, doc.indexOf("}")), /max-width:\s*none/);
 });
 
