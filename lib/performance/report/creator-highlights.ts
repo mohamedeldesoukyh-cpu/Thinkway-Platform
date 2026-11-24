@@ -23,7 +23,9 @@ function platformMetricSources(c: InfluencerReportSection, label: string): strin
 
 export function creatorHighlightPages(data: PerformanceReportDocumentData): InfluencerReportSection[][] {
   const creators = [...data.influencerSections].sort((a, b) => b.summary.engagements - a.summary.engagements || a.name.localeCompare(b.name));
-  return creators.length ? chunk(creators, 4) : [[]];
+  // Source counters and collaboration notes can make each card tall. One row
+  // per A4 page keeps cards intact and the rendered page count accurate.
+  return creators.length ? chunk(creators, 2) : [[]];
 }
 
 export function renderCreatorHighlights(data: PerformanceReportDocumentData, creators: InfluencerReportSection[]): string {

@@ -1,4 +1,5 @@
 "use client";
+import { WorkspaceDocumentPreview } from "./workspace-document-preview";
 import type { CommercialIoSnapshot } from "../types";
 import { useCallback, useEffect, useState } from "react";
 import { CommercialReveal, CommercialViewIcon } from "./commercial-motion";
@@ -7,6 +8,7 @@ import { useRouter } from "next/navigation";
 type Io = {id:string;number:string|null;status:string;approved:boolean;canApprove:boolean;available:boolean};
 export function CommercialClientIo({token,initial}:{token:string;initial?:CommercialIoSnapshot}) {
   const router=useRouter();
+  const [previewOpen,setPreviewOpen]=useState(false);
   const href=`/api/review/client-io?sign=${encodeURIComponent(token)}`;
   const [io,setIo]=useState<Io|null>(initial?.io ?? null);
   const [loading,setLoading]=useState(!initial);
@@ -41,7 +43,7 @@ export function CommercialClientIo({token,initial}:{token:string;initial?:Commer
     <span className={`cm-pill ${io?.approved ? "success" : !loading && io?.canApprove ? "warn" : "info"}`} role="status">{loading ? "Loading…" : io?.approved ? "Approved" : io?.canApprove ? "Awaiting your approval" : io ? "Current document" : "Not available yet"}</span>
     <p className="note">{loading ? "Loading Client IO…" : io ? io.approved ? "IO approved. View and download the current Client IO from the campaign." : !io.available ? "Client IO unavailable — please contact Thinkway." : io.canApprove ? "Awaiting your approval. View the Client IO before approving." : "Current Client IO — approval becomes available once sent with an active approval link." : message}</p>
     <div className="sumbar-cta" style={{marginTop:12}}>
-      {io?.available ? <><a className="btn sec cm-icon" aria-label="View Client IO" title="View Client IO" href={`${href}&ioId=${encodeURIComponent(io.id)}&source=current&view=1&format=html`} target="_blank" rel="noopener noreferrer"><CommercialViewIcon /></a><a className="btn pri" href={`${href}&ioId=${encodeURIComponent(io.id)}&source=current`}>Download PDF</a></> : <><button className="btn sec cm-icon" aria-label="View Client IO" title="View Client IO" disabled><CommercialViewIcon /></button><button className="btn pri" disabled>Download PDF</button></>}
+      {io?.available ? <><button type="button" className="btn sec cm-icon" aria-label="Preview Client IO" title="Preview Client IO" onClick={()=>setPreviewOpen(true)}><CommercialViewIcon /></button><a className="btn pri" href={`${href}&ioId=${encodeURIComponent(io.id)}&source=current`}>Download PDF</a></> : <><button className="btn sec cm-icon" aria-label="View Client IO" title="View Client IO" disabled><CommercialViewIcon /></button><button className="btn pri" disabled>Download PDF</button></>}
       {io && <button className="btn sec" disabled={!io.canApprove || io.approved || pending} onClick={()=>setConfirm(true)}>{io.approved ? "Approved" : "Approve Client IO"}</button>}
     </div>
     {io?.available && ["sent","under_client_review"].includes(io.status) && <p className="note"><a href={`${href}&ioId=${encodeURIComponent(io.id)}&view=1&format=html`} target="_blank" rel="noopener noreferrer">View saved {io.approved ? "approved" : "issued"} IO</a>{" · "}<a href={`${href}&ioId=${encodeURIComponent(io.id)}`}>Download saved {io.approved ? "approved" : "issued"} IO</a></p>}
@@ -52,5 +54,6 @@ export function CommercialClientIo({token,initial}:{token:string;initial?:Commer
       <button className="btn sec" type="button" disabled={pending} onClick={()=>setConfirm(false)}>Cancel</button>
     </form>}
     {error && <p role="alert" className="sumbar-msg">{error} <button type="button" className="btn sec" onClick={()=>void reload()}>Retry</button></p>}
+  {io && <WorkspaceDocumentPreview open={previewOpen} onOpenChange={setPreviewOpen} title="Client IO preview" url={`${href}&ioId=${encodeURIComponent(io.id)}&source=current&view=1&format=html`} />}
   </CommercialReveal>;
 }
