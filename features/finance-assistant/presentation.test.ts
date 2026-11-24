@@ -17,6 +17,7 @@ test("English and Arabic emails each use one language and no technical metadata"
   assert.match(html,new RegExp(`dir="${language==="ar"?"rtl":"ltr"}"`));
   assert.match(html,/table role="presentation" width="640"/);
   assert.doesNotMatch(html,/white-space:pre-wrap/);
+  assert.doesNotMatch(html,/background(?:-color)?:|<img|data:image/);
  }
 });
 test("request language ignores an opposite-language quoted conversation",()=>{
