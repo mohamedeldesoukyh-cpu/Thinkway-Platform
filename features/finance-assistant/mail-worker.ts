@@ -6,10 +6,13 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { runFinanceAssistant } from "./assistant";
 import { FinanceAiProvider } from "./provider";
 import { executeFinanceReport, type FinanceReportClient } from "./report-tools";
-import { financeEmailText,reportRecipient } from "./mail-policy";
+import { reportRecipient } from "./mail-policy";
 import { financeReportPdf } from "./report-pdf";
 import { loadFinanceEmail,loadFinanceSenderEvidence,financeInboxRequest,verifyFinanceInbox } from "./mail-server";
 import { deliverAutomaticReply } from "./auto-reply-policy";
+import { financeMailRequest } from "./mail-request";
+import { EXPIRED_PREPARATION_RESPONSE, failedMailPreparation, prepareFinanceMailContent, type PreparationStage } from "./mail-preparation";
+import { FINANCE_OWNER } from "./approval-policy";
 
 const jobSchema=z.object({id:z.string().uuid(),email_id:z.string().uuid(),thread_id:z.string().uuid(),sender:z.string(),company_id:z.string().uuid(),year_id:z.string().uuid(),lease_id:z.string().uuid(),attempts:z.number()});
 type Job=z.infer<typeof jobSchema>;
@@ -44,33 +47,43 @@ function delegatedReports(db:SupabaseClient,job:Job):FinanceReportClient{
 }
 export async function runFinanceMailWorker(){
   const db=createSupabaseAdminClient();
+  // Recover killed invocations after their final lease. Only unsent preparation
+  // failures qualify; never replay an uncertain send or a security review.
+  const now=new Date().toISOString();
+  const recovered=await db.from("tw_finance_mail_jobs").update({...EXPIRED_PREPARATION_RESPONSE,error_code:"preparation_timeout",lease_id:null,lease_until:null,updated_at:now})
+    .eq("sender",FINANCE_OWNER).is("outbound_id",null).is("first_send_at",null)
+    .or(`and(status.eq.processing,attempts.gte.3,lease_until.lt.${now}),and(status.eq.needs_review,error_code.eq.retry_limit)`);
+  if(recovered.error)throw new Error("Preparation recovery unavailable");
   const claimed=await rpc(db,"tw_finance_mail_claim");
   if(!claimed?.length)return {processed:0};
   const job=jobSchema.parse(claimed[0]);
+  let stage:PreparationStage="load";
+  let outcome;
   try{
     const mail=await loadFinanceEmail(job.thread_id,job.email_id);
     if(reportRecipient(mail)!==job.sender)throw new Error("Sender changed");
-    const text=mail.text?.trim();
-    if(!text||text.length>4000)throw new Error("Message requires manual review");
+    stage="request";
+    const request=financeMailRequest(mail.text,mail.subject);
+    stage="scope";
     const setup=await reportSetup(db,job);
     const apiKey=process.env.FINANCE_AI_API_KEY?.trim()||process.env.OPENAI_API_KEY?.trim();
     if(!apiKey)throw new Error("AI unavailable");
-    const reply=await runFinanceAssistant({companyId:job.company_id,yearId:job.year_id,message:text,history:[]},{
+    stage="report";
+    const reply=await runFinanceAssistant({companyId:job.company_id,yearId:job.year_id,...request},{
       channel:"automatic_email",
       provider:new FinanceAiProvider(apiKey,process.env.FINANCE_AI_MODEL?.trim()||"gpt-4.1"),
       context:JSON.stringify({company:setup.company?.name,baseCurrency:setup.company?.base_currency,yearFrom:setup.years[0].start_date,yearTo:setup.years[0].end_date,attachmentsProcessed:false}),
       execute:plan=>executeFinanceReport(delegatedReports(db,job),setup,job.year_id,plan),
     });
-    const report=reply.sources.find(source=>source.tables?.length);
-    const attachments=report?[{filename:"Amgad-accounting-report.pdf",content:(await financeReportPdf(report,reply.retrievedAt)).toString("base64"),content_type:"application/pdf"}]:[];
-    const response=financeEmailText(reply,{pdfAttached:attachments.length>0})+(mail.attachments?.length?"\n\nIncoming attachments were not processed. / لم تتم معالجة المرفقات الواردة.":"");
-    const updated=await db.from("tw_finance_mail_jobs").update({status:"prepared",response_text:response,attachments,error_code:null,lease_id:null,lease_until:null,updated_at:new Date().toISOString()}).eq("id",job.id).eq("lease_id",job.lease_id).eq("status","processing").select("id");
-    if(updated.error||!updated.data?.length)throw new Error("Job lease lost");
-    return {processed:1,status:"prepared"};
-  }catch{
-    await db.from("tw_finance_mail_jobs").update({status:job.attempts>=3?"needs_review":"queued",error_code:"preparation_failed",lease_id:null,lease_until:null,updated_at:new Date().toISOString()}).eq("id",job.id).eq("lease_id",job.lease_id);
-    return {processed:1,status:"retry_or_review"};
+    stage="pdf";
+    outcome={status:"prepared",...await prepareFinanceMailContent(reply,mail.attachments?.length??0,financeReportPdf),error_code:null};
+  }catch(error){
+    outcome=failedMailPreparation(error,stage,job.attempts);
   }
+  // Persistence/lease failures must surface, not be swallowed as preparation errors.
+  const updated=await db.from("tw_finance_mail_jobs").update({...outcome,lease_id:null,lease_until:null,updated_at:new Date().toISOString()}).eq("id",job.id).eq("lease_id",job.lease_id).eq("status","processing").select("id");
+  if(updated.error||!updated.data?.length)throw new Error("Job lease lost");
+  return {processed:1,status:outcome.status};
 }
 
 export async function sendPreparedFinanceMail(){

@@ -2,9 +2,11 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { accountingContext,loadAccountingSetup } from "@/features/accounting/setup-server";
 import { financeInboxRequest,financeMailKey,loadFinanceEmail,verifyFinanceInbox } from "@/features/finance-assistant/mail-server";
-import { financeEmailHtml,financeEmailText,isFinanceRequester,mailSchema,reportRecipient,signMailApproval,verifyMailApproval } from "@/features/finance-assistant/mail-policy";
+import { financeEmailHtml,isFinanceRequester,mailSchema,reportRecipient,signMailApproval,verifyMailApproval } from "@/features/finance-assistant/mail-policy";
+import { prepareFinanceMailContent } from "@/features/finance-assistant/mail-preparation";
 import { financeReportPdf } from "@/features/finance-assistant/report-pdf";
 import { runFinanceAssistant } from "@/features/finance-assistant/assistant";
+import { financeMailRequest, FinanceMailRequestError } from "@/features/finance-assistant/mail-request";
 import { executeFinanceReport } from "@/features/finance-assistant/report-tools";
 import { FinanceAiProvider } from "@/features/finance-assistant/provider";
 import { assertCsrfRequest } from "@/lib/security/csrf";
@@ -64,22 +66,20 @@ export async function POST(request:Request) {
     }
     const mail=await loadFinanceEmail(input.threadId,input.emailId);
     const recipient=reportRecipient(mail);
-    const text=mail.text?.trim();
-    if(!text||text.length>4000)return json({error:"This message needs manual review: send a plain-text request of at most 4,000 characters."},422);
+    const financeRequest=financeMailRequest(mail.text,mail.subject);
     const key=process.env.FINANCE_AI_API_KEY?.trim()||process.env.OPENAI_API_KEY?.trim();
     if(!key)throw new Error("Amgad's AI connection is not configured.");
     const setup=await loadAccountingSetup(input.companyId);
     const year=setup.years.find(value=>value.id===input.yearId);
     if(input.yearId&&!year)return json({error:"Invalid company fiscal year."},400);
-    const reply=await runFinanceAssistant({companyId:input.companyId,yearId:input.yearId,message:text,history:[]},{
+    const reply=await runFinanceAssistant({companyId:input.companyId,yearId:input.yearId,...financeRequest},{
+      channel:"automatic_email",
       provider:new FinanceAiProvider(key,process.env.FINANCE_AI_MODEL?.trim()||"gpt-4.1"),
       context:JSON.stringify({company:setup.company?.name,baseCurrency:setup.company?.base_currency,yearFrom:year?.start_date,yearTo:year?.end_date,attachmentsProcessed:false}),
       execute:plan=>executeFinanceReport(ctx.db,setup,input.yearId,plan),
     });
-    const body=financeEmailText(reply)+(mail.attachments?.length ? "\n\nAttachments were not read or processed. / لم تتم قراءة أو معالجة المرفقات." : "");
-    const report=reply.sources.find(source=>source.tables?.length);
-    const attachments=report?[{filename:"Amgad-accounting-report.pdf" as const,content:(await financeReportPdf(report,reply.retrievedAt)).toString("base64"),content_type:"application/pdf" as const}]:[];
+    const {response_text:body,attachments}=await prepareFinanceMailContent(reply,mail.attachments?.length??0,financeReportPdf);
     const approval=signMailApproval({userId:ctx.user.id,threadId:input.threadId,emailId:input.emailId,recipient,text:body,attachments,expires:Date.now()+10*60*1000,nonce:randomUUID()},financeMailKey());
     return json({recipient,text:body,approval,hasPdf:attachments.length>0,sendEnabled:process.env.VERCEL_ENV==="production"&&process.env.FINANCE_MAIL_SEND_ENABLED==="true"});
-  }catch(error){return json({error:error instanceof Error?error.message:"Unable to process email."},502);}
+  }catch(error){return json({error:error instanceof Error?error.message:"Unable to process email."},error instanceof FinanceMailRequestError?422:502);}
 }
