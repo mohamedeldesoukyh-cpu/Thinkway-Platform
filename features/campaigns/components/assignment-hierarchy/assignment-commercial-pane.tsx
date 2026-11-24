@@ -233,7 +233,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
             {total("Cost VAT", costTax.vatAmount, "cost")}{total("Cost incl. VAT", costTax.afterVat, "cost")}{total("Total cost", roundMoney(costTax.afterVat + draft.urCost), "cost")}
           </div></section>
           <section className="acp-section acp-revenue" aria-label="Revenue"><h3>Revenue {clientLocked && <span className="acp-lock" tabIndex={0} title="Linked invoice protects revenue, currency, fees, VAT and FX. Use the finance revision workflow to change them.">Locked</span>} {vendorCorrection && <small>{revenueCurrency} · Invoice unchanged</small>} {fx.controls("revenue")}</h3><div className="acp-fields">
-            {number("Revenue", "revenue")}{number("UR Rev", "urRevenue")}{number("AF %", "af", { max: 100 })}{total("AF", afAmount)}{number("Rev VAT %", "revVat", { max: 100 })}{total("Rev VAT", revenueTax.vatAmount)}{total("Total Billing", revenueTax.afterVat)}
+            {number("Revenue", "revenue")}{number("UR Rev", "urRevenue")}{number("AF %", "af", { max: 100 })}{total("AF", afAmount)}{total("Rev before VAT", revenueTax.beforeVat)}{number("Rev VAT %", "revVat", { max: 100 })}{total("Rev VAT", revenueTax.vatAmount)}{total("Total Billing", revenueTax.afterVat)}
           </div></section>
         </div>
       </div>
