@@ -19,14 +19,14 @@ export async function POST(request:Request){
   ]).parse(await request.json());
   const setup=await loadAccountingSetup(input.companyId);
   if(input.action==="save"){
-   if(input.plan.action!=="custom_ledger")throw Error("Only custom ledger definitions can be saved here.");
+   if(input.plan.action!=="custom_ledger"&&input.plan.action!=="accounting_analysis")throw Error("Only custom report definitions can be saved here.");
    if(input.yearId&&!setup.years.some(y=>y.id===input.yearId))throw Error("Invalid year.");
    const result=await db.from("tw_finance_saved_reports").insert({owner_id:user.id,company_id:input.companyId,year_id:input.yearId,name:input.plan.title,plan:input.plan}).select("id").single();
    if(result.error)throw Error("Could not save the report.");return json(result.data);
   }
   const saved=await db.from("tw_finance_saved_reports").select("plan,year_id").eq("id",input.id).eq("company_id",input.companyId).eq("owner_id",user.id).single();
   if(saved.error)throw Error("Saved report unavailable.");
-  const plan=financePlanSchema.parse(saved.data.plan);if(plan.action!=="custom_ledger")throw Error("Unsupported saved report.");
+  const plan=financePlanSchema.parse(saved.data.plan);if(plan.action!=="custom_ledger"&&plan.action!=="accounting_analysis")throw Error("Unsupported saved report.");
   const evidence=await executeFinanceReport(db,setup,saved.data.year_id,plan);
   return json({content:"Saved custom report regenerated from current Accounting records.",sources:[evidence],retrievedAt:new Date().toISOString()});
  }catch(e){return json({error:e instanceof Error?e.message:"Report request failed."},400);}

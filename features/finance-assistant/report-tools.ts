@@ -91,7 +91,7 @@ export async function executeFinanceReport(
     const rows=await readLedgerDetails(db,queryArgs,result.data);
     const columns=[...new Set(plan.columns)];
     if(!columns.includes("report_currency"))columns.push("report_currency");
-    const captions:Record<string,string>={date:"Date",number:"JV",reference:"Reference",account:"Account",name:"Account name",description:"Description",party:"Party",report_currency:"Currency",debit:"Debit",credit:"Credit",balance:"Account balance"};
+    const captions:Record<string,string>={date:"Date",number:"Journal reference",transaction_type:"Type",document_number:"Document",campaign:"Campaign",reference:"Reference",account:"Account",name:"Account name",description:"Description",party:"Party",report_currency:"Currency",debit:"Debit",credit:"Credit",balance:"Account balance"};
     return {title:plan.title,href:`/accounting?${params}#statements`,scope:scope+` Account prefixes: ${plan.accounts.join(", ")||"all"}. Balance is the running account balance within each currency, not a combined total.`,reportPlan:{...plan,from,to},
       tables:[{heading:plan.title,columns:columns.map(c=>captions[c]),rows:rows.map(row=>columns.map(c=>c==="party"?partyCode(row.party):String(row[c]??"")))}],facts:{company:company.name,from,to,count:rows.length,accounts:plan.accounts,columns}};
   }

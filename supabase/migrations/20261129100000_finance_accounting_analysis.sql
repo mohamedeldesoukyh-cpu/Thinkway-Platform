@@ -1,4 +1,6 @@
 BEGIN;
+ALTER TABLE public.tw_finance_saved_reports DROP CONSTRAINT tw_finance_saved_reports_plan_check;
+ALTER TABLE public.tw_finance_saved_reports ADD CONSTRAINT tw_finance_saved_reports_plan_check CHECK(plan->>'action' IN('custom_ledger','accounting_analysis') AND octet_length(plan::text)<10000);
 -- Read-only report expansion. No business data, document numbers or posting rules change.
 CREATE OR REPLACE FUNCTION public.tw_finance_analysis_snapshot(p_company uuid,p_from date,p_to date,p_accounts text DEFAULT NULL,p_display text DEFAULT 'local') RETURNS jsonb
 LANGUAGE plpgsql STABLE SET search_path=public AS $$

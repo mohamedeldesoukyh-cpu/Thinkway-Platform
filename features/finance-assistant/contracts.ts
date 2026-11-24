@@ -63,7 +63,7 @@ export const financePlanSchema = z.discriminatedUnion("action", [
     from: date.nullable(), to: date.nullable(),
     display: z.enum(["local","USD","foreign"]),
     accounts: z.array(z.string().regex(/^\d{1,6}$/)).max(20),
-    columns: z.array(z.enum(["date","number","reference","account","name","description","party","report_currency","debit","credit","balance"])).min(2).max(11),
+    columns: z.array(z.enum(["date","number","reference","account","name","description","party","report_currency","debit","credit","balance","transaction_type","document_number","campaign"])).min(2).max(14),
   }).strict(),
   z.object({
     action: z.literal("media_accounting_review"),
