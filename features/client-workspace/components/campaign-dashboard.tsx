@@ -133,7 +133,6 @@ export function CampaignDashboard({
       />
 
       <AttentionBar items={pendingReview} />
-      {inCampaign && <ClientPerformanceControls token={token} historical={historical} />}
       <OverdueStrip posts={overdue} onViewAll={() => setOverdueFocus((current) => current + 1)} />
 
       <section className="card">

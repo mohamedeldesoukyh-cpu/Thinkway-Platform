@@ -12,7 +12,7 @@ export async function prepareClientReportHtml(html: string): Promise<string> {
     const font = await readFile(path.join(process.cwd(), "public/report-assets/performance-fonts", `${family}-${weight}.ttf`));
     return `@font-face{font-family:'${family === "Inter" ? "Inter" : "Noto Sans Arabic"}';font-style:normal;font-weight:${weight};src:url(data:font/ttf;base64,${font.toString("base64")}) format('truetype');font-display:block}`;
   }));
-  html = html.replace(/@import url\(['"]https:\/\/fonts\.googleapis\.com[^;]+;/g, faces.join("\n"));
+  html = html.replace(/@import url\(['"]https:\/\/fonts\.googleapis\.com[^'"]+['"]\);/g, faces.join("\n"));
   const images = [...new Set(html.match(/data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+/g) ?? [])];
   for (let offset = 0; offset < images.length; offset += 4) {
     const replacements = await Promise.all(images.slice(offset, offset + 4).map(async uri => {
