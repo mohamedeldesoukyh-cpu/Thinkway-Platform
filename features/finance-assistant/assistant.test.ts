@@ -11,6 +11,18 @@ function provider(replies: string[], requests: LlmCompletionRequest[] = []): Llm
   } };
 }
 
+test("English and Arabic client-revenue plans default to summaries with explicit detail opt-in",async()=>{
+ for(const message of ["Give me details of the service revenue by client","تفاصيل إيرادات الخدمات حسب العميل"]){
+  const requests:LlmCompletionRequest[]=[];
+  await runFinanceAssistant({message,history:[],companyId:"11111111-1111-4111-8111-111111111111",yearId:null},{provider:provider([JSON.stringify({action:"revenue_by_client",from:"2026-11-01",to:"2026-11-30",display:"local"}),JSON.stringify({reply:"Verified client totals."})],requests),execute:async plan=>{
+   assert.equal(plan.action,"revenue_by_client");if(plan.action==="revenue_by_client")assert.equal(plan.includeTransactions,false);
+   return {title:"Revenue by client",scope:"EGP November",href:"/accounting",facts:{}};
+  }});
+  assert.match(requests[0].messages[0].content,/Do not substitute custom_ledger for client grouping/);
+  assert.match(requests[1].messages[0].content,/at most 150 words/);
+ }
+});
+
 test("automatic owner emails use delivery-aware instructions during planning and explanation",async()=>{
  const requests:LlmCompletionRequest[]=[];
  const evidence={title:"P&L",href:"/accounting",scope:"EGP, posted ledger",facts:{},tables:[{heading:"EGP",columns:["Account","Net"],rows:[["Revenue","100.00"]]}]};

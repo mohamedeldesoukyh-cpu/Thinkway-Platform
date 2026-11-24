@@ -18,6 +18,12 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
 export const financePlanSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("reply"), reply: z.string().min(1).max(6000) }).strict(),
   z.object({
+    action: z.literal("revenue_by_client"),
+    from: date.nullable(), to: date.nullable(),
+    display: z.enum(["local", "USD", "foreign"]),
+    includeTransactions: z.boolean().default(false),
+  }).strict(),
+  z.object({
     action: z.literal("pnl_comparison"), from: date, to: date,
     comparisonFrom: date, comparisonTo: date,
     display: z.enum(["local", "USD", "foreign"]),
@@ -61,7 +67,7 @@ export type FinanceEvidence = {
   statementDocument?: import('@/features/accounting/formatted-report-model').FormattedReport;
   reportPlan?: Exclude<FinancePlan,{action:"reply"}>;
   corrections?: Array<{company:string;id:string;type:string;token:string;number:string;summary:string}>;
-  tables?: Array<{heading:string;columns:string[];rows:string[][]}>;
+  tables?: Array<{heading:string;columns:string[];rows:string[][];orientation?:"portrait"|"landscape"}>;
   title: string;
   href: string;
   scope: string;
