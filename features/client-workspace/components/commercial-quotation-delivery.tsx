@@ -1,6 +1,7 @@
 "use client";
 
 import { CommercialReveal, CommercialViewIcon } from "./commercial-motion";
+import { WorkspaceDocumentPreview } from "./workspace-document-preview";
 import { useState, useTransition } from "react";
 
 import { sendClientQuotationAction } from "../actions/client-workspace-actions";
@@ -14,6 +15,7 @@ export function CommercialQuotationDelivery({
   view: ClientWorkspaceView;
   token: string;
 }) {
+  const [previewOpen, setPreviewOpen] = useState(false);
   const saved = view.clientEmails ?? [];
   const [customEmail, setCustomEmail] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -67,7 +69,7 @@ export function CommercialQuotationDelivery({
         address.
       </p>
       <div className="sumbar-cta" style={{ marginTop: 12 }}>
-        <a className="btn sec cm-icon" aria-label="View quotation" title="View quotation" href={`${downloadHref}&view=1&format=html`} target="_blank" rel="noopener noreferrer"><CommercialViewIcon /></a>
+        <button type="button" className="btn sec cm-icon" aria-label="Preview quotation" title="Preview quotation" onClick={() => setPreviewOpen(true)}><CommercialViewIcon /></button>
         <button type="button" className="btn pri" onClick={() => void download()} disabled={downloading}>
           {downloading ? "Preparing quotation…" : "Download PDF"}
         </button>
@@ -121,6 +123,7 @@ export function CommercialQuotationDelivery({
       </div>
       {error ? <p className="sumbar-msg">{error}</p> : null}
       {message ? <p className="sumbar-msg">{message}</p> : null}
+      <WorkspaceDocumentPreview open={previewOpen} onOpenChange={setPreviewOpen} title="Quotation preview" url={`${downloadHref}&view=1&format=html`} />
     </CommercialReveal>
   );
 }

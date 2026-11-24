@@ -12,9 +12,9 @@ test('all creators appear even when one wins every category; rate includes sampl
  assert.equal((html.match(/Top engagements/g)||[]).length,1);
  assert.equal((html.match(/Highest post ER/g)||[]).length,1);
 });
-test('pagination includes every creator once and never exceeds four per page',()=>{
+test('pagination keeps a single row of creator cards on each A4 page',()=>{
  const d=data(Array.from({length:11},(_,i)=>creator('Creator '+i,i,100,i)));
- const pages=creatorHighlightPages(d);assert.deepEqual(pages.map(p=>p.length),[4,4,3]);assert.equal(new Set(pages.flat().map(c=>c.influencerId)).size,11);
+ const pages=creatorHighlightPages(d);assert.deepEqual(pages.map(p=>p.length),[2,2,2,2,2,1]);assert.equal(new Set(pages.flat().map(c=>c.influencerId)).size,11);
 });
 test('missing rate does not invent a winner or denominator',()=>{
  const c=creator('<Creator>',0,0,0);c.publications=[];const html=renderCreatorHighlights(data([c]),[c]);

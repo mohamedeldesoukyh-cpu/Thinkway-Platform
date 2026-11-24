@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { WorkspaceDocumentPreview } from "./workspace-document-preview";
 import { Button } from "@/components/ui/button";
 import { loadClientPerformanceAllowanceAction, refreshClientPerformanceAction } from "../actions/client-performance-actions";
 
 export function ClientPerformanceControls({ token, historical }: { token: string; historical: boolean }) {
   const router = useRouter();
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [allowance, setAllowance] = useState<{ limit: number; used: number; refreshing: boolean; lastRefreshAt: string | null; coolingDown: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -46,19 +48,20 @@ export function ClientPerformanceControls({ token, historical }: { token: string
     finally { setBusy(false); }
   }
   const coolingDown = allowance?.coolingDown ?? false;
-  return <section className="card" aria-label="Performance report controls">
+  return <><section className="card" aria-label="Performance report controls">
     <div className="flex flex-wrap items-center justify-between gap-3 p-4">
       <div>
-        <h3 className="text-sm font-semibold">Performance report</h3>
+        <h3 className="text-sm font-semibold">Refresh data</h3>
         <p className="mt-1 text-sm" aria-live="polite">{allowance ? `${allowance.used} of ${allowance.limit} refreshes used · ${Math.max(0, allowance.limit - allowance.used)} remaining` : "Loading refresh allowance…"}</p>
         <p className="mt-1 text-xs text-muted-foreground">One refresh updates published campaign metrics. Downloads use the latest saved data and do not use credits.</p>
       </div>
       <div className="flex flex-wrap gap-2">
-        {!historical && <Button type="button" size="sm" disabled={busy || !allowance || (!retryable && (allowance.used >= allowance.limit || allowance.refreshing || coolingDown))} onClick={() => void refresh()}>{busy ? "Requesting refresh…" : retryable ? "Retry refresh request" : allowance?.refreshing ? "Refreshing metrics…" : "Refresh metrics"}</Button>}
-        <Button size="sm" variant="outline" asChild><a href={`/api/review/performance?${new URLSearchParams({ sign: token, format: "pdf" })}`} target="_blank" rel="noreferrer">Export performance PDF</a></Button>
+        {!historical && <Button type="button" size="sm" disabled={busy || !allowance || (!retryable && (allowance.used >= allowance.limit || allowance.refreshing || coolingDown))} onClick={() => void refresh()}>{busy ? "Requesting refresh…" : retryable ? "Retry refresh request" : allowance?.refreshing ? "Refreshing data…" : "Refresh data"}</Button>}
+        <Button type="button" size="sm" variant="outline" onClick={() => setPreviewOpen(true)}>Preview report</Button>
+        <Button size="sm" variant="outline" asChild><a href={`/api/review/performance?${new URLSearchParams({ sign: token, format: "pdf" })}`} target="_blank" rel="noreferrer">Download PDF</a></Button>
       </div>
       {coolingDown && !allowance?.refreshing && <p className="w-full text-xs text-muted-foreground">Allow five minutes between refresh requests.</p>}
       {message && <p className="w-full text-sm" role="status">{message}</p>}
     </div>
-  </section>;
+  </section><WorkspaceDocumentPreview open={previewOpen} onOpenChange={setPreviewOpen} title="Performance report" url={`/api/review/performance?${new URLSearchParams({ sign: token, view: "1" })}`} /></>;
 }
