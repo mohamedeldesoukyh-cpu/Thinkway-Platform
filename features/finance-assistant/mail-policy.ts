@@ -28,7 +28,7 @@ export function reportRecipient(mail: z.infer<typeof mailSchema>) {
 }
 export function financeEmailText(reply: FinanceReply, options?: { pdfAttached?: boolean }) {
   return [reply.content, ...(options?.pdfAttached ? ["The requested report PDF is attached. / ملف التقرير المطلوب بصيغة PDF مرفق."] : []), ...reply.sources.flatMap(source => [source.title, source.scope,
-    ...(source.tables ?? []).map(table => `${table.heading}\n${table.columns.join(" | ")}\n${table.rows.map(row => row.join(" | ")).join("\n")}`)]),
+    ...(options?.pdfAttached ? [] : (source.tables ?? []).map(table => `${table.heading}\n${table.columns.join(" | ")}\n${table.rows.map(row => row.join(" | ")).join("\n")}`))]),
     `Prepared: ${reply.retrievedAt}`, "Amgad — AI Finance Assistant, Thinkway"].join("\n\n");
 }
 export const financeAttachmentSchema=z.object({filename:z.literal("Amgad-accounting-report.pdf"),content:z.string().max(2_700_000).regex(/^[A-Za-z0-9+/]+={0,2}$/),content_type:z.literal("application/pdf")}).strict();
