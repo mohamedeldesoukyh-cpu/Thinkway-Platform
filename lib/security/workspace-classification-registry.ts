@@ -196,6 +196,7 @@ export const SERVER_ACTION_MODULE_CLASSIFICATIONS: Record<string, WorkspaceClass
   "features/campaign-intelligence-profile": "internal_workspace",
   "features/ai-workspace": "internal_workspace",
   "features/discovery": "internal_workspace",
+  "features/creators/picker": "internal_workspace",
   "features/discovery-import": "internal_workspace",
   "features/quotations": "internal_workspace",
   "features/io": "internal_workspace",

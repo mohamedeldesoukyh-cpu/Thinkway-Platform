@@ -133,7 +133,7 @@ export function CreatorPickerDialog({
   );
 
   const browse = useCreatorBrowse({
-    enabled: open,
+    enabled: open && !bodyOverride,
     filters: mergedFilters,
     pageSize,
     paginationMode,
@@ -416,7 +416,7 @@ export function CreatorPickerDialog({
   );
 
   const actionFooter =
-    footer ??
+    footer !== undefined ? footer :
     (selectionMode === "multi" && onConfirm ? (
       panelLayout ? (
         <Button
