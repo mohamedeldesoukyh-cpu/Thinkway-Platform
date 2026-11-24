@@ -49,3 +49,10 @@ test("uncertain send or receipt persistence preserves the retry key and never re
   await deliverAutomaticReply(h.deps);assert.equal(h.keys.at(-1),`amgad-auto-${h.f.job.id}`);
  }
 });
+test("temporary provider load failure retries instead of permanently holding the owner request",async()=>{
+ const h=harness();
+ assert.deepEqual(await deliverAutomaticReply({...h.deps,load:async()=>{throw Error("provider 503");}}),{sent:0,pending:true});
+ assert.deepEqual(h.events,["claim","pending"]);
+ await deliverAutomaticReply(h.deps);
+ assert.equal(h.keys[0],`amgad-auto-${h.f.job.id}`);
+});
