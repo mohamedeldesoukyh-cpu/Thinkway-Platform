@@ -29,8 +29,9 @@ import {
   existingKeysFromShortlistItems,
 } from "./creator-picker-dialog";
 import type { ExistingCreatorKey } from "./creator-selection-types";
+import { CreatorSourcePanel } from "./creator-source-panel";
 
-type AddCreatorsMode = "search" | "paste";
+type AddCreatorsMode = "search" | "paste" | "source";
 
 type Props = {
   open: boolean;
@@ -111,7 +112,7 @@ export function ShortlistCreatorPicker({
           toast.info(describeAddOutcome(outcome));
         }
         onAdded();
-        onOpenChange(false);
+        if (mode !== "source" || outcome.failed === 0) onOpenChange(false);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Failed to add creators");
       }
@@ -155,22 +156,25 @@ export function ShortlistCreatorPicker({
   }
 
   const sourceTabs = (
-    <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-0.5">
+    <div className="mt-3 grid grid-cols-3 gap-1 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-0.5">
       {(
         [
           { id: "search", label: "Search" },
           { id: "paste", label: "Paste links" },
+          { id: "source", label: "From list or campaign" },
         ] as const
       ).map((option) => (
         <button
           key={option.id}
           type="button"
+          aria-pressed={mode === option.id}
+          disabled={isPending || isPasting}
           onClick={() => {
             setMode(option.id);
             setPasteError(null);
           }}
           className={cn(
-            "h-8 rounded-md text-xs font-semibold transition-colors",
+            "min-h-11 rounded-md px-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
             mode === option.id
               ? "bg-white text-[#2563eb] shadow-[0_1px_3px_rgba(37,99,235,0.12)]"
               : "bg-transparent text-[#64748b] hover:text-[#0f172a]"
@@ -192,7 +196,9 @@ export function ShortlistCreatorPicker({
       description={
         mode === "paste"
           ? "Paste a full list of profile links. Creators already in Discovery are added; missing ones are created, then added."
-          : "Search internal, imported, and discovered creators, or paste a list of profile links."
+          : mode === "source"
+            ? "Choose a shortlist or campaign, then select individual creators or add them all."
+            : "Search creators, paste profile links, or add from an existing shortlist or campaign."
       }
       selectionMode="multi"
       productionOnly
@@ -202,7 +208,9 @@ export function ShortlistCreatorPicker({
       onConfirmPending={isPending || isPasting}
       headerExtra={sourceTabs}
       bodyOverride={
-        mode === "paste" ? (
+        mode === "source" && open ? (
+          <CreatorSourcePanel shortlistId={shortlistId} existingKeys={existingKeys} pending={isPending} onConfirm={handleConfirm} />
+        ) : mode === "paste" ? (
           <ShortlistPasteLinksPanel
             value={pasteRaw}
             onChange={(value) => {
@@ -216,7 +224,7 @@ export function ShortlistCreatorPicker({
         ) : undefined
       }
       footer={
-        mode === "paste" ? (
+        mode === "source" ? null : mode === "paste" ? (
           <Button
             onClick={handlePaste}
             disabled={isPasting || pasteCount === 0}
