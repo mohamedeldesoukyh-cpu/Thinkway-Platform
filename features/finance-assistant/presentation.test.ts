@@ -49,5 +49,5 @@ test("client summary email renders exact totals and readable bullet rows without
  const text=financeEmailText(reply,{language:"en",pdfAttached:true});
  assert.match(text,/Total net revenue: EGP 1,000.01/);assert.match(text,/• Offset client: EGP 0.00/);
  assert.doesNotMatch(text,/Unused dense|Technical scope|CLT-000/);
- const html=financeEmailHtml(text);assert.match(html,/<ul /);assert.match(html,/Client &lt;A&gt;/);assert.doesNotMatch(html,/<A>/);
+ const html=financeEmailHtml(text);assert.match(html,/<table aria-label="Client revenue"/);assert.match(html,/Client &lt;A&gt;/);assert.doesNotMatch(html,/<A>/);
 });
