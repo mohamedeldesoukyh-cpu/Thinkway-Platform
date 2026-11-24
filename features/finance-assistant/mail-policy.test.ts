@@ -1,7 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { isFinanceRequester,reportRecipient,signMailApproval,verifyMailApproval,financeEmailText } from "./mail-policy";
+import { isFinanceRequester,reportRecipient,signMailApproval,verifyMailApproval,financeEmailText,mailSchema } from "./mail-policy";
+
+test("valid inbox messages may have no subject or unknown attachment size",()=>{
+  const mail=mailSchema.parse({id:randomUUID(),direction:"inbound",from:"mmahmoud@thinkwaymedia.com",subject:null,text:"Show November P&L",attachments:[{id:randomUUID(),filename:null,size:null}]});
+  assert.equal(mail.subject,"");assert.equal(mail.attachments?.[0].size,null);
+  assert.equal(reportRecipient(mail),"mmahmoud@thinkwaymedia.com");
+  assert.throws(()=>mailSchema.parse({...mail,attachments:[{id:"a",filename:"statement.pdf",size:-1}]}));
+});
 
 test("only the three approved addresses match, never display-name spoofing",()=>{
   assert.equal(isFinanceRequester("Mohamed <MOHAMEDELDESOUKY@thinkwaymedia.com>"),true);

@@ -70,10 +70,11 @@ application code rather than deleting stored reports, queue history or journals.
 
 ## Remaining requested capabilities
 
-Full Media/Accounting balance reconciliation; document-to-transaction creation;
-broader operational correction types; background webhook registration/activation;
-email attachment processing and a maintained IFRS reference source remain
-unfinished. Existing prompts and UI must not claim these are active.
+Full Media/Accounting balance reconciliation; broader operational correction
+types; continuous incoming email delivery on protected dev; email attachment
+processing and a maintained IFRS reference source remain unfinished. Document
+uploads now prepare reviewed journal proposals (see the verification below).
+Existing prompts and UI must not claim the unfinished capabilities are active.
 
 ## Extended workflows (2026-11-24)
 
@@ -118,3 +119,52 @@ Three assistant child components now inherit their existing client parent; the
 boundary manifest/guard verifies this arrangement (899 explicit client modules).
 The CSS threshold has not been changed. Release is not fully validated while that
 failure remains.
+
+## Detailed reconciliation and document proposals verified (2026-11-24)
+
+Commit 4262b730 adds individual unmatched-entry contributions, source references,
+age, possible causes and proposed review actions. Exact reference/date/amount
+matching remains conservative: ambiguous candidates are never silently allocated.
+The opening difference plus unmatched statement entries minus unmatched ledger
+entries must equal the closing difference. Inconsistent ledger evidence fails.
+Browser upload, extraction and reconciliation succeeded; the six-page detailed
+PDF was rendered and inspected. No accounting balances were changed.
+
+PDF/image invoices and receipts can prepare base-currency journal proposals using
+the actual active chart. Exact balance, fiscal-year dates, account eligibility
+and source references are validated; duplicate references and assumptions are
+shown for review. The reviewed proposal opens the existing General JV editor and
+retains its source file for attachment after saving. No automatic saving, posting
+or serial allocation. A synthetic 100 EGP cash receipt reached the correct editor
+with balanced lines, then was discarded without creating a business record.
+57 focused assistant/access checks and 13 journal regression tests passed, as did
+TypeScript, focused lint and the Vercel build.
+
+## Real email draft verification (2026-11-24)
+
+The user approved automatic dev draft preparation with sending disabled. Resend's
+incoming-email webhook and branch-scoped signing secret are configured. The
+original event was blocked by Vercel Authentication (401). A user-approved
+temporary share link for one immutable preview returned a 307 redirect, which
+Resend did not deliver through. The share link was revoked and the webhook URL
+restored to `https://dev.thinkwaymedia.com/api/webhooks/finance-mail`. Automatic
+delivery to protected dev is **not verified or operational**; do not equate the
+configured secret with successful delivery.
+
+The retained owner's November P&L request was manually queued through the
+authenticated dev UI and processed by the durable worker. It reached `prepared`
+on its first attempt with one persisted 73,604-byte PDF and no outbound email ID.
+The exact attachment was downloaded from dev storage, rendered and inspected:
+one landscape A4 page with November 1–30 2026 scope and EGP dev balances. This
+verifies worker preparation and PDF persistence, not automatic webhook receipt.
+
+Prepared-request history now offers authenticated PDF downloads of the retained
+bytes; queue RLS/current administrator access still apply. No PDF base64 is loaded
+in the history list. Valid Resend messages with null subjects or unknown
+attachment sizes are accepted without weakening sender/Reply-To checks.
+
+Artifacts are in `C:/thinkway-platform/.tmp/finance-assistant-release/`:
+`amgad-queued-pnl-dev.pdf`, `amgad-queued-draft-verified.png`,
+`amgad-preview-access-revoked.png`, and `amgad-webhook-restored.png`.
+Live remains unchanged. All outgoing mail is disabled on dev. The pre-existing
+CSS release gate remains unresolved; no thresholds were changed.

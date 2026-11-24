@@ -15,8 +15,8 @@ export function isFinanceRequester(value: string) {
 }
 export const mailSchema = z.object({
   id: z.string().uuid(), direction: z.enum(["inbound", "outbound"]), from: z.string(),
-  subject: z.string(), text: z.string().nullable().optional(), reply_to: z.array(z.string()).nullable().optional(),
-  attachments: z.array(z.object({id:z.string(),filename:z.string().nullable(),size:z.number()})).optional(),
+  subject: z.string().nullable().transform(value=>value??""), text: z.string().nullable().optional(), reply_to: z.array(z.string()).nullable().optional(),
+  attachments: z.array(z.object({id:z.string(),filename:z.string().nullable(),size:z.number().nonnegative().nullable()})).optional(),
 });
 export function reportRecipient(mail: z.infer<typeof mailSchema>) {
   const sender = mailboxAddress(mail.from);
