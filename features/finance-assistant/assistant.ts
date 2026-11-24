@@ -39,7 +39,7 @@ Dates are null or YYYY-MM-DD. Use the actual requested dates, not the example. F
   // Keep this case deterministic so model prose cannot turn zero into inactivity.
   const reportRows = evidence.tables?.flatMap(table => table.rows) ?? [];
   if (plan.action === "pnl" && reportRows.length > 0 && reportRows.every(row => /^-?0(?:\.0+)?$/.test(row.at(-1) ?? ""))) {
-    const content = /[\u0600-\u06ff]/.test(input.message)
+    const content = /[\u0600-\u06ff]/.test(input.message.split(/\r?\n--\s*\r?\n/)[0])
       ? "يعرض تقرير الأرباح والخسائر صافي أرصدة صفرية ضمن النطاق المحدد. هذا لا يثبت عدم وجود معاملات أو نشاط. راجع تفاصيل النطاق والجدول المرفق."
       : "The P&L shows zero net balances for the selected scope. This does not establish that there were no transactions or activity. Review the report scope and verified table below.";
     return {content, sources:[evidence], retrievedAt};

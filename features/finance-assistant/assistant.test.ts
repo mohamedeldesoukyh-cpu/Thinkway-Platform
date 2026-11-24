@@ -73,14 +73,14 @@ test("report failure propagates without asking AI to invent a replacement", asyn
 });
 
 test("zero P&L balances never become a claim of no activity in either language", async () => {
-  for (const message of ["Show this month's P&L", "اعرض الأرباح والخسائر لهذا الشهر"]) {
+  for (const message of ["Show this month's P&L", "اعرض الأرباح والخسائر لهذا الشهر", "Show this month's P&L\n-- \nThinkway (ثينكواي)"]) {
     const requests: LlmCompletionRequest[] = [];
     const result=await runFinanceAssistant({message,history:[],companyId:"11111111-1111-4111-8111-111111111111",yearId:null},{
       provider:provider(['{"action":"pnl","from":"2026-11-01","to":"2026-11-30","display":"local"}'],requests),
       execute:async()=>({title:"P&L",href:"/accounting",scope:"EGP, posted ledger",facts:{},tables:[{heading:"EGP",columns:["Account","Net"],rows:[["Revenue","0.00"],["Expenses","0.00"]]}]}),
     });
     assert.equal(requests.length,1);
-    assert.match(result.content,/does not establish|لا يثبت/);
+    assert.match(result.content,message.startsWith("Show") ? /does not establish/ : /لا يثبت/);
     assert.equal(result.sources[0].tables?.[0].rows.length,2);
   }
 });
