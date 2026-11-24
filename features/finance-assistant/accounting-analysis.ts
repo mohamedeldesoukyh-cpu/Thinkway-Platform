@@ -14,7 +14,8 @@ const captions={client:"Client",vendor:"Supplier / creator",campaign:"Campaign",
 const areaGroups:Record<Plan["area"],string[]>={all:[],profitability:["410000","510000"],revenue:["400000"],direct_cost:["510000"],expenses:["500000","600000","700000","800000"],banking:["110000"],tax:["140000","230000","800000"],fixed_assets:["150000","633000"],receivables:["120000"],payables:["210000"]};
 type Totals={revenue:bigint;cost:bigint;debit:bigint;credit:bigint;count:number};
 const zero=():Totals=>({revenue:BigInt(0),cost:BigInt(0),debit:BigInt(0),credit:BigInt(0),count:0});
-function values(t:Totals,measures:Plan["measures"]){return measures.map(m=>m==="margin"?t.revenue===BigInt(0)?"—":decimal((t.revenue-t.cost)*BigInt(10000)/t.revenue):money(m==="gross_profit"?t.revenue-t.cost:m==="net"?t.debit-t.credit:t[m]));}
+function percentage(n:bigint,d:bigint){const sign=(n<BigInt(0))!==(d<BigInt(0))?-BigInt(1):BigInt(1);const numerator=n<BigInt(0)?-n:n;const denominator=d<BigInt(0)?-d:d;return decimal(sign*((numerator*BigInt(10000)+denominator/BigInt(2))/denominator));}
+function values(t:Totals,measures:Plan["measures"]){return measures.map(m=>m==="margin"?t.revenue===BigInt(0)?"—":percentage(t.revenue-t.cost,t.revenue):money(m==="gross_profit"?t.revenue-t.cost:m==="net"?t.debit-t.credit:t[m]));}
 
 /** Only validated ledger amounts enter calculations. Unknown attribution is retained. */
 export function aggregateAccountingRows(rows:Row[],setup:AccountingSetup,plan:Plan){

@@ -12,7 +12,7 @@ const row=(account:string,debit:string,credit:string,overrides={})=>({id:"journa
 test("client GP retains reversals, unmatched cost and zero revenue without mixing currencies",()=>{
  const result=aggregateAccountingRows([row("411001","0","1000"),row("511001","600","0"),row("411001","100","0"),row("511001","0","50"),row("511001","40","0",{client_id:null,client_name:null}),row("411001","0","10",{report_currency:"USD"}),row("411001","999","0",{transaction_type:"closing"})],setup,plan);
  assert.deepEqual(result.totals,[{currency:"EGP",revenue:"900.00",cost:"590.00",grossProfit:"310.00",count:5},{currency:"USD",revenue:"10.00",cost:"0.00",grossProfit:"10.00",count:1}]);
- assert.equal(result.unassigned,1);assert.deepEqual(result.tables[0].rows[0],["1 · Client","900.00","550.00","350.00","38.88"]);
+ assert.equal(result.unassigned,1);assert.deepEqual(result.tables[0].rows[0],["1 · Client","900.00","550.00","350.00","38.89"]);
  assert.deepEqual(result.tables[0].rows[1],["Unassigned client","0.00","40.00","-40.00","—"]);
 });
 test("custom month/account grouping keeps identities distinct and applies scope",()=>{
