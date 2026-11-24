@@ -6,6 +6,7 @@ import { classifyApiPath } from "@/lib/security/workspace-classify";
 test("Amgad is internal-only at both page and API boundaries", () => {
   assert.equal(classifyApiPath("/api/accounting/assistant"), "internal_workspace");
   assert.equal(classifyApiPath("/api/accounting/assistant/mail"), "internal_workspace");
+  assert.equal(classifyApiPath("/api/accounting/assistant/corrections"), "internal_workspace");
   for (const path of ["/accounting", "/api/accounting/assistant", "/api/accounting/assistant/mail"]) {
     for (const actor of ["anonymous", "client_portal", "creator_portal"] as const) {
       assert.equal(authorizeWorkspacePath(path, actor).allowed, false);

@@ -23,3 +23,14 @@ export async function loadFinanceEmail(threadId:string,emailId:string) {
   z.string().uuid().parse(threadId);z.string().uuid().parse(emailId);
   return mailSchema.parse(await financeInboxRequest(`/threads/${threadId}/emails/${emailId}`));
 }
+
+export async function loadFinanceSenderEvidence(emailId:string):Promise<unknown> {
+  z.string().uuid().parse(emailId);
+  const response=await fetch(`https://api.resend.com/emails/receiving/${emailId}?html_format=cid`,{
+    cache:"no-store",signal:AbortSignal.timeout(20000),headers:{Authorization:`Bearer ${financeMailKey()}`},
+  });
+  // Missing correspondence or authentication cannot qualify for automatic mail.
+  if(!response.ok)return null;
+  const raw=await response.json();
+  return {id:raw.id,from:raw.from,message_id:raw.message_id,text:raw.text,subject:raw.subject,authentication:raw.authentication,headers:raw.headers};
+}

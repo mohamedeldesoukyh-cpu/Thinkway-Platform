@@ -19,7 +19,7 @@ async function access() {
   if(!ctx.user.email||!isFinanceRequester(ctx.user.email)) throw new Error("Mailbox access is restricted to the approved finance team.");
   return ctx;
 }
-const threadSchema=z.object({id:z.string().uuid(),subject:z.string(),from:z.string(),received_at:z.string().nullable().optional()});
+const threadSchema=z.object({id:z.string().uuid(),subject:z.string().nullable().transform(v=>v??"(No subject)"),from:z.string().nullable().transform(v=>v??"Unknown sender"),received_at:z.string().nullable().optional()});
 export async function GET(request:Request) {
   try {await access();} catch {return json({error:"Sign in with an approved finance account and TW Accounting access."},403);}
   try {

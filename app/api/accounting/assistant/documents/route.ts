@@ -5,6 +5,7 @@ import {validateDocumentJournal} from "@/features/finance-assistant/document-jou
 import {documentInput,extractedStatementSchema,statementCsv} from "@/features/finance-assistant/document-extraction";
 import {assertCsrfRequest} from "@/lib/security/csrf";
 import {consumeRateLimit} from "@/lib/security/rate-limit";
+import {isFinanceOwner} from "@/features/finance-assistant/approval-policy";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=120;
@@ -19,6 +20,7 @@ export async function POST(request:Request){
   if(!(file instanceof File))throw Error("Choose a statement document.");
   if(file.size>3_000_000)throw Error("Upload a document under 3 MB.");
   if(form.get("mode")==="journal"){
+   if(!isFinanceOwner(ctx.user.email))return json({error:"Amgad journal proposals require the finance owner's review. Sign in as mohamedeldesouky@thinkwaymedia.com."},403);
    if(!ctx.access.manage)return json({error:"Accounting management access required"},403);
    const company=z.string().uuid().parse(form.get("companyId")),yearId=z.string().uuid().parse(form.get("yearId"));
    const setup=await loadAccountingSetup(company);

@@ -6,9 +6,10 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { runFinanceAssistant } from "./assistant";
 import { FinanceAiProvider } from "./provider";
 import { executeFinanceReport, type FinanceReportClient } from "./report-tools";
-import { financeAttachmentSchema,financeEmailHtml,financeEmailText,reportRecipient } from "./mail-policy";
+import { financeEmailText,reportRecipient } from "./mail-policy";
 import { financeReportPdf } from "./report-pdf";
-import { loadFinanceEmail,financeInboxRequest,verifyFinanceInbox } from "./mail-server";
+import { loadFinanceEmail,loadFinanceSenderEvidence,financeInboxRequest,verifyFinanceInbox } from "./mail-server";
+import { deliverAutomaticReply } from "./auto-reply-policy";
 
 const jobSchema=z.object({id:z.string().uuid(),email_id:z.string().uuid(),thread_id:z.string().uuid(),sender:z.string(),company_id:z.string().uuid(),year_id:z.string().uuid(),lease_id:z.string().uuid(),attempts:z.number()});
 type Job=z.infer<typeof jobSchema>;
@@ -75,21 +76,14 @@ export async function sendPreparedFinanceMail(){
   // Never send development-ledger reports through the real mailbox.
   if(process.env.VERCEL_ENV!=="production"||process.env.FINANCE_MAIL_AUTO_SEND_ENABLED!=="true")return {sent:0};
   const db=createSupabaseAdminClient();
-  const jobs=await rpc(db,"tw_finance_mail_claim_send");
-  if(!jobs?.length)return {sent:0};
-  const job=jobs[0];
-  try{
-    const mail=await loadFinanceEmail(job.thread_id,job.email_id);
-    if(reportRecipient(mail)!==job.sender)throw new Error("Recipient changed");
-    const result=z.object({id:z.string()}).parse(await financeInboxRequest(`/threads/${job.thread_id}/emails/${job.email_id}/reply`,{
-      method:"POST",headers:{"Idempotency-Key":`amgad-auto-${job.id}`},body:JSON.stringify({text:job.response_text,html:financeEmailHtml(job.response_text),attachments:z.array(financeAttachmentSchema).max(1).parse(job.attachments),cc:[],bcc:[],reply_all:false,headers:{"Auto-Submitted":"auto-replied"}}),
-    }));
-    const done=await db.from("tw_finance_mail_jobs").update({status:"sent",outbound_id:result.id,lease_until:null,lease_id:null,updated_at:new Date().toISOString()}).eq("id",job.id).eq("lease_id",job.lease_id);
-    if(done.error)throw new Error("Send receipt persistence failed");
-    return {sent:1};
-  }catch{
-    // Retain sending state and stable key; a timed-out request may have sent.
-    await db.from("tw_finance_mail_jobs").update({error_code:"send_retry_pending"}).eq("id",job.id).eq("lease_id",job.lease_id);
-    return {sent:0,pending:true};
-  }
+  let lease:string|null=null;
+  return deliverAutomaticReply({
+    environment:process.env.VERCEL_ENV,enabled:process.env.FINANCE_MAIL_AUTO_SEND_ENABLED,
+    claim:async()=>{const jobs=await rpc(db,"tw_finance_mail_claim_send");lease=jobs?.[0]?.lease_id??null;return jobs?.[0]??null;},
+    load:async job=>{await verifyFinanceInbox();const mail=await loadFinanceEmail(job.thread_id,job.email_id);return {mail,received:await loadFinanceSenderEvidence(job.email_id)};},
+    hold:async(job,reason)=>{const result=await db.from("tw_finance_mail_jobs").update({status:"needs_review",error_code:reason,lease_id:null,lease_until:null,updated_at:new Date().toISOString()}).eq("id",job.id).eq("lease_id",lease).eq("status","sending");if(result.error)throw Error("Could not hold reply for review");},
+    send:async(job,payload,key)=>z.object({id:z.string()}).parse(await financeInboxRequest(`/threads/${job.thread_id}/emails/${job.email_id}/reply`,{method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify(payload)})).id,
+    finish:async(job,receipt)=>{const done=await db.from("tw_finance_mail_jobs").update({status:"sent",outbound_id:receipt,lease_until:null,lease_id:null,updated_at:new Date().toISOString()}).eq("id",job.id).eq("lease_id",lease).eq("status","sending").select("id");if(done.error||!done.data?.length)throw Error("Send receipt persistence failed");},
+    pending:async job=>{await db.from("tw_finance_mail_jobs").update({error_code:"send_retry_pending"}).eq("id",job.id).eq("lease_id",lease).eq("status","sending");},
+  });
 }

@@ -174,3 +174,37 @@ The Resend webhook was disabled and verified in the provider UI. Gmail forwardin
 and authenticated inbox reads remain available. Queue delegation stays enabled
 for explicit administrator processing; no continuous receipt or sending is active.
 Prepared PDF downloads use a direct authenticated link to stream the stored bytes.
+
+## Single-owner automatic reply preparation (2026-11-24)
+
+The owner superseded the earlier three-address allowlist: only
+`mohamedeldesouky@thinkwaymedia.com` may request or receive automatic finance
+replies. Mahmoud and Raaof are removed from mail access, routing and active queue
+eligibility. Migration `20261129070000_finance_mail_single_owner.sql` restricts
+queue configuration/history to the real owner auth account, rejects removed
+senders before deduplication, and preserves any historical excluded jobs in
+review/sent/failed states. Applied to dev only; rollback tests pass.
+
+Client email preparation/sending is owner-only through the narrowed authenticated
+mail policy; exact recipients, body and PDF still require a separate reviewed
+send action. Amgad correction controls use an owner-gated route retaining existing
+MFA, finance permissions and source/version validation. Document journal proposals
+are owner-only and still require review and existing journal save/post controls.
+These restrictions concern Amgad; ordinary accounting users retain their existing
+module permissions. Email messages never execute accounting changes.
+
+Automatic delivery now requires matching provider-computed DKIM and DMARC passes
+from Resend's received-email API, tied to the same email ID, Message-ID, sender,
+subject and body. Missing/mismatched/failed evidence and automatic/list messages
+go to review before any send. No trust is placed in sender-supplied
+Authentication-Results headers. Correspondence between Inbox IDs and received
+email IDs is not assumed; missing correspondence blocks automatic delivery.
+The authenticated "Check automatic reply safety" control tests the real retained
+message without sending. It does not activate delivery.
+
+Delivery tests use a stub transport: no real recipients are contacted. Cases cover
+owner-only routing, no CC/BCC or reply-all, forged Reply-To, missing/failed sender
+evidence, mismatched source contents, autoresponder suppression, dev-send denial,
+stable retry keys and uncertain-delivery handling. All 46 assistant tests passed;
+TypeScript and focused lint passed. Dev retains Vercel protection, disabled webhook
+and disabled outgoing mail. Production activation is separate and not performed.

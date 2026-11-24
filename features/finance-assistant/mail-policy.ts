@@ -1,10 +1,11 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import type { FinanceReply } from "./contracts";
+import { FINANCE_OWNER } from "./approval-policy";
 
 export const FINANCE_MAILBOX = "amgad@thinkwaymedia.com";
 export const FINANCE_INBOX_ID = "62af07bc-6823-47a3-bf0d-aee74451d771";
-export const FINANCE_REQUESTERS = ["mohamedeldesouky@thinkwaymedia.com", "mmahmoud@thinkwaymedia.com", "raaof@thinkwaymedia.com"] as const;
+export const FINANCE_REQUESTERS = [FINANCE_OWNER] as const;
 export function mailboxAddress(value: string): string | null {
   const match = value.trim().match(/^(?:[^<>\r\n]*<)?([A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,})(?:>)?$/i);
   return match?.[1].toLowerCase() ?? null;
@@ -15,6 +16,7 @@ export function isFinanceRequester(value: string) {
 }
 export const mailSchema = z.object({
   id: z.string().uuid(), direction: z.enum(["inbound", "outbound"]), from: z.string(),
+  message_id: z.string().nullable().optional(),
   subject: z.string().nullable().transform(value=>value??""), text: z.string().nullable().optional(), reply_to: z.array(z.string()).nullable().optional(),
   attachments: z.array(z.object({id:z.string(),filename:z.string().nullable(),size:z.number().nonnegative().nullable()})).optional(),
 });

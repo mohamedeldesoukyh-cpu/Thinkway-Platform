@@ -3,7 +3,7 @@ BEGIN;
 DO $$
 DECLARE actor uuid;c uuid;y uuid;e uuid:=gen_random_uuid();t uuid:=gen_random_uuid();j uuid;lease uuid;v jsonb;blocked boolean;
 BEGIN
- SELECT p.id INTO STRICT actor FROM profiles p JOIN roles r ON r.id=p.role_id WHERE r.slug='super_admin' AND p.is_active LIMIT 1;
+ SELECT p.id INTO STRICT actor FROM profiles p JOIN roles r ON r.id=p.role_id WHERE lower(p.email)='mohamedeldesouky@thinkwaymedia.com' AND r.slug='super_admin' AND p.is_active LIMIT 1;
  SELECT company_id,id INTO STRICT c,y FROM tw_accounting_years LIMIT 1;
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal2')::text,true);
  SET LOCAL ROLE authenticated;
@@ -14,6 +14,12 @@ BEGIN
  IF j IS NULL OR tw_finance_mail_enqueue(e,t,'mohamedeldesouky@thinkwaymedia.com')<>j THEN RAISE EXCEPTION 'Enqueue deduplication failed';END IF;
  blocked:=false;BEGIN PERFORM tw_finance_mail_enqueue(gen_random_uuid(),t,'outsider@example.com');EXCEPTION WHEN OTHERS THEN blocked:=true;END;
  IF NOT blocked THEN RAISE EXCEPTION 'Unapproved sender accepted';END IF;
+ blocked:=false;BEGIN PERFORM tw_finance_mail_enqueue(gen_random_uuid(),t,'mmahmoud@thinkwaymedia.com');EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Removed Mahmoud sender accepted';END IF;
+ blocked:=false;BEGIN PERFORM tw_finance_mail_enqueue(gen_random_uuid(),t,'raaof@thinkwaymedia.com');EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Removed Raaof sender accepted';END IF;
+ blocked:=false;BEGIN PERFORM tw_finance_mail_enqueue(e,t,'mmahmoud@thinkwaymedia.com');EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Deduplication bypassed removed-sender validation';END IF;
  SELECT lease_id INTO lease FROM tw_finance_mail_claim() WHERE id=j;
  IF lease IS NULL OR EXISTS(SELECT 1 FROM tw_finance_mail_claim() WHERE id=j) THEN RAISE EXCEPTION 'Lease exclusivity failed';END IF;
  v:=tw_finance_mail_read(j,lease,'setup');
@@ -43,6 +49,14 @@ BEGIN
  RESET ROLE;
  SET LOCAL ROLE service_role;
  IF tw_finance_mail_enqueue(gen_random_uuid(),t,'mohamedeldesouky@thinkwaymedia.com') IS NOT NULL THEN RAISE EXCEPTION 'Disabled automation enqueued';END IF;
+ RESET ROLE;
+ -- A claimed owner email in JWT data is insufficient without the real auth user.
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',gen_random_uuid(),'email','mohamedeldesouky@thinkwaymedia.com','role','authenticated','aal','aal2')::text,true);
+ SET LOCAL ROLE authenticated;
+ IF tw_finance_mail_is_owner() OR EXISTS(SELECT 1 FROM tw_finance_mail_jobs) OR EXISTS(SELECT 1 FROM tw_finance_mail_config) THEN RAISE EXCEPTION 'Nonowner could read finance automation';END IF;
+ blocked:=false;BEGIN PERFORM tw_finance_mail_configure(c,y,true);EXCEPTION WHEN insufficient_privilege THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Nonowner could configure automation';END IF;
+ RESET ROLE;
  RAISE NOTICE 'Finance mail delegation, deduplication, leases, recipient restrictions and retry expiry passed';
 END $$;
 ROLLBACK;
