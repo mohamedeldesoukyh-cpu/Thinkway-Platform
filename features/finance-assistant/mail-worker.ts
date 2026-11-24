@@ -38,10 +38,10 @@ function delegatedReports(db:SupabaseClient,job:Job):FinanceReportClient{
   return {rpc:async(name,args)=>{
     try{
       if(args.p_company!==job.company_id)throw new Error("Wrong company");
-      const operation=name==="tw_accounting_party_lookup"?"party_lookup":name==="tw_finance_statement_snapshot"?"statement":name==="tw_accounting_open_items"?"outstanding":null;
+      const operation=name==="tw_finance_accounting_controls"?"controls":name==="tw_finance_analysis_snapshot"?"analysis":name==="tw_accounting_party_lookup"?"party_lookup":name==="tw_finance_statement_snapshot"?"statement":name==="tw_accounting_open_items"?"outstanding":null;
       if(!operation)throw new Error("Unsupported report operation");
-      const options=args.p_options as {reportMode?:string;display?:string}|undefined;
-      const parameters=operation==="party_lookup"?{search:args.p_search}:operation==="outstanding"?{party:args.p_party,currency:args.p_currency}:{action:options?.reportMode==="profit"?"pnl":args.p_kind==="all"?"custom_ledger":"client_statement",account:args.p_account,display:options?.display,from:args.p_from,to:args.p_to,party:args.p_party,offset:args.p_offset};
+      const options=args.p_options as {reportMode?:string;display?:string;summaryOnly?:boolean}|undefined;
+      const parameters=operation==="controls"?{from:args.p_from,to:args.p_to,section:args.p_section}:operation==="analysis"?{account:args.p_accounts,display:args.p_display,from:args.p_from,to:args.p_to}:operation==="party_lookup"?{search:args.p_search,kind:args.p_kind}:operation==="outstanding"?{party:args.p_party,currency:args.p_currency,kind:args.p_kind}:{action:options?.summaryOnly?"financial_position":options?.reportMode==="profit"?"pnl":args.p_kind==="all"?"custom_ledger":args.p_kind==="vendor"?"supplier_statement":"client_statement",account:args.p_account,display:options?.display,from:args.p_from,to:args.p_to,party:args.p_party,offset:args.p_offset};
       return {data:await rpc(db,"tw_finance_mail_read",{p_job:job.id,p_lease:job.lease_id,p_operation:operation,p_args:parameters}),error:null};
     }catch{return {data:null,error:"Delegated report unavailable"};}
   }};
