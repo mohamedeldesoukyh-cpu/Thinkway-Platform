@@ -10,6 +10,16 @@ import {
 
 assert.equal(computeAgencyFeeAmount(100_000, 10_000, 5), 5_500);
 
+// Keep the AF rate precision through billing; round only the money amounts.
+const preciseAfBilling = computeClientBilling({
+  revenueBeforeVat: 1120,
+  agencyFeePercent: 8.391234,
+  vatPercent: 14,
+});
+assert.equal(preciseAfBilling.agencyFeePercent, 8.391234);
+assert.equal(preciseAfBilling.agencyFeeAmount, 93.98);
+assert.equal(preciseAfBilling.totalBilling, 1383.94);
+
 // Assignment details must separate VAT from revenue and profit.
 assert.deepEqual(assignmentClientBilling({ revenue_before_vat: 40000, revenue_vat_percent: 14 }), {
   subtotal: 40000, vatAmount: 5600, totalBilling: 45600,

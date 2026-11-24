@@ -28,16 +28,16 @@ const PaneContext = createContext<{ open: (target: Target) => void; selected: Ta
 export const useAssignmentCommercialPane = () => useContext(PaneContext);
 const keyOf = (target: Target) => `${target.lineId}:${target.deliverableId ?? "parent"}`;
 
-function FormattedNumber({ value, onChange, disabled, integer = false, max, percentage = false }: {
-  value: number; onChange: (value: number) => void; disabled?: boolean; integer?: boolean; max?: number; percentage?: boolean;
+function FormattedNumber({ value, onChange, disabled, integer = false, max, percentage = false, precision = 2 }: {
+  value: number; onChange: (value: number) => void; disabled?: boolean; integer?: boolean; max?: number; percentage?: boolean; precision?: number;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
-  const formatted = value.toLocaleString("en-US", { minimumFractionDigits: integer ? 0 : 2, maximumFractionDigits: integer ? 0 : 2 });
+  const formatted = value.toLocaleString("en-US", { minimumFractionDigits: integer ? 0 : 2, maximumFractionDigits: integer ? 0 : precision });
   return <span className={percentage ? "acp-number acp-percentage" : "acp-number"}><input type="text" inputMode={integer ? "numeric" : "decimal"} autoComplete="off" disabled={disabled}
     value={editing ?? formatted} onFocus={() => setEditing(formatted)}
     onChange={event => {
       const next = event.target.value.replace(/,/g, "").trim();
-      if (!(integer ? /^\d*$/ : /^\d*(?:\.\d{0,2})?$/).test(next)) return;
+      if (!(integer ? /^\d*$/ : new RegExp(`^\\d*(?:\\.\\d{0,${precision}})?$`)).test(next)) return;
       const parsed = Number(next);
       if (!Number.isFinite(parsed) || (max !== undefined && parsed > max)) return;
       setEditing(next);
@@ -200,7 +200,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
     } catch { setMessage({ ok: false, text: "Unable to save. Your edits have been kept; please try again." }); }
     finally { setPending(false); }
   }
-  const number = (label: string, field: keyof Omit<Draft, "currency">, options?: { disabled?: boolean; max?: number; integer?: boolean }) => <label className="acp-field">{label}<FormattedNumber key={selectedKey + field} value={draft[field]} disabled={readOnly || (!vendorCorrection && fx.dirty) || options?.disabled || ((vendorCorrection || clientLocked) && ["revenue", "urRevenue", "af", "revVat"].includes(field)) || (costLocked && ["cost", "urCost", "costVat"].includes(field)) || (field === "qty" && (costLocked || clientLocked))} integer={options?.integer} max={options?.max} percentage={field === "costVat" || field === "revVat" || field === "af"} onChange={value => change(field, value)} />{!["qty", "costVat", "revVat", "af"].includes(field) && fx.equivalent(draft[field], field === "cost" || field === "urCost" ? "cost" : "revenue", vendorCorrection && (field === "cost" || field === "urCost") ? draft.currency : revenueCurrency)}</label>;
+  const number = (label: string, field: keyof Omit<Draft, "currency">, options?: { disabled?: boolean; max?: number; integer?: boolean }) => <label className="acp-field">{label}<FormattedNumber key={selectedKey + field} value={draft[field]} disabled={readOnly || (!vendorCorrection && fx.dirty) || options?.disabled || ((vendorCorrection || clientLocked) && ["revenue", "urRevenue", "af", "revVat"].includes(field)) || (costLocked && ["cost", "urCost", "costVat"].includes(field)) || (field === "qty" && (costLocked || clientLocked))} integer={options?.integer} precision={field === "af" ? 6 : 2} max={options?.max} percentage={field === "costVat" || field === "revVat" || field === "af"} onChange={value => change(field, value)} />{!["qty", "costVat", "revVat", "af"].includes(field) && fx.equivalent(draft[field], field === "cost" || field === "urCost" ? "cost" : "revenue", vendorCorrection && (field === "cost" || field === "urCost") ? draft.currency : revenueCurrency)}</label>;
   const total = (label: string, value: number, side: "cost" | "revenue" = "revenue") => <div className="acp-total"><span>{label}</span><output>{value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</output>{fx.equivalent(value, side, vendorCorrection && side === "cost" ? draft.currency : revenueCurrency)}</div>;
   const editor = enabled && line && selected ? <section ref={pane} data-shortcut-pane className="assignment-commercial-pane" aria-label="Assignment cost and revenue editor" style={{ height }}>
     <div className="acp-resizer" role="separator" aria-label="Resize assignment editor" aria-orientation="horizontal" aria-valuemin={260} aria-valuemax={Math.max(260, Math.floor((host?.clientHeight ?? 700) * .65))} aria-valuenow={Math.round(height)} tabIndex={0} title="Drag to resize; double-click to reset"
