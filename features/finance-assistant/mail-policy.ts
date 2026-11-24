@@ -29,7 +29,12 @@ export function financeEmailText(reply: FinanceReply) {
     ...(source.tables ?? []).map(table => `${table.heading}\n${table.columns.join(" | ")}\n${table.rows.map(row => row.join(" | ")).join("\n")}`)]),
     `Prepared: ${reply.retrievedAt}`, "Amgad — AI Finance Assistant, Thinkway"].join("\n\n");
 }
-const approvalSchema = z.object({userId:z.string().uuid(),threadId:z.string().uuid(),emailId:z.string().uuid(),recipient:z.string().email(),text:z.string().min(1).max(180000),expires:z.number(),nonce:z.string().uuid()}).strict();
+export const financeAttachmentSchema=z.object({filename:z.literal("Amgad-accounting-report.pdf"),content:z.string().max(2_700_000).regex(/^[A-Za-z0-9+/]+={0,2}$/),content_type:z.literal("application/pdf")}).strict();
+export function financeEmailHtml(text:string){
+ const escaped=text.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+ return `<html><body style="margin:0;background:#f4f5f8;font-family:Arial,sans-serif"><main style="max-width:760px;margin:24px auto;background:white;border:1px solid #dce1e8;border-radius:12px;padding:28px"><h1 style="font-size:22px;color:#080642">Thinkway · Finance</h1><p style="color:#64748b">Amgad — AI Finance Assistant</p><div dir="auto" style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.7">${escaped}</div><hr style="border:0;border-top:1px solid #e2e8f0;margin-top:24px"><p style="font-size:12px;color:#64748b">Confidential accounting information · Thinkway</p></main></body></html>`;
+}
+const approvalSchema = z.object({userId:z.string().uuid(),threadId:z.string().uuid(),emailId:z.string().uuid(),recipient:z.string().email(),text:z.string().min(1).max(180000),attachments:z.array(financeAttachmentSchema).max(1).optional(),expires:z.number(),nonce:z.string().uuid()}).strict();
 export type MailApproval = z.infer<typeof approvalSchema>;
 export function signMailApproval(value: MailApproval, secret: string) {
   const payload = Buffer.from(JSON.stringify(approvalSchema.parse(value))).toString("base64url");

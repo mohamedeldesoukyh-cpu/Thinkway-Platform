@@ -53,6 +53,10 @@
   },
   "crons": [
     {
+      "path": "/api/cron/finance-mail",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/publication-metrics",
       "schedule": "0 2 * * *"
     },

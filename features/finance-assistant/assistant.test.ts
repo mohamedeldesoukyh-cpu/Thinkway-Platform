@@ -11,6 +11,14 @@ function provider(replies: string[], requests: LlmCompletionRequest[] = []): Llm
   } };
 }
 
+test("empty posting-gap results never certify that Media and Accounting agree",async()=>{
+ for(const message of ["Review Media and Accounting differences","راجع الفرق بين الميديا والمحاسبة"]){
+  const requests:LlmCompletionRequest[]=[];
+  const result=await runFinanceAssistant({message,history:[],companyId:"11111111-1111-4111-8111-111111111111",yearId:null},{provider:provider([JSON.stringify({action:"media_accounting_review",from:"2026-11-01",to:"2026-11-30",documentType:"all"})],requests),execute:async()=>({title:"Posting gaps",href:"/finance/posting-center",scope:"Posting gaps only",facts:{count:0}})});
+  assert.equal(requests.length,1);assert.match(result.content,/does not establish|لا يثبت/);assert.match(result.content,/No corrections|لم يتم/);
+ }
+});
+
 test("Arabic statement requests execute a validated report and retain server evidence", async () => {
   const requests: LlmCompletionRequest[] = [];
   const evidence = { title: "Client", href: "/reports/statements", scope: "Period movement", facts: { currency: "EGP", debit: 120 } };

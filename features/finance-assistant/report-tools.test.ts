@@ -29,7 +29,7 @@ test("ambiguous clients never cause a ledger read",async()=>{
 });
 test("client statement keeps posted opening and closing balances separate by currency",async()=>{
   const calls: {name:string;args:Record<string,unknown>}[]=[];
-  const evidence=await executeFinanceReport(database([[{id:companyId,name:"Client",code:"CL1"}],{currency:"FC",count:150,accounts:[
+  const evidence=await executeFinanceReport(database([[{id:companyId,name:"Client",code:"CL1"}],{currency:"FC",count:0,rows:[],accounts:[
     {account:"121001",name:"Receivable",currency:"USD",opening:"100",debit:"50",credit:"20",closing:"130"},
     {account:"121001",name:"Receivable",currency:"EGP",opening:"2000",debit:"0",credit:"500",closing:"1500"},
   ]}],calls),setup,yearId,{action:"client_statement",clientName:"Client",from:null,to:null,display:"foreign"});

@@ -6,9 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { FinanceReply } from "./contracts";
 import { FinanceMailWorkspace } from "./mail-workspace";
+import { FinanceAutomationWorkspace } from "./automation-workspace";
+import { FinanceCorrectionReview } from "./correction-review";
+import { FinanceReportDownload } from "./report-download";
+import { FinanceSavedReports } from "./saved-reports";
 
 type Message = { role: "user" | "assistant"; content: string; reply?: FinanceReply };
-const suggestions = ["Show the P&L for the selected fiscal year", "هات كشف حساب عميل", "What can you help me with?"];
+const suggestions = ["Show the P&L for the selected fiscal year", "هات كشف حساب عميل", "Why is there a difference between Media and Accounting?"];
 
 export function FinanceAssistantWorkspace({companyId,yearId}:{companyId:string;yearId:string|null}) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -57,6 +61,8 @@ export function FinanceAssistantWorkspace({companyId,yearId}:{companyId:string;y
           {message.reply?.sources.map((source) => <div key={source.href} className="mt-4 border-t pt-3">
             <Link className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4" href={source.href}>{source.title}</Link>
             <p className="text-sm text-muted-foreground">{source.scope}</p>
+            {source.reportPlan&&<FinanceReportDownload plan={source.reportPlan} companyId={companyId} yearId={yearId}/>}
+            {source.corrections?.map(correction=><FinanceCorrectionReview key={`${correction.type}:${correction.id}`} correction={correction}/>)}
             {source.tables?.map((table,tableIndex)=><div key={tableIndex} className="mt-4 overflow-x-auto rounded-lg border" role="region" aria-label={table.heading} tabIndex={0} dir="ltr"><table className="w-full text-left text-sm"><caption className="p-3 text-left font-semibold">{table.heading}</caption><thead className="bg-muted"><tr>{table.columns.map((column,i)=><th key={i} scope="col" className="whitespace-nowrap px-3 py-2">{column}</th>)}</tr></thead><tbody>{table.rows.map((row,i)=><tr key={i} className="border-t">{row.map((cell,j)=><td key={j} className="px-3 py-2 tabular-nums" dir="auto">{cell}</td>)}</tr>)}</tbody></table></div>)}
             <details className="mt-2"><summary className="cursor-pointer py-2 text-sm">Verified report data</summary><pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded bg-muted p-3 text-xs" dir="ltr">{JSON.stringify(source.facts, null, 2)}</pre></details>
           </div>)}
@@ -68,11 +74,12 @@ export function FinanceAssistantWorkspace({companyId,yearId}:{companyId:string;y
         {error && <p id="finance-error" role="alert" className="text-sm text-destructive">{error}</p>}
         <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-muted-foreground">Chat lasts for this page session.</p><Button type="submit" disabled={busy || !draft.trim()} className="min-h-11">{busy ? "Checking your request…" : "Ask Finance"}</Button></div>
       </form>
+      <FinanceSavedReports key={companyId} companyId={companyId} onRun={reply=>setMessages(previous=>[...previous,{role:"assistant",content:reply.content,reply}])}/>
     </section>
     <aside className="space-y-5 text-sm">
       <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">Connected to TW Accounting</h2><p className="mt-2 leading-relaxed text-muted-foreground">Client account statements and ledger-based P&L. Reports include posted, unlocked entries and use journal dates. Source details show the exact scope.</p></section>
       <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">Google Workspace + Resend</h2><p className="mt-2 break-words">amgad@thinkwaymedia.com</p><p className="mt-2 leading-relaxed text-muted-foreground">Forwarding is configured with Gmail copies retained. Use the inbox below to check connectivity and prepare replies for the approved finance team.</p></section>
-      <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">First release</h2><p className="mt-2 leading-relaxed text-muted-foreground">Reports and explanations are available. Document uploads, voice, transaction approval and maintained IFRS references are next.</p></section>
+      <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">Reports and operational review</h2><p className="mt-2 leading-relaxed text-muted-foreground">Download system PDFs, save custom ledger reports, and review Media posting gaps. Eligible posting corrections require document-specific approval. Full balance reconciliation, uploaded-document processing, voice and maintained IFRS references are not enabled yet.</p></section>
     </aside>
-  </div><FinanceMailWorkspace key={`${companyId}:${yearId}`} companyId={companyId} yearId={yearId}/></>;
+  </div><FinanceMailWorkspace key={`${companyId}:${yearId}`} companyId={companyId} yearId={yearId}/><FinanceAutomationWorkspace key={`automation:${companyId}:${yearId}`} companyId={companyId} yearId={yearId}/></>;
 }

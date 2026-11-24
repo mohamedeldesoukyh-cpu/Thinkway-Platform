@@ -24,6 +24,19 @@ export const financePlanSchema = z.discriminatedUnion("action", [
     display: z.enum(["local", "USD", "foreign"]),
   }).strict(),
   z.object({
+    action: z.literal("custom_ledger"),
+    title: z.string().trim().min(1).max(100),
+    from: date.nullable(), to: date.nullable(),
+    display: z.enum(["local","USD","foreign"]),
+    accounts: z.array(z.string().regex(/^\d{1,6}$/)).max(20),
+    columns: z.array(z.enum(["date","number","reference","account","name","description","party","report_currency","debit","credit","balance"])).min(2).max(11),
+  }).strict(),
+  z.object({
+    action: z.literal("media_accounting_review"),
+    from: date.nullable(), to: date.nullable(),
+    documentType: z.enum(["all","client_invoice","supplier_invoice","internal_cost","client_credit_note","vendor_credit_note","client_debit_note","vendor_debit_note"]),
+  }).strict(),
+  z.object({
     action: z.literal("pnl"),
     from: date.nullable(), to: date.nullable(),
     display: z.enum(["local", "USD", "foreign"]),
@@ -34,6 +47,8 @@ export const financePlanSchema = z.discriminatedUnion("action", [
 export type FinancePlan = z.infer<typeof financePlanSchema>;
 export type FinanceChatInput = z.infer<typeof financeChatSchema>;
 export type FinanceEvidence = {
+  reportPlan?: Exclude<FinancePlan,{action:"reply"}>;
+  corrections?: Array<{company:string;id:string;type:string;token:string;number:string;summary:string}>;
   tables?: Array<{heading:string;columns:string[];rows:string[][]}>;
   title: string;
   href: string;

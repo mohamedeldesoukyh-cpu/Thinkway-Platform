@@ -16,6 +16,7 @@ export const PUBLIC_ROUTE_PREFIXES = [
 ] as const;
 
 export function isPublicPath(pathname: string): boolean {
+  if (pathname === "/api/webhooks/finance-mail") return true; // Verified Svix signature in handler.
   if (pathname === "/robots.txt") return true;
   // These downloads authenticate the signed review token inside the handler.
   // Do not require an internal staff session for a client workspace export.

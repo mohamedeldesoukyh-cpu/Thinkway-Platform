@@ -1,0 +1,41 @@
+-- Development only; every queue/config change rolls back, no business documents created.
+BEGIN;
+DO $$
+DECLARE actor uuid;c uuid;y uuid;e uuid:=gen_random_uuid();t uuid:=gen_random_uuid();j uuid;lease uuid;v jsonb;blocked boolean;
+BEGIN
+ SELECT p.id INTO STRICT actor FROM profiles p JOIN roles r ON r.id=p.role_id WHERE r.slug='super_admin' AND p.is_active LIMIT 1;
+ SELECT company_id,id INTO STRICT c,y FROM tw_accounting_years LIMIT 1;
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal2')::text,true);
+ SET LOCAL ROLE authenticated;
+ PERFORM tw_finance_mail_configure(c,y,true);
+ RESET ROLE;
+ SET LOCAL ROLE service_role;
+ j:=tw_finance_mail_enqueue(e,t,'mohamedeldesouky@thinkwaymedia.com');
+ IF j IS NULL OR tw_finance_mail_enqueue(e,t,'mohamedeldesouky@thinkwaymedia.com')<>j THEN RAISE EXCEPTION 'Enqueue deduplication failed';END IF;
+ blocked:=false;BEGIN PERFORM tw_finance_mail_enqueue(gen_random_uuid(),t,'outsider@example.com');EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Unapproved sender accepted';END IF;
+ SELECT lease_id INTO lease FROM tw_finance_mail_claim() WHERE id=j;
+ IF lease IS NULL OR EXISTS(SELECT 1 FROM tw_finance_mail_claim() WHERE id=j) THEN RAISE EXCEPTION 'Lease exclusivity failed';END IF;
+ v:=tw_finance_mail_read(j,lease,'setup');
+ IF v->'company'->>'id'<>c::text THEN RAISE EXCEPTION 'Wrong delegated company';END IF;
+ blocked:=false;BEGIN PERFORM tw_finance_mail_read(j,gen_random_uuid(),'setup');EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Wrong lease accepted';END IF;
+ blocked:=false;BEGIN PERFORM tw_finance_mail_read(j,lease,'post');EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Write delegation accepted';END IF;
+ UPDATE tw_finance_mail_jobs SET status='prepared',response_text='Rollback fixture' WHERE id=j;
+ IF NOT EXISTS(SELECT 1 FROM tw_finance_mail_claim_send() WHERE id=j) THEN RAISE EXCEPTION 'Send claim failed';END IF;
+ IF EXISTS(SELECT 1 FROM tw_finance_mail_claim_send() WHERE id=j) THEN RAISE EXCEPTION 'Concurrent send claimed';END IF;
+ UPDATE tw_finance_mail_jobs SET first_send_at=now()-interval '21 hours',lease_until=now()-interval '1 minute' WHERE id=j;
+ PERFORM tw_finance_mail_claim_send();
+ IF (SELECT status FROM tw_finance_mail_jobs WHERE id=j)<>'needs_review' THEN RAISE EXCEPTION 'Unsafe late send retry';END IF;
+ RESET ROLE;
+ SET LOCAL ROLE authenticated;
+ blocked:=false;BEGIN PERFORM tw_finance_mail_enqueue(gen_random_uuid(),t,'mohamedeldesouky@thinkwaymedia.com');EXCEPTION WHEN insufficient_privilege THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Authenticated caller accessed service queue';END IF;
+ PERFORM tw_finance_mail_configure(c,y,false);
+ RESET ROLE;
+ SET LOCAL ROLE service_role;
+ IF tw_finance_mail_enqueue(gen_random_uuid(),t,'mohamedeldesouky@thinkwaymedia.com') IS NOT NULL THEN RAISE EXCEPTION 'Disabled automation enqueued';END IF;
+ RAISE NOTICE 'Finance mail delegation, deduplication, leases, recipient restrictions and retry expiry passed';
+END $$;
+ROLLBACK;

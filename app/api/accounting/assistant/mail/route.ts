@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { accountingContext,loadAccountingSetup } from "@/features/accounting/setup-server";
 import { financeInboxRequest,financeMailKey,loadFinanceEmail,verifyFinanceInbox } from "@/features/finance-assistant/mail-server";
-import { financeEmailText,isFinanceRequester,mailSchema,reportRecipient,signMailApproval,verifyMailApproval } from "@/features/finance-assistant/mail-policy";
+import { financeEmailHtml,financeEmailText,isFinanceRequester,mailSchema,reportRecipient,signMailApproval,verifyMailApproval } from "@/features/finance-assistant/mail-policy";
+import { financeReportPdf } from "@/features/finance-assistant/report-pdf";
 import { runFinanceAssistant } from "@/features/finance-assistant/assistant";
 import { executeFinanceReport } from "@/features/finance-assistant/report-tools";
 import { FinanceAiProvider } from "@/features/finance-assistant/provider";
@@ -11,7 +12,7 @@ import { consumeRateLimit } from "@/lib/security/rate-limit";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
-export const maxDuration=60;
+export const maxDuration=120;
 const json=(body:unknown,status=200)=>Response.json(body,{status,headers:{"Cache-Control":"private, no-store"}});
 async function access() {
   const ctx=await accountingContext();
@@ -36,7 +37,7 @@ export async function GET(request:Request) {
 }
 const inputSchema=z.discriminatedUnion("action",[
   z.object({action:z.literal("prepare"),threadId:z.string().uuid(),emailId:z.string().uuid(),companyId:z.string().uuid(),yearId:z.string().uuid().nullable()}).strict(),
-  z.object({action:z.literal("send"),approval:z.string().max(300000)}).strict(),
+  z.object({action:z.enum(["send","preview-pdf"]),approval:z.string().max(4_000_000)}).strict(),
 ]);
 export async function POST(request:Request) {
   if(!assertCsrfRequest(request).ok)return json({error:"Invalid request origin."},403);
@@ -45,15 +46,19 @@ export async function POST(request:Request) {
   let input;try{input=inputSchema.parse(await request.json());}catch{return json({error:"Invalid email request."},400);}
   try{
     await verifyFinanceInbox();
-    if(input.action==="send"){
+    if(input.action!=="prepare"){
+      const approved=verifyMailApproval(input.approval,financeMailKey(),ctx.user.id);
+      if(input.action==="preview-pdf"){
+        const attachment=approved.attachments?.[0];if(!attachment)return json({error:"No PDF in this reply."},400);
+        return new Response(new Uint8Array(Buffer.from(attachment.content,"base64")),{headers:{"Content-Type":"application/pdf","Content-Disposition":'attachment; filename="Amgad-accounting-report.pdf"',"Cache-Control":"private, no-store"}});
+      }
       // Sending is enabled separately after development verification and release approval.
       if(process.env.FINANCE_MAIL_SEND_ENABLED!=="true")return json({error:"Email sending is disabled in this environment. Review the prepared reply below."},409);
-      const approved=verifyMailApproval(input.approval,financeMailKey(),ctx.user.id);
       const mail=await loadFinanceEmail(approved.threadId,approved.emailId);
       if(reportRecipient(mail)!==approved.recipient)throw new Error("The reply recipient changed. Prepare the reply again.");
       const sent=z.object({id:z.string()}).parse(await financeInboxRequest(`/threads/${approved.threadId}/emails/${approved.emailId}/reply`,{
         method:"POST",headers:{"Idempotency-Key":`amgad-review-${approved.nonce}`},
-        body:JSON.stringify({text:approved.text,cc:[],bcc:[],reply_all:false,headers:{"Auto-Submitted":"auto-replied"}}),
+        body:JSON.stringify({text:approved.text,html:financeEmailHtml(approved.text),attachments:approved.attachments??[],cc:[],bcc:[],reply_all:false,headers:{"Auto-Submitted":"auto-replied"}}),
       }));
       return json({sent:true,id:sent.id});
     }
@@ -72,7 +77,9 @@ export async function POST(request:Request) {
       execute:plan=>executeFinanceReport(ctx.db,setup,input.yearId,plan),
     });
     const body=financeEmailText(reply)+(mail.attachments?.length ? "\n\nAttachments were not read or processed. / لم تتم قراءة أو معالجة المرفقات." : "");
-    const approval=signMailApproval({userId:ctx.user.id,threadId:input.threadId,emailId:input.emailId,recipient,text:body,expires:Date.now()+10*60*1000,nonce:randomUUID()},financeMailKey());
-    return json({recipient,text:body,approval,sendEnabled:process.env.FINANCE_MAIL_SEND_ENABLED==="true"});
+    const report=reply.sources.find(source=>source.tables?.length);
+    const attachments=report?[{filename:"Amgad-accounting-report.pdf" as const,content:(await financeReportPdf(report,reply.retrievedAt)).toString("base64"),content_type:"application/pdf" as const}]:[];
+    const approval=signMailApproval({userId:ctx.user.id,threadId:input.threadId,emailId:input.emailId,recipient,text:body,attachments,expires:Date.now()+10*60*1000,nonce:randomUUID()},financeMailKey());
+    return json({recipient,text:body,approval,hasPdf:attachments.length>0,sendEnabled:process.env.FINANCE_MAIL_SEND_ENABLED==="true"});
   }catch(error){return json({error:error instanceof Error?error.message:"Unable to process email."},502);}
 }
