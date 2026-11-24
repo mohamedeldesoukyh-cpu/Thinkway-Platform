@@ -41,3 +41,7 @@ test("profitability email contains native escaped table and mandatory allocation
  const text=financeEmailText({content:"Your report is ready.",retrievedAt:"2026-11-24",sources:[{title:"Profit",scope:"",href:"/accounting",reportPlan:plan,facts:{provisional:true},tables:[{heading:"EGP",columns:["Client","Revenue","Cost","GP"],rows:[["<client>","100.00","60.00","40.00"]]}]}]},{pdfAttached:true,language:"en"});
  const html=financeEmailHtml(text);assert.match(html,/&lt;client&gt;/);assert.match(html,/<th/);assert.match(html,/profit is provisional/);assert.doesNotMatch(html,/<img|background:/);
 });
+test("Arabic analysis emails localize headings without bilingual boilerplate",()=>{
+ const text=financeEmailText({content:"التقرير جاهز.",retrievedAt:"2026-11-24",sources:[{title:"Profit",scope:"",href:"/accounting",reportPlan:plan,facts:{},tables:[{heading:"Client profitability · EGP",columns:["Client","Revenue","Direct cost","Gross profit"],rows:[["Client name","100.00","60.00","40.00"]]}]}]},{pdfAttached:true,language:"ar"});
+ assert.match(text,/الإيرادات/);assert.match(text,/مجمل الربح/);assert.doesNotMatch(text,/Client profitability|Direct cost|Gross profit|report PDF is attached/);
+});

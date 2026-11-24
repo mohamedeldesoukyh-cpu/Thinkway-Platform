@@ -1,5 +1,5 @@
 import {z} from "zod";
-import {cents,decimal} from "@/features/accounting/journal-model";
+import {cents,decimal,money} from "@/features/accounting/journal-model";
 import {partyCode} from "@/features/accounting/party-code";
 import {isWithin} from "@/features/accounting/chart-model";
 import type {AccountingSetup} from "@/features/accounting/setup-types";
@@ -14,7 +14,7 @@ const captions={client:"Client",vendor:"Supplier / creator",campaign:"Campaign",
 const areaGroups:Record<Plan["area"],string[]>={all:[],profitability:["410000","510000"],revenue:["400000"],direct_cost:["510000"],expenses:["500000","600000","700000","800000"],banking:["110000"],tax:["140000","230000","800000"],fixed_assets:["150000","633000"],receivables:["120000"],payables:["210000"]};
 type Totals={revenue:bigint;cost:bigint;debit:bigint;credit:bigint;count:number};
 const zero=():Totals=>({revenue:BigInt(0),cost:BigInt(0),debit:BigInt(0),credit:BigInt(0),count:0});
-function values(t:Totals,measures:Plan["measures"]){return measures.map(m=>m==="margin"?t.revenue===BigInt(0)?"—":decimal((t.revenue-t.cost)*BigInt(10000)/t.revenue):decimal(m==="gross_profit"?t.revenue-t.cost:m==="net"?t.debit-t.credit:t[m]));}
+function values(t:Totals,measures:Plan["measures"]){return measures.map(m=>m==="margin"?t.revenue===BigInt(0)?"—":decimal((t.revenue-t.cost)*BigInt(10000)/t.revenue):money(m==="gross_profit"?t.revenue-t.cost:m==="net"?t.debit-t.credit:t[m]));}
 
 /** Only validated ledger amounts enter calculations. Unknown attribution is retained. */
 export function aggregateAccountingRows(rows:Row[],setup:AccountingSetup,plan:Plan){
@@ -23,12 +23,14 @@ export function aggregateAccountingRows(rows:Row[],setup:AccountingSetup,plan:Pl
  const groups=new Map<string,{currency:string;labels:string[];totals:Totals}>();
  const controls=new Map<string,Totals>();
  let unassigned=0;
+ const included:Row[]=[];
  for(const row of rows){
   if(row.transaction_type==="closing")continue;
   const account=chart.find(a=>a.code===row.account);
   if(!account)throw Error("Report account is missing from the chart.");
   if(areaGroups[plan.area].length&&!areaGroups[plan.area].some(root=>within(row.account,root)))continue;
   if(plan.accounts.length&&!plan.accounts.some(root=>within(row.account,root)||row.account.startsWith(root)))continue;
+  included.push(row);
   const revenue=account.type==="Revenue"?cents(row.credit)-cents(row.debit):BigInt(0);
   const cost=within(row.account,"510000")?cents(row.debit)-cents(row.credit):BigInt(0);
   if(!row.client_id&&(revenue!==BigInt(0)||cost!==BigInt(0)))unassigned++;
@@ -43,7 +45,7 @@ export function aggregateAccountingRows(rows:Row[],setup:AccountingSetup,plan:Pl
  const measures=[...new Set(plan.measures)];
  const tables=[...controls].sort(([a],[b])=>a.localeCompare(b)).map(([currency,total])=>({orientation:"portrait" as const,heading:`${plan.title} · ${currency}`,columns:[...plan.groupBy.map(g=>captions[g]),...measures.map(m=>captions[m])],rows:[...[...groups.values()].filter(g=>g.currency===currency).sort((a,b)=>a.labels.join().localeCompare(b.labels.join())).map(g=>[...g.labels,...values(g.totals,measures)]),["Total",...plan.groupBy.slice(1).map(()=>""),...values(total,measures)]]}));
  if(!tables.length)tables.push({orientation:"portrait",heading:plan.title,columns:[...plan.groupBy.map(g=>captions[g]),...measures.map(m=>captions[m])],rows:[]});
- return {tables,unassigned,totals:[...controls].map(([currency,t])=>({currency,revenue:decimal(t.revenue),cost:decimal(t.cost),grossProfit:decimal(t.revenue-t.cost),count:t.count}))};
+ return {tables,unassigned,included,totals:[...controls].map(([currency,t])=>({currency,revenue:decimal(t.revenue),cost:decimal(t.cost),grossProfit:decimal(t.revenue-t.cost),count:t.count}))};
 }
 
 export async function accountingAnalysis(db:FinanceReportClient,setup:AccountingSetup,plan:Plan,yearId:string|null):Promise<FinanceEvidence>{
@@ -66,7 +68,7 @@ export async function accountingAnalysis(db:FinanceReportClient,setup:Accounting
  const selected=clientId?snapshot.rows.filter(r=>r.client_id===clientId):snapshot.rows;
  const result=aggregateAccountingRows(selected,setup,plan);
  const unresolved=snapshot.rows.filter(r=>!r.client_id).length;
- if(plan.includeTransactions)result.tables.push({orientation:"portrait",heading:"Requested transaction detail",columns:["Date","Document","Account","Client","Description","Currency","Debit","Credit"],rows:selected.filter(r=>r.transaction_type!=="closing").map(r=>[r.date,r.document_number??r.number,r.account,r.client_name??"Unassigned",r.description,r.report_currency,r.debit,r.credit])});
+ if(plan.includeTransactions)result.tables.push({orientation:"portrait",heading:"Requested transaction detail",columns:["Date","Document","Account","Client","Description","Currency","Debit","Credit"],rows:result.included.map(r=>[r.date,r.document_number??r.number,r.account,r.client_name??"Unassigned",r.description,r.report_currency,money(r.debit),money(r.credit)])});
  return {title:plan.title,href:`/accounting?company=${company.id}${yearId?`&year=${yearId}`:""}#amgad`,reportPlan:plan,tables:result.tables,
   scope:`${company.name} · ${plan.from} to ${plan.to} · Posted Accounting ledger including unlocked entries; closing entries excluded. Revenue and direct costs use configured chart groups; GP = revenue less direct cost, before overheads and tax. Client/campaign attribution uses source links; unassigned entries are never allocated by assumption. ${clientId&&unresolved?`${unresolved} entries without client attribution cannot be included in this client's figures.`:result.unassigned?`${result.unassigned} revenue/cost entries need attribution review; client GP is provisional.`:""}`,
   facts:{company:company.name,from:plan.from,to:plan.to,area:plan.area,groupBy:plan.groupBy,measures:plan.measures,totals:result.totals,unassignedEntries:clientId?unresolved:result.unassigned,provisional:clientId?unresolved>0:result.unassigned>0,accountingBasis:true}};

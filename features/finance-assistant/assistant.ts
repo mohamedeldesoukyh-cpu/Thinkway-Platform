@@ -57,6 +57,9 @@ Dates are null or YYYY-MM-DD. Use the actual requested dates, not the example. F
   const plan = financePlanSchema.parse(JSON.parse(planned.content));
   if (plan.action === "reply") return { content: plan.reply, sources: [], retrievedAt };
   const evidence = await dependencies.execute(plan);
+  if(plan.action==="accounting_analysis"&&Array.isArray(evidence.facts.totals)&&evidence.facts.totals.length===0){
+    return {content:financeLanguage(input.message)==="ar"?"لم تُعثر على قيود مُرحّلة تطابق نطاق التقرير والفترة المطلوبة. لا توجد مبالغ لعرضها في هذا التقرير؛ وهذا لا يعني خلو بقية الحسابات من المعاملات.":"No posted entries matched the requested report scope and period. There are no amounts to display in this report; this does not mean that other accounts have no transactions.",sources:[evidence],retrievedAt};
+  }
   if(plan.action==="media_accounting_review"&&evidence.facts.count===0){
     const content=/[\u0600-\u06ff]/.test(input.message.split(/\r?\n--\s*\r?\n/)[0])
       ? "لم يُعثر على مستندات غير مُرحّلة ضمن نطاق التقرير. هذا لا يثبت تطابق أرصدة الميديا والمحاسبة؛ فروق الأرباح والتوقيت والتخصيصات والقيود اليدوية لم تُفحص في هذا التقرير. لم يتم اقتراح أو تنفيذ تصحيحات."
