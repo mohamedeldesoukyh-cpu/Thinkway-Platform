@@ -66,7 +66,7 @@ application code rather than deleting stored reports, queue history or journals.
 - Existing `scripts/test-tw-accounting-media-posting.sql`: dev rollback fixtures;
   source types, same-serial reposting, accrual clearing and duplicate prevention.
 - `scripts/render-amgad-pdf-fixture.ts`: isolated bilingual 65-entry artifact;
-  all four rendered pages visually inspected. No business records are created.
+  all three compact rendered pages visually inspected; P&L summary verified on one page. No business records are created.
 
 ## Remaining requested capabilities
 

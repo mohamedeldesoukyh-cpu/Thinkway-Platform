@@ -15,7 +15,7 @@ export async function financeReportPdf(evidence:FinanceEvidence,retrievedAt:stri
  }
  const logo=await readFile(path.join(process.cwd(),"public/report-assets/statement-brand.png"));
  const html=formattedReportHtml({title:evidence.title,company:String(evidence.facts.company??"Thinkway"),caption:`${evidence.scope} Generated ${retrievedAt}.`,sections:evidence.tables})
-  .replace('<link rel="stylesheet" href="/report-assets/statement-shared.css">',`<style>${css}\ntd{overflow-wrap:anywhere}td,th{font-size:10px}h1,h2,p,td{unicode-bidi:plaintext}</style>`)
+  .replace('<link rel="stylesheet" href="/report-assets/statement-shared.css">',`<style>${css}\ntd{overflow-wrap:anywhere}td,th{font-size:10px}.page tbody td{padding:5px 8px}.page thead th{padding:7px 8px}.page .band{padding:16px 24px}.page .body{padding:16px 24px}.page .sum{margin:10px 0}.page .tile{padding:8px 12px}.page tr:has(+tr.total){break-after:avoid}.page tr.total{break-before:avoid}h1,h2,p,td{unicode-bidi:plaintext}</style>`)
   .replaceAll('/report-assets/statement-brand.png',`data:image/png;base64,${logo.toString("base64")}`);
  const result=await renderHtmlToPdf(html.replaceAll("No transactions for this selection.","No matching report rows for this selection."),{format:"A4",printBackground:true,preferCSSPageSize:true,margin:{top:"10mm",bottom:"10mm",left:"10mm",right:"10mm"}});
  if(!result.ok)throw Error("PDF generation failed. Please retry.");
