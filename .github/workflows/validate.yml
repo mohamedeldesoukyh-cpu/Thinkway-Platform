@@ -77,6 +77,9 @@ jobs:
       - name: BullMQ producer connection
         run: npm run test:bullmq-connection
 
+      - name: Background platform additions and creator isolation
+        run: npx tsx --test features/discovery/enrichment/platform-add-queue.test.ts features/discovery/enrichment/poll-creator-refresh.test.ts lib/creators/same-creator-identity.test.ts
+
       - name: Storage MIME allowlist
         run: npm run test:storage-mime
 
