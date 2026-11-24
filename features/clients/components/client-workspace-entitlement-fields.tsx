@@ -12,6 +12,7 @@ import {
   type ClientWorkspaceTabOverrides,
 } from "@/features/client-workspace/entitlement";
 import { ClientFormField, ClientFormSection } from "@/features/clients/components/client-form-ui";
+import { ClientCampaignWorkspaceSettings } from "./client-campaign-workspace-settings";
 
 const NAV_LABEL: Record<ClientWorkspaceNavSection, string> = {
   shortlist: "Shortlist",
@@ -22,6 +23,7 @@ const NAV_LABEL: Record<ClientWorkspaceNavSection, string> = {
 };
 
 export function ClientWorkspaceEntitlementFields({
+  clientId,
   enabled,
   packageId,
   overrides,
@@ -30,6 +32,7 @@ export function ClientWorkspaceEntitlementFields({
   onPackageChange,
   onOverridesChange,
 }: {
+  clientId?: string;
   enabled: boolean;
   packageId: ClientWorkspacePackage;
   overrides: ClientWorkspaceTabOverrides | null;
@@ -44,7 +47,7 @@ export function ClientWorkspaceEntitlementFields({
     <ClientFormSection
       icon={PanelsTopLeftIcon}
       title="Client Workspace"
-      description="Service entitlement for the client-facing workspace. Billing stays on the Client IO / retainer."
+      description="Internal controls for the client-facing workspace. Billing stays on the Client IO / retainer."
     >
       <input type="hidden" name="client_workspace_enabled" value={enabled ? "true" : "false"} />
       <input type="hidden" name="client_workspace_package" value={enabled ? packageId : ""} />
@@ -96,7 +99,7 @@ export function ClientWorkspaceEntitlementFields({
             className="text-[12px] font-semibold text-[#0048dd]"
             onClick={() => setCustomize((current) => !current)}
           >
-            {customize ? "Hide tab customization" : "Customize tabs"}
+            {customize ? "Hide package access overrides" : "Package access overrides"}
           </button>
           {customize ? (
             <div className="grid gap-2 rounded-[10px] border border-[#e6ebf3] p-3">
@@ -126,7 +129,7 @@ export function ClientWorkspaceEntitlementFields({
                 );
               })}
               <p className="text-[11.5px] text-[#5b6478]">
-                Locked tabs stay visible. Do not use this for the usual package assignment.
+                Locked tabs stay visible. Use the campaign workspace controls below to hide tabs from a shared link.
               </p>
             </div>
           ) : null}
@@ -136,6 +139,7 @@ export function ClientWorkspaceEntitlementFields({
           When Off, review links show a closed-service state. Internal campaign work is unchanged.
         </p>
       )}
+      {clientId && <ClientCampaignWorkspaceSettings key={clientId} clientId={clientId} disabled={disabled} />}
     </ClientFormSection>
   );
 }

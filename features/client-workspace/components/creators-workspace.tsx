@@ -115,7 +115,7 @@ export function CreatorsWorkspace({
     ? Object.fromEntries(view.creators.map(c => [c.creatorId, "accepted" as const]))
     : sharedSelection;
   const explore = intent === "explore";
-  const strategicOnly = view.review.source === "studio";
+  const strategicOnly = view.review.source === "studio" || Boolean(view.entitlement?.hiddenTabs?.includes("commercial"));
   const pendingIds = new Set(view.journey?.pendingCommercialApprovalCreatorIds ?? []);
   const confirmed = Boolean(view.journey?.selectionConfirmed);
   const canReopenSelection = confirmed && reopenSelectionAllowed({
@@ -387,7 +387,7 @@ export function CreatorsWorkspace({
           <p className="ck">Your Selection</p>
           <h2>{confirmed ? "Confirmed selection" : "Your Selection"}</h2>
           <p className="note">
-            {confirmed
+            {strategicOnly ? "Review and approve the creators selected for this campaign." : confirmed
               ? Boolean(view.hideCostAndFees)
                 ? "These Client Approved creators are included in the current quotation. Review Total Investment on Commercial. This is not final quotation approval."
                 : "These Client Approved creators are included in the current quotation. Review Cost, Agency Fees, and Total Investment on Commercial. This is not final quotation approval."
@@ -538,7 +538,7 @@ export function CreatorsWorkspace({
                   <p className="ck">Others</p>
                   <h3 className="nm" dir="auto">{creator.displayName}</h3>
                   {optionFields}
-                  {!hasOptions ? <CreatorInvestment creator={creator} currency={view.commercial.currency} isSelected={currentCampaign || state === "accepted"} hideCostAndFees={Boolean(view.hideCostAndFees)} showOriginalCurrency={showOriginalCurrency} /> : null}
+                  {!strategicOnly && !hasOptions ? <CreatorInvestment creator={creator} currency={view.commercial.currency} isSelected={currentCampaign || state === "accepted"} hideCostAndFees={Boolean(view.hideCostAndFees)} showOriginalCurrency={showOriginalCurrency} /> : null}
                   <span className={statusClass(state)}>{state === "accepted" ? "Selected" : state === "rejected" ? "Rejected" : "Under review"}</span>
                   {workspaceState.optionErrors[creator.creatorId] ? <p role="alert">{workspaceState.optionErrors[creator.creatorId]}</p> : null}
                 </div>
@@ -791,6 +791,7 @@ function CreatorDetailPane({
   showOriginalCurrency: boolean;
   hideCostAndFees: boolean;
 }) {
+  const pricingVisible = !useClientWorkspaceState().view.entitlement?.hiddenTabs?.includes("commercial");
   const location = brief?.location || formatLocation(creator.city, creator.country);
   const investmentAmount = creator.selectedQuotationItemIds !== undefined ? creator.investmentAmount : brief?.investmentAmount ?? creator.investmentAmount;
   const cardAmounts = {
@@ -919,7 +920,7 @@ function CreatorDetailPane({
           {thinkwayStatusLabel(creator.thinkwayStatus) ? (
             <span className="tag g sc ok">{thinkwayStatusLabel(creator.thinkwayStatus)}</span>
           ) : null}
-          {creator.selection === "accepted" && !isPricedClientInvestment(investmentAmount) ? (
+          {pricingVisible && creator.selection === "accepted" && !isPricedClientInvestment(investmentAmount) ? (
             <span className="tag g sc warn">Pricing required</span>
           ) : null}
         </div>
@@ -950,7 +951,7 @@ function CreatorDetailPane({
             <ReviewCreatorProfileLinks links={profileLinks} />
           </div>
         ) : null}
-        <div className="sec">
+        {pricingVisible && <div className="sec">
           <p className="st">Expected costs</p>
           <div className="duo">
             <div className="mc">
@@ -992,6 +993,7 @@ function CreatorDetailPane({
             </p>
           ) : null}
         </div>
+        }
         <div className="sec">
           <p className="st">Audience match</p>
           <p className="desc" style={{ marginBottom: 12 }}>{audienceMatch}</p>

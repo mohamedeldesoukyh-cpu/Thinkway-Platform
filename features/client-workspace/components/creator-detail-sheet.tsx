@@ -1,4 +1,5 @@
 "use client";
+import { useClientWorkspaceState } from "./client-workspace-state";
 
 import { useEffect, useState, useTransition } from "react";
 import { CheckIcon, XIcon } from "lucide-react";
@@ -70,6 +71,7 @@ export function CreatorDetailSheet({
   onRequestChanges: (message: string) => void;
 }) {
   const [brief, setBrief] = useState<ClientCreatorBrief | null>(null);
+  const pricingVisible = !useClientWorkspaceState().view.entitlement?.hiddenTabs?.includes("commercial");
   const [rejectReason, setRejectReason] = useState("");
   const [comment, setComment] = useState("");
   const [changeNote, setChangeNote] = useState("");
@@ -261,7 +263,7 @@ export function CreatorDetailSheet({
                 ) : null}
               </Section>
 
-              <Section title="Commercial">
+              {pricingVisible && <Section title="Commercial">
                 <p className="text-sm font-semibold">
                   Creator investment{" "}
                   {(() => {
@@ -280,6 +282,7 @@ export function CreatorDetailSheet({
                 </p>
               </Section>
 
+              }
               <Section title="Deliverables">
                 <p className="text-sm">
                   {deliverablesLabel(

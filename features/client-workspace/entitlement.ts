@@ -88,6 +88,7 @@ export type ClientWorkspacePreviewState = {
 };
 
 export type ClientWorkspaceEntitlementView = {
+  hiddenTabs?: ClientWorkspaceNavSection[];
   enabled: boolean;
   closed: boolean;
   unresolvedLegalEntity: boolean;
@@ -299,7 +300,7 @@ export function applyEntitlementToView(
   const next: ClientWorkspaceView = {
     ...view,
     entitlement,
-    visibleSections: [...CLIENT_WORKSPACE_JOURNEY_SECTIONS],
+    visibleSections: CLIENT_WORKSPACE_JOURNEY_SECTIONS.filter((section) => !entitlement.hiddenTabs?.includes(section)),
   };
   if (!isClientWorkspaceSectionOpen(entitlement, "approval")) {
     next.campaignExecution = emptyClientCampaignExecution();
@@ -310,7 +311,22 @@ export function applyEntitlementToView(
     next.quotation = undefined;
     next.clientEmails = [];
   }
+  if (entitlement.hiddenTabs?.includes("commercial")) {
+    return redactHiddenCommercialData(next);
+  }
   return next;
+}
+
+/** Strip embedded snapshots and creator prices too, before serializing to the browser. */
+export function redactHiddenCommercialData<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(redactHiddenCommercialData) as T;
+  if (value === null || typeof value !== "object") return value;
+  const hidden = /^(investmentAmount|originalInvestmentAmount|agencyFeeAmount|usageRightsAmount|approvedCommercial|quotation|shortlistInvestment|quotationInvestment|investmentDelta|cpe|cpm|emv|packageFingerprint)$/;
+  return Object.fromEntries(Object.entries(value).filter(([key]) => !hidden.test(key)).map(([key, item]) => [
+    key, key === "commercial" && item && typeof item === "object"
+      ? emptyClientCommercialSummary((item as ClientCommercialSummary).currency)
+      : redactHiddenCommercialData(item),
+  ])) as T;
 }
 
 export function entitlementPanelCopy(section: ClientWorkspaceNavSection): {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ClientPerformanceControls } from "./client-performance-controls";
 
 import {
   clientCampaignOpenHref,
@@ -130,6 +131,7 @@ export function CampaignDashboard({
       />
 
       <AttentionBar items={pendingReview} />
+      {inCampaign && <ClientPerformanceControls token={token} historical={historical} />}
       <OverdueStrip posts={overdue} onViewAll={() => setOverdueFocus((current) => current + 1)} />
 
       <section className="card">
