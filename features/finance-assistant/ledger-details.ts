@@ -8,7 +8,7 @@ export async function readLedgerDetails(db:FinanceReportClient,args:Record<strin
  const initial=schema.parse(first);
  if(initial.count>1000)throw Error("Narrow the report to at most 1,000 ledger entries.");
  const rows=[...initial.rows];
- for(let offset=100;offset<initial.count;offset+=100){
+ for(let offset=100;rows.length<initial.count&&offset<initial.count;offset+=100){
   const next=await db.rpc("tw_accounting_statement_filtered",{...args,p_offset:offset});
   if(next.error)throw Error("Ledger details unavailable.");
   const page=schema.parse(next.data);

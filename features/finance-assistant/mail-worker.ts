@@ -33,10 +33,10 @@ function delegatedReports(db:SupabaseClient,job:Job):FinanceReportClient{
   return {rpc:async(name,args)=>{
     try{
       if(args.p_company!==job.company_id)throw new Error("Wrong company");
-      const operation=name==="tw_accounting_party_lookup"?"party_lookup":name==="tw_accounting_statement_filtered"?"statement":null;
+      const operation=name==="tw_accounting_party_lookup"?"party_lookup":name==="tw_finance_statement_snapshot"?"statement":name==="tw_accounting_open_items"?"outstanding":null;
       if(!operation)throw new Error("Unsupported report operation");
       const options=args.p_options as {reportMode?:string;display?:string}|undefined;
-      const parameters=operation==="party_lookup"?{search:args.p_search}:{action:options?.reportMode==="profit"?"pnl":"client_statement",display:options?.display,from:args.p_from,to:args.p_to,party:args.p_party,offset:args.p_offset};
+      const parameters=operation==="party_lookup"?{search:args.p_search}:operation==="outstanding"?{party:args.p_party,currency:args.p_currency}:{action:options?.reportMode==="profit"?"pnl":args.p_kind==="all"?"custom_ledger":"client_statement",account:args.p_account,display:options?.display,from:args.p_from,to:args.p_to,party:args.p_party,offset:args.p_offset};
       return {data:await rpc(db,"tw_finance_mail_read",{p_job:job.id,p_lease:job.lease_id,p_operation:operation,p_args:parameters}),error:null};
     }catch{return {data:null,error:"Delegated report unavailable"};}
   }};

@@ -18,6 +18,15 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
 export const financePlanSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("reply"), reply: z.string().min(1).max(6000) }).strict(),
   z.object({
+    action: z.literal("pnl_comparison"), from: date, to: date,
+    comparisonFrom: date, comparisonTo: date,
+    display: z.enum(["local", "USD", "foreign"]),
+  }).strict(),
+  z.object({
+    action: z.literal("client_outstanding"), clientName: z.string().trim().min(2).max(120),
+    currency: z.string().regex(/^[A-Z]{3}$/), from: z.null(), to: z.null(),
+  }).strict(),
+  z.object({
     action: z.literal("client_statement"),
     clientName: z.string().trim().min(2).max(120),
     from: date.nullable(), to: date.nullable(),
@@ -42,7 +51,9 @@ export const financePlanSchema = z.discriminatedUnion("action", [
     display: z.enum(["local", "USD", "foreign"]),
   }).strict(),
 ]).refine((plan) => plan.action === "reply" || !plan.from || !plan.to || plan.from <= plan.to,
-  "The start date must precede the end date");
+  "The start date must precede the end date")
+  .refine(plan => plan.action !== "pnl_comparison" || plan.comparisonFrom <= plan.comparisonTo,
+    "Invalid comparison period");
 
 export type FinancePlan = z.infer<typeof financePlanSchema>;
 export type FinanceChatInput = z.infer<typeof financeChatSchema>;

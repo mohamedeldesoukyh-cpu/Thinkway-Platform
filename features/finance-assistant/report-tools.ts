@@ -6,6 +6,8 @@ import type { AccountingSetup } from "@/features/accounting/setup-types";
 import type { FinanceEvidence, FinancePlan } from "./contracts";
 import { mediaAccountingReview } from "./media-review";
 import { readLedgerDetails } from "./ledger-details";
+import { compareProfitReports } from "./comparison";
+import { cents, decimal } from "@/features/accounting/journal-model";
 
 const amount = z.string().regex(/^-?\d+(\.\d+)?$/);
 const accountSchema = z.object({account:z.string(),name:z.string(),currency:z.string(),opening:amount,debit:amount,credit:amount,closing:amount});
@@ -19,14 +21,22 @@ export async function executeFinanceReport(
 ): Promise<FinanceEvidence> {
   const company = setup.company;
   if (!company) throw new Error("Select an accounting company.");
+  if (plan.action === "pnl_comparison") {
+    const current = await executeFinanceReport(db,setup,yearId,{action:"pnl",from:plan.from,to:plan.to,display:plan.display});
+    const previous = await executeFinanceReport(db,setup,yearId,{action:"pnl",from:plan.comparisonFrom,to:plan.comparisonTo,display:plan.display});
+    const tables = compareProfitReports(current,previous);
+    return {title:"P&L comparison",href:current.href,reportPlan:plan,tables,
+      scope:`${current.scope} Comparison: ${plan.comparisonFrom} to ${plan.comparisonTo}. Change = current minus comparison; signed expenses reduce profit. Percentages use positive comparison balances only and truncate to two decimals. Periods may differ in length. Figures show variance, not its underlying business cause. Reports are retrieved sequentially; rerun after postings change.`,
+      facts:{company:company.name,currentFrom:plan.from,currentTo:plan.to,comparisonFrom:plan.comparisonFrom,comparisonTo:plan.comparisonTo,tables}};
+  }
   const year = setup.years.find(y => y.id === yearId);
-  if ((!plan.from || !plan.to) && !year) throw new Error("Select a fiscal year or specify both dates.");
-  const from = plan.from ?? year!.start_date, to = plan.to ?? year!.end_date;
+  if (plan.action !== "client_outstanding" && (!plan.from || !plan.to) && !year) throw new Error("Select a fiscal year or specify both dates.");
+  const from = plan.from ?? year?.start_date ?? "", to = plan.to ?? year?.end_date ?? "";
   if (from > to) throw new Error("Invalid reporting period.");
   if (plan.action === "media_accounting_review") return {...await mediaAccountingReview(db,company.id,company.name,from,to,plan.documentType),reportPlan:{...plan,from,to}};
   let partyId: string | null = null;
   let partyName: string | null = null;
-  if (plan.action === "client_statement") {
+  if (plan.action === "client_statement" || plan.action === "client_outstanding") {
     const found = await db.rpc("tw_accounting_party_lookup", {p_company:company.id,p_kind:"client",p_search:plan.clientName,p_selected:null});
     if (found.error) throw new Error("Client lookup unavailable.");
     const candidates = partySchema.parse(found.data);
@@ -37,6 +47,17 @@ export async function executeFinanceReport(
     };
     partyId = candidates[0].id; partyName = candidates[0].name;
   }
+  if (plan.action === "client_outstanding") {
+    const result=await db.rpc("tw_accounting_open_items",{p_company:company.id,p_kind:"client",p_party:partyId,p_currency:plan.currency,p_account:null});
+    if(result.error)throw Error("Outstanding items unavailable.");
+    const items=z.array(z.object({id:z.string(),number:z.string(),date:z.string(),due:z.string().nullable(),total:amount,settled:amount,adjustments:amount.optional(),outstanding:amount,currency:z.string(),account:z.string()})).max(1000).parse(result.data);
+    if(items.some(i=>i.currency!==plan.currency))throw Error("Unexpected item currency.");
+    const total=decimal(items.reduce((sum,i)=>sum+cents(i.outstanding),BigInt(0)));
+    return {title:`${partyName} — unsettled statement`,href:`/accounting?company=${company.id}#client-statements`,reportPlan:plan,
+      scope:`${company.name} · ${plan.currency} · Current open invoices and applied settlements at retrieval time, across fiscal years. This is not a historical balance or the complete ledger SOA; unallocated receipts and manual ledger entries may differ. No payment demand was sent.`,
+      tables:[{heading:`${partyName} · ${plan.currency}`,columns:["Document","Date","Due","Account","Total","Settled","Adjustments","Outstanding"],rows:[...items.map(i=>[i.number,i.date,i.due??"Not specified",i.account,i.total,i.settled,i.adjustments??"0.00",i.outstanding]),["Total outstanding","","","","","","",total]]}],
+      facts:{company:company.name,client:partyName,currency:plan.currency,count:items.length,outstanding:total,currentOnly:true}};
+  }
   const options = {includeAuxiliary:false,includeThirdParties:false,reportMode:plan.action === "pnl" ? "profit" : "statement",
     dateBasis:"journal",excludeClosing:plan.action === "pnl",display:plan.display,accountStatus:"all",types:[],includeUnlocked:true,
     excludeReversals:false,skipZero:false,skipInactivePeriod:false};
@@ -45,7 +66,7 @@ export async function executeFinanceReport(
     p_kind:partyId ? "client" : "all",p_party:partyId,p_currency:null,p_offset:0,
   };
   const queryArgs={...args,p_account:plan.action==="custom_ledger"?plan.accounts.join(",")||null:null};
-  const result = await db.rpc("tw_accounting_statement_filtered", queryArgs);
+  const result = await db.rpc("tw_finance_statement_snapshot", queryArgs);
   if (result.error) throw new Error("Accounting report unavailable.");
   const report = reportSchema.parse(result.data);
   const params = new URLSearchParams({company:company.id});

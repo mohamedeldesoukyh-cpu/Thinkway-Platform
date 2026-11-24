@@ -18,6 +18,13 @@ BEGIN
  IF lease IS NULL OR EXISTS(SELECT 1 FROM tw_finance_mail_claim() WHERE id=j) THEN RAISE EXCEPTION 'Lease exclusivity failed';END IF;
  v:=tw_finance_mail_read(j,lease,'setup');
  IF v->'company'->>'id'<>c::text THEN RAISE EXCEPTION 'Wrong delegated company';END IF;
+ v:=tw_finance_mail_read(j,lease,'statement',jsonb_build_object('action','custom_ledger','account','121','from','2026-11-01','to','2026-11-30','display','local'));
+ IF jsonb_array_length(v->'rows')<>(v->>'count')::integer THEN RAISE EXCEPTION 'Incomplete delegated snapshot';END IF;
+ IF EXISTS(SELECT 1 FROM jsonb_array_elements(v->'accounts') a WHERE a->>'account' NOT LIKE '121%') THEN RAISE EXCEPTION 'Account filter lost';END IF;
+ blocked:=false;BEGIN PERFORM tw_finance_mail_read(j,lease,'statement',jsonb_build_object('action','custom_ledger','account','121;DELETE','from','2026-11-01','to','2026-11-30','display','local'));EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Invalid filter accepted';END IF;
+ blocked:=false;BEGIN PERFORM tw_finance_mail_read(j,lease,'outstanding',jsonb_build_object('currency','EGP'));EXCEPTION WHEN OTHERS THEN blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Unscoped outstanding report accepted';END IF;
  blocked:=false;BEGIN PERFORM tw_finance_mail_read(j,gen_random_uuid(),'setup');EXCEPTION WHEN OTHERS THEN blocked:=true;END;
  IF NOT blocked THEN RAISE EXCEPTION 'Wrong lease accepted';END IF;
  blocked:=false;BEGIN PERFORM tw_finance_mail_read(j,lease,'post');EXCEPTION WHEN OTHERS THEN blocked:=true;END;

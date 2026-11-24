@@ -70,9 +70,34 @@ application code rather than deleting stored reports, queue history or journals.
 
 ## Remaining requested capabilities
 
-Full Media/Accounting balance reconciliation; uploaded bank/client PDF or CSV
-statement reconciliation; broader correction proposal/execution types; comparative
-financial analysis; external client statements/payment follow-ups with reviewed
-To/CC; unsettled-item statements; background webhook activation; voice and a
-maintained IFRS reference source remain separate unfinished work. Existing prompts
-and UI must not claim those capabilities are already active.
+Full Media/Accounting balance reconciliation; document-to-transaction creation;
+broader operational correction types; background webhook registration/activation;
+email attachment processing; voice and a maintained IFRS reference source remain
+unfinished. Existing prompts and UI must not claim these are active.
+
+## Extended workflows (2026-11-24)
+
+- P&L comparison aligns account/classification/currency, calculates exact decimal
+  changes, and suppresses misleading percentages for zero/negative bases.
+- Current client unsettled statements use open invoices and current allocations;
+  they explicitly do not claim historical outstanding balances or complete SOAs.
+- CSV reconciliation checks opening + movement = closing, requires one account
+  and currency, lists exact reference/date/amount match candidates, and preserves
+  duplicate/ambiguous/unmatched rows. It does not clear or post records.
+- PDF/PNG/JPEG statement extraction uses the configured OpenAI provider, validates
+  structured output, retains page/row references and requires review of editable
+  rows before reconciliation. Maximum 3 MB input / 500 extracted rows; CSV up to
+  2 MB / 2,000 rows; ledger snapshots limited to 1,000 entries.
+- Report email preparation supports explicit To/CC, English/Arabic templates,
+  optional notes, payment follow-ups from current unsettled statements and signed
+  exact-PDF previews. Sending is gated to production plus the explicit send flag.
+  No dev reports can be sent. Provider idempotency uses the reviewed draft nonce.
+- All detailed ledger pages now load under one STABLE database snapshot. Mail
+  delegation supports custom account filters and current outstanding reports.
+- Verified webhook receipts now start a bounded worker after the response;
+  durable queue/leases and cron retries remain in place. Webhook registration and
+  secret configuration are still required for actual continuous operation.
+
+Migrations 20261129050000 and 20261129060000 applied to development only. Queue,
+filtering and delegation SQL checks passed with rollback. 52 focused tests passed;
+TypeScript and focused lint verification are required before deploying this update.

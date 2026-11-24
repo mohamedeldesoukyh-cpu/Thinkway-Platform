@@ -10,6 +10,7 @@ import { FinanceAutomationWorkspace } from "./automation-workspace";
 import { FinanceCorrectionReview } from "./correction-review";
 import { FinanceReportDownload } from "./report-download";
 import { FinanceSavedReports } from "./saved-reports";
+import { FinanceReconciliationWorkspace } from "./reconciliation-workspace";
 
 type Message = { role: "user" | "assistant"; content: string; reply?: FinanceReply };
 const suggestions = ["Show the P&L for the selected fiscal year", "هات كشف حساب عميل", "Why is there a difference between Media and Accounting?"];
@@ -75,11 +76,12 @@ export function FinanceAssistantWorkspace({companyId,yearId}:{companyId:string;y
         <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-muted-foreground">Chat lasts for this page session.</p><Button type="submit" disabled={busy || !draft.trim()} className="min-h-11">{busy ? "Checking your request…" : "Ask Finance"}</Button></div>
       </form>
       <FinanceSavedReports key={companyId} companyId={companyId} onRun={reply=>setMessages(previous=>[...previous,{role:"assistant",content:reply.content,reply}])}/>
+      <FinanceReconciliationWorkspace key={`reconcile:${companyId}:${yearId}`} companyId={companyId} yearId={yearId} onRun={reply=>setMessages(previous=>[...previous,{role:"assistant",content:reply.content,reply}])}/>
     </section>
     <aside className="space-y-5 text-sm">
       <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">Connected to TW Accounting</h2><p className="mt-2 leading-relaxed text-muted-foreground">Client account statements and ledger-based P&L. Reports include posted, unlocked entries and use journal dates. Source details show the exact scope.</p></section>
       <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">Google Workspace + Resend</h2><p className="mt-2 break-words">amgad@thinkwaymedia.com</p><p className="mt-2 leading-relaxed text-muted-foreground">Forwarding is configured with Gmail copies retained. Use the inbox below to check connectivity and prepare replies for the approved finance team.</p></section>
-      <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">Reports and operational review</h2><p className="mt-2 leading-relaxed text-muted-foreground">Download system PDFs, save custom ledger reports, and review Media posting gaps. Eligible posting corrections require document-specific approval. Full balance reconciliation, uploaded-document processing, voice and maintained IFRS references are not enabled yet.</p></section>
+      <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">Reports and operational review</h2><p className="mt-2 leading-relaxed text-muted-foreground">Compare P&L periods, download PDFs, save custom ledger reports, reconcile uploaded statements, and prepare client emails with To/CC. Eligible Media posting corrections require document-specific approval. Document-to-transaction creation, full Media profitability reconciliation, voice and maintained IFRS references are not enabled yet.</p></section>
     </aside>
   </div><FinanceMailWorkspace key={`${companyId}:${yearId}`} companyId={companyId} yearId={yearId}/><FinanceAutomationWorkspace key={`automation:${companyId}:${yearId}`} companyId={companyId} yearId={yearId}/></>;
 }

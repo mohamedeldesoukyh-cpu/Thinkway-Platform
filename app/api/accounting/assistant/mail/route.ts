@@ -53,7 +53,7 @@ export async function POST(request:Request) {
         return new Response(new Uint8Array(Buffer.from(attachment.content,"base64")),{headers:{"Content-Type":"application/pdf","Content-Disposition":'attachment; filename="Amgad-accounting-report.pdf"',"Cache-Control":"private, no-store"}});
       }
       // Sending is enabled separately after development verification and release approval.
-      if(process.env.FINANCE_MAIL_SEND_ENABLED!=="true")return json({error:"Email sending is disabled in this environment. Review the prepared reply below."},409);
+      if(process.env.VERCEL_ENV!=="production"||process.env.FINANCE_MAIL_SEND_ENABLED!=="true")return json({error:"Email sending is disabled in this environment. Review the prepared reply below."},409);
       const mail=await loadFinanceEmail(approved.threadId,approved.emailId);
       if(reportRecipient(mail)!==approved.recipient)throw new Error("The reply recipient changed. Prepare the reply again.");
       const sent=z.object({id:z.string()}).parse(await financeInboxRequest(`/threads/${approved.threadId}/emails/${approved.emailId}/reply`,{
@@ -80,6 +80,6 @@ export async function POST(request:Request) {
     const report=reply.sources.find(source=>source.tables?.length);
     const attachments=report?[{filename:"Amgad-accounting-report.pdf" as const,content:(await financeReportPdf(report,reply.retrievedAt)).toString("base64"),content_type:"application/pdf" as const}]:[];
     const approval=signMailApproval({userId:ctx.user.id,threadId:input.threadId,emailId:input.emailId,recipient,text:body,attachments,expires:Date.now()+10*60*1000,nonce:randomUUID()},financeMailKey());
-    return json({recipient,text:body,approval,hasPdf:attachments.length>0,sendEnabled:process.env.FINANCE_MAIL_SEND_ENABLED==="true"});
+    return json({recipient,text:body,approval,hasPdf:attachments.length>0,sendEnabled:process.env.VERCEL_ENV==="production"&&process.env.FINANCE_MAIL_SEND_ENABLED==="true"});
   }catch(error){return json({error:error instanceof Error?error.message:"Unable to process email."},502);}
 }
