@@ -1,3 +1,4 @@
+import { processFinanceMailCycle } from "@/features/finance-assistant/mail-preparation";
 import { verifyFinanceMailEvent } from "@/features/finance-assistant/mail-events";
 import { enqueueFinanceEmail,runFinanceMailWorker,sendPreparedFinanceMail } from "@/features/finance-assistant/mail-worker";
 import { after } from "next/server";
@@ -13,7 +14,7 @@ export async function POST(request:Request){
   if(!event)return Response.json({accepted:true});
   try{
     const queued=await enqueueFinanceEmail(event.threadId,event.emailId);
-    if(queued.queued)after(async()=>{await runFinanceMailWorker();await sendPreparedFinanceMail();});
+    if(queued.queued)after(async()=>{await processFinanceMailCycle(runFinanceMailWorker,sendPreparedFinanceMail);});
     return Response.json(queued);
   }
   catch{return Response.json({error:"Retry later"},{status:503});}

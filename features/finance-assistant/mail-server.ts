@@ -30,6 +30,7 @@ export async function loadFinanceSenderEvidence(emailId:string):Promise<unknown>
     cache:"no-store",signal:AbortSignal.timeout(20000),headers:{Authorization:`Bearer ${financeMailKey()}`},
   });
   // Missing correspondence or authentication cannot qualify for automatic mail.
+  if(response.status===429||response.status>=500)throw new Error("Sender evidence temporarily unavailable");
   if(!response.ok)return null;
   const raw=await response.json();
   return {id:raw.id,from:raw.from,message_id:raw.message_id,text:raw.text,subject:raw.subject,authentication:raw.authentication,headers:raw.headers};
