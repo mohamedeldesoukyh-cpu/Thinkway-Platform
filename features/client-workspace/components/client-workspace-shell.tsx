@@ -34,6 +34,10 @@ export function ClientWorkspaceShell({
 }) {
   const { selection } = useClientWorkspaceState();
   const calc = selectionCalculator(view.creators, selection);
+  // Match the roster shown by CreatorsWorkspace, including an empty campaign.
+  // Keep the original selection calculator for approved commercial information.
+  const shortlistCount = view.currentCampaignCreators?.length ?? view.creators.length;
+  const selectedCount = view.currentCampaignCreators?.length ?? calc.selectedCount;
   const partnerIdentity = headerPartnerIdentity({
     identityLogo: view.identityLogo,
     clientLabel: view.overview.clientLabel,
@@ -153,7 +157,7 @@ export function ClientWorkspaceShell({
                 >
                   {CLIENT_WORKSPACE_SECTION_LABEL[item]}
                   {item === "shortlist" || item === "creators" ? (
-                    <span className="cw-tab-count">{item === "shortlist" ? view.creators.length : calc.selectedCount}</span>
+                    <span className="cw-tab-count">{item === "shortlist" ? shortlistCount : selectedCount}</span>
                   ) : null}
                   {locked ? (
                     <svg className="cx-tab-lock" viewBox="0 0 24 24" aria-hidden="true">
