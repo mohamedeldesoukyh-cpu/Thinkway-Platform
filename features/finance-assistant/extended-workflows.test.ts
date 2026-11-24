@@ -6,10 +6,16 @@ import {recipientsSchema,signComposedMail,verifyComposedMail,type ComposedMail} 
 import type {LedgerRow} from "./ledger-details";
 import type {FinanceEvidence} from "./contracts";
 import {financePlanSchema} from "./contracts";
+import {runFinanceAssistant} from "./assistant";
 import {documentInput,extractedStatementSchema,statementCsv} from "./document-extraction";
 const id="11111111-1111-4111-8111-111111111111";
 const base={companyId:id,yearId:null,account:"121001",currency:"EGP",from:"2026-11-01",to:"2026-11-30",opening:"0",closing:"100",direction:"same" as const,pdf:false,csv:"date,reference,description,amount\n2026-11-01,INV1,Invoice,100"};
 const line:LedgerRow={id,line:1,account:"121001",name:"Receivables",date:"2026-11-01",number:"JV1",reference:"INV1",description:"Invoice",party:"Client",report_currency:"EGP",debit:"100",credit:"0",balance:"100"};
+test("zero comparison balances cannot become claims of no ledger activity",async()=>{
+ let calls=0;
+ const reply=await runFinanceAssistant({companyId:id,yearId:null,message:"Compare periods",history:[]},{provider:{identity:{id:"fixture",name:"Fixture"},complete:async()=>{calls++;return {providerId:"fixture",model:"fixture",content:JSON.stringify({action:"pnl_comparison",from:"2026-11-01",to:"2026-11-30",comparisonFrom:"2026-10-01",comparisonTo:"2026-10-31",display:"local"})};}},execute:async()=>({title:"Comparison",href:"/",scope:"Selected periods",facts:{},tables:[{heading:"EGP",columns:[],rows:[["","Net profit","Total","0.00","0.00","0.00","N/A"]]}]})});
+ assert.equal(calls,1);assert.match(reply.content,/does not establish/);
+});
 test("document extraction checks file signatures and keeps source rows in CSV",()=>{
  assert.throws(()=>documentInput(Buffer.from("not pdf"),"application/pdf"));
  assert.throws(()=>documentInput(Buffer.from("<script>"),"image/png"));

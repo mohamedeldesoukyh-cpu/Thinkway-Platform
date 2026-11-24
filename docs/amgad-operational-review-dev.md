@@ -72,7 +72,7 @@ application code rather than deleting stored reports, queue history or journals.
 
 Full Media/Accounting balance reconciliation; document-to-transaction creation;
 broader operational correction types; background webhook registration/activation;
-email attachment processing; voice and a maintained IFRS reference source remain
+email attachment processing and a maintained IFRS reference source remain
 unfinished. Existing prompts and UI must not claim these are active.
 
 ## Extended workflows (2026-11-24)
@@ -100,4 +100,21 @@ unfinished. Existing prompts and UI must not claim these are active.
 
 Migrations 20261129050000 and 20261129060000 applied to development only. Queue,
 filtering and delegation SQL checks passed with rollback. 52 focused tests passed;
-TypeScript and focused lint verification are required before deploying this update.
+TypeScript and focused lint passed. Dev deployment c9f3d95f built successfully and
+was aliased to dev.thinkwaymedia.com. Browser verification confirmed the comparison
+table, Arabic email preview with explicit To/CC, disabled sending and exact PDF
+download. The downloaded comparison PDF was rendered and visually checked (one
+landscape A4 page). Browser connection failed during the CSV chooser test; CSV/PDF
+upload and reconciliation browser verification is incomplete.
+
+Follow-up fixes cover deterministic zero-comparison wording (no unsupported claim
+of no transactions), and optional Arabic/English browser dictation. Dictation only
+fills editable request text, never submits automatically; microphone recognition
+requires user interaction and has not been exercised with real audio.
+
+CI for c9f3d95f passed its functional checks/build but failed performance budgets:
+total CSS 1574.6 KiB > 1550 (pre-existing) and explicit client boundaries 901 > 900.
+Three assistant child components now inherit their existing client parent; the
+boundary manifest/guard verifies this arrangement (899 explicit client modules).
+The CSS threshold has not been changed. Release is not fully validated while that
+failure remains.
