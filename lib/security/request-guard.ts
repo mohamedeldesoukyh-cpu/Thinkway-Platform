@@ -163,7 +163,12 @@ export function preAuthRequestGuard(
     return withGuardHeaders(limited, pathname, rate);
   }
 
-  const csrf = assertCsrfRequest(request);
+  // This exact POST route authenticates the raw body with Svix, not cookies.
+  // Provider deliveries have no browser Origin. Keep rate limits above and
+  // signature verification in the handler; never exempt a prefix or action.
+  const signatureWebhook = pathname === "/api/webhooks/finance-mail" &&
+    request.method === "POST" && !serverAction;
+  const csrf = signatureWebhook ? { ok: true as const } : assertCsrfRequest(request);
   if (!csrf.ok) {
     incrementSecurityMetric("csrfFailures");
     incrementSecurityMetric("blockedRequests");
