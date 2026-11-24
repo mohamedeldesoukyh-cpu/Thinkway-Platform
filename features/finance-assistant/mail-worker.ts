@@ -56,13 +56,14 @@ export async function runFinanceMailWorker(){
     const apiKey=process.env.FINANCE_AI_API_KEY?.trim()||process.env.OPENAI_API_KEY?.trim();
     if(!apiKey)throw new Error("AI unavailable");
     const reply=await runFinanceAssistant({companyId:job.company_id,yearId:job.year_id,message:text,history:[]},{
+      channel:"automatic_email",
       provider:new FinanceAiProvider(apiKey,process.env.FINANCE_AI_MODEL?.trim()||"gpt-4.1"),
       context:JSON.stringify({company:setup.company?.name,baseCurrency:setup.company?.base_currency,yearFrom:setup.years[0].start_date,yearTo:setup.years[0].end_date,attachmentsProcessed:false}),
       execute:plan=>executeFinanceReport(delegatedReports(db,job),setup,job.year_id,plan),
     });
-    const response=financeEmailText(reply)+(mail.attachments?.length?"\n\nAttachments were not processed. / لم تتم معالجة المرفقات.":"");
     const report=reply.sources.find(source=>source.tables?.length);
     const attachments=report?[{filename:"Amgad-accounting-report.pdf",content:(await financeReportPdf(report,reply.retrievedAt)).toString("base64"),content_type:"application/pdf"}]:[];
+    const response=financeEmailText(reply,{pdfAttached:attachments.length>0})+(mail.attachments?.length?"\n\nIncoming attachments were not processed. / لم تتم معالجة المرفقات الواردة.":"");
     const updated=await db.from("tw_finance_mail_jobs").update({status:"prepared",response_text:response,attachments,error_code:null,lease_id:null,lease_until:null,updated_at:new Date().toISOString()}).eq("id",job.id).eq("lease_id",job.lease_id).eq("status","processing").select("id");
     if(updated.error||!updated.data?.length)throw new Error("Job lease lost");
     return {processed:1,status:"prepared"};

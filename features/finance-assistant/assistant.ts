@@ -17,11 +17,15 @@ export async function runFinanceAssistant(
     execute: (plan: Exclude<FinancePlan, { action: "reply" }>) => Promise<FinanceEvidence>;
     now?: Date;
     context?: string;
+    channel?: "automatic_email";
   },
 ): Promise<FinanceReply> {
   const retrievedAt = (dependencies.now ?? new Date()).toISOString();
+  const systemPrompt = FINANCE_SYSTEM_PROMPT + (dependencies.channel === "automatic_email"
+    ? "\nResponse channel: automatic owner email, not the website chat. Write the report explanation for the email recipient. The application handles authenticated owner-only delivery and generates any report PDF attachment. Do not ask the owner to confirm, click website controls, or send their requested report to themselves. Do not describe a PDF as waiting in an actions panel. Do not claim delivery or attachments yourself: the application adds the attachment notice after PDF generation. Client emails and accounting changes still require explicit authenticated owner approval. Omit your signature; the email formatter adds it."
+    : "");
   const messages = [
-    { role: "system" as const, content: `${FINANCE_SYSTEM_PROMPT}\nToday is ${retrievedAt.slice(0, 10)}.\nActive accounting scope: ${dependencies.context ?? "selected company and fiscal year"}.
+    { role: "system" as const, content: `${systemPrompt}\nToday is ${retrievedAt.slice(0, 10)}.\nActive accounting scope: ${dependencies.context ?? "selected company and fiscal year"}.
 Return ONLY a JSON object matching exactly one of these shapes:
 {"action":"reply","reply":"your answer or clarification"}
 {"action":"client_statement","clientName":"name from user","from":null,"to":null,"display":"local"}
@@ -58,7 +62,7 @@ Dates are null or YYYY-MM-DD. Use the actual requested dates, not the example. F
     return {content, sources:[evidence], retrievedAt};
   }
   const result = await dependencies.provider.complete({ messages: [
-    { role: "system", content: `${FINANCE_SYSTEM_PROMPT}\nExplain only the supplied report evidence. Repeat its scope limitations. If there are client candidates, ask which client; do not pick one. No balances can be inferred from candidates. Preserve the reported currency and date range. The UI will show the source separately. Return ONLY a JSON object: {"reply":"your concise plain-text explanation"}.` },
+    { role: "system", content: `${systemPrompt}\nExplain only the supplied report evidence. Repeat its scope limitations. If there are client candidates, ask which client; do not pick one. No balances can be inferred from candidates. Preserve the reported currency and date range. The application includes the source evidence separately. Return ONLY a JSON object: {"reply":"your concise plain-text explanation"}.` },
     { role: "user", content: JSON.stringify({ request: input.message, evidence }) },
   ] });
   if (result.stub || !result.content.trim()) throw new Error("Finance AI did not return an answer.");

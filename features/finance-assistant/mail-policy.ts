@@ -26,8 +26,8 @@ export function reportRecipient(mail: z.infer<typeof mailSchema>) {
   if (mail.reply_to?.some(address => mailboxAddress(address) !== sender)) throw new Error("Reply-To differs from the authorized sender. Review this message in Resend.");
   return sender;
 }
-export function financeEmailText(reply: FinanceReply) {
-  return [reply.content, ...reply.sources.flatMap(source => [source.title, source.scope,
+export function financeEmailText(reply: FinanceReply, options?: { pdfAttached?: boolean }) {
+  return [reply.content, ...(options?.pdfAttached ? ["The requested report PDF is attached. / ملف التقرير المطلوب بصيغة PDF مرفق."] : []), ...reply.sources.flatMap(source => [source.title, source.scope,
     ...(source.tables ?? []).map(table => `${table.heading}\n${table.columns.join(" | ")}\n${table.rows.map(row => row.join(" | ")).join("\n")}`)]),
     `Prepared: ${reply.retrievedAt}`, "Amgad — AI Finance Assistant, Thinkway"].join("\n\n");
 }
