@@ -1,3 +1,4 @@
+import {statementDocument} from '@/features/accounting/statement-document';
 // Credential-free adapter: its caller supplies the authenticated, RLS-scoped client.
 import { z } from "zod";
 import { financialReportSections } from "@/features/accounting/financial-report-options-model";
@@ -11,7 +12,7 @@ import { cents, decimal } from "@/features/accounting/journal-model";
 
 const amount = z.string().regex(/^-?\d+(\.\d+)?$/);
 const accountSchema = z.object({account:z.string(),name:z.string(),currency:z.string(),opening:amount,debit:amount,credit:amount,closing:amount});
-const reportSchema = z.object({currency:z.string(),accounts:z.array(accountSchema),count:z.number().optional()});
+const reportSchema = z.object({currency:z.string(),accounts:z.array(accountSchema),count:z.number().optional(),party:z.object({code:z.string().nullable().optional(),address:z.string().nullable().optional(),taxId:z.string().nullable().optional()}).nullable().optional(),aging:z.array(z.object({account:z.string(),currency:z.string(),normal_balance:z.string(),buckets:z.array(amount),unapplied:amount})).optional()});
 const partySchema = z.array(z.object({id:z.string().uuid(),name:z.string(),code:z.string().nullable().optional()}));
 export type FinanceReportClient = {rpc(name:string,args:Record<string,unknown>):PromiseLike<{data:unknown;error:unknown}>};
 
@@ -87,7 +88,9 @@ export async function executeFinanceReport(
   }
   const groups = statementGroups({...report,rows:[],count:report.count??0} as Statement);
   const details=await readLedgerDetails(db,queryArgs,result.data);
+  const document=statementDocument({...report,party:report.party?{code:report.party.code??undefined,address:report.party.address??undefined,taxId:report.party.taxId??undefined}:null,count:details.length,rows:details.map(r=>({...r,currency:r.currency??r.report_currency,auxiliary:r.auxiliary??null,foreign_debit:r.foreign_debit??null,foreign_credit:r.foreign_credit??null}))},{title:'Statement of Account',company:company.name,from,to,dateBasis:'Journal date',party:partyName??'',kind:'client',consolidate:true,details:true});
   return {title:`${partyName} — account statement`,href:`/accounting?${params}#client-statements`,scope,
-    reportPlan:{...plan,from,to},tables:groups.flatMap(({currency,totals,accounts})=>[{heading:currency,columns:["Account","Name","Opening","Debit","Credit","Closing"],rows:[...accounts.map(a=>[a.account,a.name,a.opening,a.debit,a.credit,a.closing]),["","Total",totals.opening,totals.debit,totals.credit,totals.closing]]},{heading:`${currency} · Entries`,columns:["Date","JV","Reference","Account","Description","Debit","Credit","Account balance"],rows:details.filter(r=>r.report_currency===currency).map(r=>[r.date,r.number,r.reference,r.account,r.description,r.debit,r.credit,r.balance])}]),
+    statementDocument:document,
+    reportPlan:{...plan,from,to},tables:document.sections,
     facts:{company:company.name,client:partyName,from,to,display:plan.display,groups:groups.map(({currency,totals,accounts})=>({currency,totals,accounts}))}};
 }

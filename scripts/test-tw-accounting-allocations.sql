@@ -133,6 +133,10 @@ BEGIN
  IF EXISTS(SELECT 1 FROM tw_accounting_journal_lines WHERE journal_id=j AND account_code='111001') THEN RAISE EXCEPTION 'Vendor advance application moved cash'; END IF;
  PERFORM tw_accounting_settlement_reverse(av,c,'2026-02-03','Undo vendor advance application');
  PERFORM tw_accounting_settlement_reverse(pv,c,'2026-02-03','Undo vendor advance receipt');
+ q:=tw_accounting_statement_filtered(c,'2026-01-01','2026-12-31');
+ IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(q->'rows') x JOIN tw_accounting_settlements st ON st.journal_id=(x->>'id')::uuid WHERE st.kind='receipt' AND x->>'transaction_type'='receipt' AND x->>'document_number'=st.number) THEN RAISE EXCEPTION 'Receipt source document lost';END IF;
+ IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(q->'rows') x JOIN tw_accounting_settlements st ON st.journal_id=(x->>'id')::uuid WHERE st.kind='payment' AND x->>'transaction_type'='payment' AND x->>'document_number'=st.number) THEN RAISE EXCEPTION 'Payment source document lost';END IF;
+ RAISE NOTICE 'PASS: actual receipt/payment source document references match the settlement register';
  -- Financial-only staff can read counterparties but read access cannot post.
  INSERT INTO tw_module_assignments(profile_id,media,accounting_role) VALUES(viewer,false,'read') ON CONFLICT(profile_id) DO UPDATE SET media=false,accounting_role='read';
  PERFORM set_config('request.jwt.claim.sub',viewer::text,true);

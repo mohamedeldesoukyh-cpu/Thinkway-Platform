@@ -58,6 +58,7 @@ export const financePlanSchema = z.discriminatedUnion("action", [
 export type FinancePlan = z.infer<typeof financePlanSchema>;
 export type FinanceChatInput = z.infer<typeof financeChatSchema>;
 export type FinanceEvidence = {
+  statementDocument?: import('@/features/accounting/formatted-report-model').FormattedReport;
   reportPlan?: Exclude<FinancePlan,{action:"reply"}>;
   corrections?: Array<{company:string;id:string;type:string;token:string;number:string;summary:string}>;
   tables?: Array<{heading:string;columns:string[];rows:string[][]}>;

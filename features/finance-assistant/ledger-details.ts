@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { FinanceReportClient } from "./report-tools";
 const amount=z.string().regex(/^-?\d+(\.\d+)?$/);
-export const ledgerRowSchema=z.object({id:z.string(),line:z.number().int(),account:z.string(),name:z.string(),date:z.string(),number:z.string(),reference:z.string().nullable().transform(v=>v??""),description:z.string().nullable().transform(v=>v??""),party:z.string().nullable(),report_currency:z.string(),debit:amount,credit:amount,balance:amount});
+export const ledgerRowSchema=z.object({transaction_type:z.string().optional(),document_number:z.string().optional(),campaign:z.string().nullable().optional(),reversed:z.boolean().optional(),currency:z.string().optional(),auxiliary:z.string().nullable().optional(),foreign_debit:amount.nullable().optional(),foreign_credit:amount.nullable().optional(),trx_debit:amount.nullable().optional(),trx_credit:amount.nullable().optional(),id:z.string(),line:z.number().int(),account:z.string(),name:z.string(),date:z.string(),number:z.string(),reference:z.string().nullable().transform(v=>v??""),description:z.string().nullable().transform(v=>v??""),party:z.string().nullable(),report_currency:z.string(),debit:amount,credit:amount,balance:amount});
 export type LedgerRow=z.infer<typeof ledgerRowSchema>;
 export async function readLedgerDetails(db:FinanceReportClient,args:Record<string,unknown>,first:unknown):Promise<LedgerRow[]>{
  const schema=z.object({rows:z.array(ledgerRowSchema),count:z.number().int().nonnegative()});

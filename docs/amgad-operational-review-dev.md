@@ -233,3 +233,9 @@ replace a later response. Pagination clears the previous page while loading.
 Mini statements still load their explicitly selected account/party. No ledger
 data or accounting permission changes are involved. Dev browser verification
 of this follow-up is recorded in the handover and PR verification notes.
+
+
+## 24 November — portrait statement unification
+All Statement Desk account, auxiliary, client/vendor and summary previews now select the shared portrait statement design. The renderer uses the existing Media statement assets, brand, summary, aging/payment blocks, repeated headings and page numbering. It preserves original JV identifiers while showing originating document numbers and JV/PY/RC/SI/PI/note types plus TRX currency/amounts. CSV and Word/Excel retain these details; Word/Excel page setup is portrait. Amgad client SOA PDFs use the same document renderer. Ledger aging is explicitly labeled oldest-first by ledger date, rather than represented as invoice allocation aging.
+
+Migration 20261129080000 is read-only report metadata, applied only to pinned dev. Rollback SQL checks passed for unchanged balances, filters, USD/foreign currency separation, JV/RC/PY types, exact TRX, aging, and actual settlement document references/reversals. No business numbers or records retained. 65 focused tests passed; local build and unchanged bundle budgets passed (CSS 1546.4 KiB, JS 14967.9 KiB before final typography-only adjustment). The 42-entry Arabic/English PDF was rendered and all five portrait pages inspected. Dev deployment/UI verification follows this commit. Live and real sending remain unchanged.
