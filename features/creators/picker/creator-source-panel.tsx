@@ -1,4 +1,4 @@
-"use client";
+// Inherits the client boundary from ShortlistCreatorPicker.
 
 import { useEffect, useState } from "react";
 import { Loader2Icon } from "lucide-react";

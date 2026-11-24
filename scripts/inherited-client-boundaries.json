@@ -1,5 +1,11 @@
 [
   {
+    "file": "features/creators/picker/creator-source-panel.tsx",
+    "parents": [
+      "features/creators/picker/shortlist-creator-picker.tsx"
+    ]
+  },
+  {
     "file": "features/quotations/components/use-live-quotation-enrichment.ts",
     "parents": [
       "features/quotations/components/quotation-workspace.tsx"
