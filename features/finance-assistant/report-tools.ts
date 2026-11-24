@@ -9,6 +9,7 @@ import { mediaAccountingReview } from "./media-review";
 import { readLedgerDetails } from "./ledger-details";
 import { compareProfitReports } from "./comparison";
 import { cents, decimal } from "@/features/accounting/journal-model";
+import { revenueByClient } from "./revenue-by-client";
 
 const amount = z.string().regex(/^-?\d+(\.\d+)?$/);
 const accountSchema = z.object({account:z.string(),name:z.string(),currency:z.string(),opening:amount,debit:amount,credit:amount,closing:amount});
@@ -34,6 +35,7 @@ export async function executeFinanceReport(
   if (plan.action !== "client_outstanding" && (!plan.from || !plan.to) && !year) throw new Error("Select a fiscal year or specify both dates.");
   const from = plan.from ?? year?.start_date ?? "", to = plan.to ?? year?.end_date ?? "";
   if (from > to) throw new Error("Invalid reporting period.");
+  if (plan.action === "revenue_by_client") return revenueByClient(db,setup,{...plan,from,to},yearId);
   if (plan.action === "media_accounting_review") return {...await mediaAccountingReview(db,company.id,company.name,from,to,plan.documentType),reportPlan:{...plan,from,to}};
   let partyId: string | null = null;
   let partyName: string | null = null;

@@ -19,3 +19,10 @@ test("only an actually generated PDF receives an attachment notice",()=>{
  assert.match(text,/requested report PDF is attached/);assert.match(text,/مرفق/);
  assert.match(text,/Verified report summary/);assert.match(text,/2026-11-24/);
 });
+
+test("attached PDFs keep transaction tables out of email while unattached replies retain evidence",()=>{
+ const reply={content:"Net service revenue is EGP 1000.",retrievedAt:"2026-11-24T13:00:00.000Z",sources:[{title:"Service revenue",href:"/accounting",scope:"November, EGP, posted entries",facts:{},tables:[{heading:"Detail",columns:["Document","Amount"],rows:Array.from({length:200},(_,i)=>[`UNIQUE-JOURNAL-${i}`,"5.00"])}]}]};
+ const attached=financeEmailText(reply,{pdfAttached:true});
+ assert.doesNotMatch(attached,/UNIQUE-JOURNAL/);assert.match(attached,/Net service revenue/);assert.match(attached,/November, EGP/);assert.ok(attached.length<600);
+ assert.match(financeEmailText(reply),/UNIQUE-JOURNAL-199/);
+});
