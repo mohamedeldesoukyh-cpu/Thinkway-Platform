@@ -1,5 +1,5 @@
 /** Campaign Studio desktop — maps to app/thinkway-design-tokens.css */
-export const STUDIO_REF_SCOPE = "campaign-studio-ref";
+export const STUDIO_REF_SCOPE = "twcs";
 
 export const STUDIO_REF_COLORS = {
   navy: "var(--navy)",
@@ -32,7 +32,7 @@ export const STUDIO_REF_COLORS = {
 
 export const STUDIO_REF_BRAND_GRADIENT = "var(--tw-brand-gradient)";
 
-/** Prefer cs-* CSS classes inside .campaign-studio-ref (see campaign-studio-ref.css). */
+/** Prefer cs-* CSS classes inside .twcs (see campaign-studio-ref.css). */
 export const STUDIO_REF_CLASSES = {
   scope: STUDIO_REF_SCOPE,
   studioDesktop: "cs-studio-desktop",

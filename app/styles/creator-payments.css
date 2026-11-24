@@ -249,13 +249,13 @@
 @media(max-width:760px) { .thinkway-creator-payments .cp-creator-summary-grid { grid-template-columns:1fr; } }
 
 /* Primary finance navigation, distinct from the smaller payment workflow tabs. */
-.workspace-redesign .campaign-detail-suite .campaign-finance-workspace > .campaign-finance-primary-tabs {
+.twwr .twcd .campaign-finance-workspace > .campaign-finance-primary-tabs {
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
   border:1px solid var(--tw-line,var(--border));
   background:var(--card);
 }
-.workspace-redesign .campaign-detail-suite .campaign-finance-workspace > .campaign-finance-primary-tabs [role="tab"].campaign-finance-tab {
+.twwr .twcd .campaign-finance-workspace > .campaign-finance-primary-tabs [role="tab"].campaign-finance-tab {
   display:flex;
   justify-content:flex-start;
   min-width:0;
@@ -268,7 +268,7 @@
 .campaign-finance-tab span { min-width:0; }
 .campaign-finance-tab strong { display:block; font-weight:650; }
 .campaign-finance-tab small { margin-top:3px; font-size:11px; font-weight:400; }
-.workspace-redesign .campaign-detail-suite .campaign-finance-workspace > .campaign-finance-primary-tabs [role="tab"].campaign-finance-tab[data-state="active"] {
+.twwr .twcd .campaign-finance-workspace > .campaign-finance-primary-tabs [role="tab"].campaign-finance-tab[data-state="active"] {
   background:#0057ff;
   color:#fff;
   box-shadow:0 2px 5px rgb(0 87 255 / 18%);
@@ -396,10 +396,10 @@ body .cp-payment-detail-drawer.cp-payment-record-drawer {
   .cp-record-amount > strong { font-size:21px; }
 }
 /* Compact, consistent finance navigation and persistent payment overview. */
-.workspace-redesign .campaign-detail-suite .campaign-finance-workspace > .campaign-finance-primary-tabs {
+.twwr .twcd .campaign-finance-workspace > .campaign-finance-primary-tabs {
   width:fit-content; max-width:100%; padding:3px; gap:3px; margin:4px 0 10px; border-radius:10px;
 }
-.workspace-redesign .campaign-detail-suite .campaign-finance-workspace > .campaign-finance-primary-tabs [role="tab"].campaign-finance-tab {
+.twwr .twcd .campaign-finance-workspace > .campaign-finance-primary-tabs [role="tab"].campaign-finance-tab {
   min-height:36px; padding:8px 16px; gap:8px; border-radius:7px;
 }
 .campaign-finance-tab strong {font-size:13px; line-height:1.3;}
@@ -411,7 +411,7 @@ body .cp-payment-detail-drawer.cp-payment-record-drawer {
   min-height:34px; padding:7px 12px; gap:7px; border-radius:7px;
 }
 @media(max-width:640px) {
- .workspace-redesign .campaign-detail-suite .campaign-finance-workspace > .campaign-finance-primary-tabs [role="tab"].campaign-finance-tab,
+ .twwr .twcd .campaign-finance-workspace > .campaign-finance-primary-tabs [role="tab"].campaign-finance-tab,
  .thinkway-creator-payments .cp-workflow-tabs [role="tab"].cp-workflow-tab {min-height:44px; padding:7px 9px;}
 }
 

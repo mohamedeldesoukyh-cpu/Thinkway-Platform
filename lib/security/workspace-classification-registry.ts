@@ -51,6 +51,17 @@ export const PAGE_PREFIX_CLASSIFICATIONS: Array<{
 
 /** Exact API path templates (Next dynamic segments kept as [id] style). */
 export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
+  "/api/accounting/assistant": "internal_workspace",
+  "/api/accounting/assistant/mail": "internal_workspace",
+  "/api/accounting/assistant/report": "internal_workspace",
+  "/api/accounting/assistant/reconcile": "internal_workspace",
+  "/api/accounting/assistant/compose": "internal_workspace",
+  "/api/accounting/assistant/documents": "internal_workspace",
+  "/api/accounting/assistant/corrections": "internal_workspace",
+  "/api/accounting/assistant/saved-reports": "internal_workspace",
+  "/api/accounting/assistant/automation": "admin_only",
+  "/api/webhooks/finance-mail": "public",
+  "/api/cron/finance-mail": "service_only",
   "/api/accounting/setup": "internal_workspace",
   "/api/accounting/journals": "internal_workspace",
   "/api/accounting/monthly-accruals": "internal_workspace",

@@ -7,7 +7,7 @@ import "@/app/styles/workspace-reference-layout.css";
 
 /** Presentation boundary: existing pages retain their data, actions and state. */
 export function WorkspaceRedesign({ children }: { children: ReactNode }) {
-  return <div className="workspace-redesign">{children}</div>;
+  return <div className="twwr">{children}</div>;
 }
 
 export function WorkspaceContextHeader({ title, description, actions, children }: {

@@ -76,6 +76,9 @@ const nextConfig: NextConfig = {
   // Each checkout is self-contained, including managed Git worktrees.
   turbopack: { root: __dirname },
   outputFileTracingIncludes: {
+    '/api/accounting/assistant/**/*': ['./public/report-assets/statement-*'],
+    '/api/cron/finance-mail': ['./public/report-assets/statement-*'],
+    '/api/webhooks/finance-mail': ['./public/report-assets/statement-*'],
     '/api/rate-cards/*/export': ['./public/report-assets/nbe-logo-3d-v1.png'],
       '/*': [
         './public/tw-logo-dark.png',

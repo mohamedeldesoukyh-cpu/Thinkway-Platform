@@ -1,24 +1,24 @@
 /* Shared suite compatibility layer. Keep brand headers, charts, avatars and
    document previews intact; map workspace surfaces to the active app theme. */
-.dark, .dark .workspace-redesign, .dark body:has(.workspace-redesign) {
+.dark, .dark .twwr, .dark body:has(.twwr) {
   --wr-ink:#eef2f8;--wr-muted:#a6b4c8;--wr-bg:#101620;--wr-soft:#202d40;
   --wr-surface:#182231;--wr-hair:#2c3a4e;--wr-line:#3a4a60;--wr-blue-ink:#8bb8ff;
   --wr-warning-bg:#3c301b;--wr-lav:#1d3152;
 }
-.dark :is(.workspace-redesign, body:has(.workspace-redesign) [role="dialog"], body:has(.workspace-redesign) [data-radix-popper-content-wrapper]) {
+.dark :is(.twwr, body:has(.twwr) [role="dialog"], body:has(.twwr) [data-radix-popper-content-wrapper]) {
   --secondary:#202d40;--secondary-foreground:#cbd5e1;
   --accent:#1d3152;--accent-foreground:#8bb8ff;
 }
-.dark .workspace-redesign :is(.client-detail-suite,.campaign-detail-suite,.campaigns-list-suite,.collections-suite) {--tw-ink2:#cbd5e1;color:var(--wr-ink);}
-.dark .workspace-redesign [data-slot=table-row]:hover {background:var(--wr-soft);}
-.dark .workspace-redesign [data-slot=table-row][data-state=selected] {background:#1d3152;}
-.dark .workspace-redesign :is([data-slot=table-cell],.thinkway-campaign-op-table-cell) a:not([data-slot=button]) {color:var(--wr-blue-ink);}
-.dark .workspace-redesign .platform-v6-link {color:var(--wr-blue-ink);}
-.dark body:has(.workspace-redesign) :is([data-slot=dialog-content],[data-slot=sheet-content]) {
+.dark .twwr :is(.client-detail-suite,.twcd,.campaigns-list-suite,.collections-suite) {--tw-ink2:#cbd5e1;color:var(--wr-ink);}
+.dark .twwr [data-slot=table-row]:hover {background:var(--wr-soft);}
+.dark .twwr [data-slot=table-row][data-state=selected] {background:#1d3152;}
+.dark .twwr :is([data-slot=table-cell],.thinkway-campaign-op-table-cell) a:not([data-slot=button]) {color:var(--wr-blue-ink);}
+.dark .twwr .platform-v6-link {color:var(--wr-blue-ink);}
+.dark body:has(.twwr) :is([data-slot=dialog-content],[data-slot=sheet-content]) {
   --popover:#182231;--popover-foreground:#eef2f8;--foreground:#eef2f8;--muted-foreground:#a6b4c8;
   --background:#182231;--card:#182231;--border:#3a4a60;--input:#3a4a60;
 }
-.dark :is(.discovery-suite,.finance-suite,.campaign-detail-suite,.campaigns-list-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.collections-suite,.dv) {
+.dark :is(.discovery-suite,.finance-suite,.twcd,.campaigns-list-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.collections-suite,.dv) {
   --tw-ink:#eef2f8;--tw-ink2:#cbd5e1;--tw-mut:#a6b4c8;
   --tw-bg:#101620;--tw-surface:#182231;--tw-soft:#202d40;--tw-lav:#1d3152;
   --tw-line:#3a4a60;--tw-hair:#2c3a4e;--tw-bi:#8bb8ff;
@@ -27,11 +27,11 @@
   --tw-ring:0 0 0 1px var(--tw-hair),0 6px 20px #0002;
   color:var(--tw-ink);
 }
-.dark :is(.discovery-suite,.finance-suite,.campaign-detail-suite,.campaigns-list-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.collections-suite,.dv)
+.dark :is(.discovery-suite,.finance-suite,.twcd,.campaigns-list-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.collections-suite,.dv)
  :is(.tw-c,.tw-k,.tw-idbar,.tw-toolbar,.tw-tools,.tw-dr,.tw-cp__w,.tw-cp__m,.tw-cp__r,.tw-pub,.tw-calcp,.tw-mast,.tw-mr,.tw-ms2,.tw-step2,.tw-mode) {
   background:var(--tw-surface);color:var(--tw-ink);border-color:var(--tw-line);
 }
-.dark :is(.discovery-suite,.finance-suite,.campaign-detail-suite,.campaigns-list-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.collections-suite,.dv)
+.dark :is(.discovery-suite,.finance-suite,.twcd,.campaigns-list-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.collections-suite,.dv)
  :is(.tw-b:not(.pri),.tw-in,.tw-select,.tw-search,.tw-dr__x) {
   background:var(--tw-surface);color:var(--tw-ink2);border-color:var(--tw-line);
 }
@@ -97,7 +97,7 @@
 .dark :is(.q-redesign-body.q-display-popover,.q-redesign-body.q-discovery-popover) {background:#182231;color:var(--q-ink);}
 
 @media (max-width:1023px) {
-  .workspace-redesign .wr-context-header {margin-inline:0;}
+  .twwr .wr-context-header {margin-inline:0;}
   .wr-responsive-table td {white-space:normal;overflow-wrap:anywhere;}
   .wr-responsive-table td .platform-v6-link {white-space:normal;overflow-wrap:anywhere;}
   .tq-redesign.discovery-suite .q-redesign-body .q-cell-actions {gap:8px;flex-wrap:wrap;}
@@ -120,8 +120,8 @@
   .tq-redesign .q-redesign-body :is(.q-cell-service,.q-cell-creator,.q-cell-option,.q-cell-price) {min-width:0;}
   .tq-redesign .q-redesign-body .q-lines__h input[type=search] {width:100%;max-width:100%;min-height:44px;font-size:16px;}
   :is(.home-dashboard-suite,.finance-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.campaigns-list-suite,.collections-suite) .tw-main {padding-inline:12px;min-width:0;}
-  :is(.discovery-suite,.finance-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.campaigns-list-suite,.campaign-detail-suite,.collections-suite) :is(.tw-ch,.tw-toolbar,.tw-tools) {flex-wrap:wrap;min-width:0;}
-  :is(.discovery-suite,.finance-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.campaigns-list-suite,.campaign-detail-suite,.collections-suite) .tw-sc {max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;}
+  :is(.discovery-suite,.finance-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.campaigns-list-suite,.twcd,.collections-suite) :is(.tw-ch,.tw-toolbar,.tw-tools) {flex-wrap:wrap;min-width:0;}
+  :is(.discovery-suite,.finance-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.campaigns-list-suite,.twcd,.collections-suite) .tw-sc {max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;}
   .discovery-suite.tw-cp-root .tw-cp__l {overflow-x:hidden;}
   .discovery-suite.tw-cp-root .tw-cp__l :is(input,select) {max-width:100%;min-width:0;min-height:44px;font-size:16px;}
   .discovery-suite.tw-cp-root :is(.tw-cp__h .tw-b,.tw-cp__t button,.tw-platform-chip__remove) {min-height:44px;}

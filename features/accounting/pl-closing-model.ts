@@ -1,6 +1,6 @@
 import {cents,decimal,type JournalLine} from './journal-model';
 export type ClosingBalance={account:string;name:string;auxiliary:string|null;client?:string|null;vendor?:string|null;client_code?:string|null;vendor_code?:string|null;balance:string};
-export type ClosingDraft={date:string;memo:string;reference:string;lines:JournalLine[]};
+export type ClosingDraft={date:string;memo:string;reference:string;lines:JournalLine[];workflow?:'general'|'closing';sourceFile?:File};
 export function closingDraft(rows:ClosingBalance[],selected:string[],destination:string,year:string,date:string,base:string):ClosingDraft {
  const grouped=new Map<string,{row:ClosingBalance;balance:bigint}>();
  for(const row of rows){if(!selected.includes(row.account))continue;const key=JSON.stringify([row.account,row.auxiliary,row.client,row.vendor]);const previous=grouped.get(key);grouped.set(key,{row,balance:(previous?.balance??BigInt(0))+cents(row.balance)});}

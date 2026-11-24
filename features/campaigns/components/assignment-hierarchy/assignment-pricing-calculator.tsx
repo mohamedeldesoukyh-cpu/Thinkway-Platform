@@ -158,7 +158,7 @@ export function AssignmentPricingCalculator({
   }
 
   return createPortal(
-    <div className="campaign-detail-suite">
+    <div className="twcd">
       <div className="tw-calcp" role="dialog" aria-label="Pricing calculator">
         <div className="tw-calcp__h">
           <b>Pricing calculator</b>

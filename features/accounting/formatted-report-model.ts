@@ -1,8 +1,10 @@
+import {statementDocumentHtml,type StatementPageInfo} from './statement-document';
 import {reportFilename} from './report-filename';
 import {reportAmount,isReportAmount} from './report-number';
-export type FormattedReport={title:string;company:string;caption:string;downloadName?:string;sections:{orientation?:'portrait'|'landscape';heading:string;columns:string[];rows:string[][]}[]};
+export type FormattedReport={title:string;company:string;caption:string;downloadName?:string;template?:'statement';sections:{statement?:StatementPageInfo;orientation?:'portrait'|'landscape';heading:string;columns:string[];rows:string[][]}[]};
 const escape=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 export function formattedReportHtml(report:FormattedReport){
+ if(report.template==='statement')return statementDocumentHtml(report);
  const numeric=isReportAmount;
  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${escape(reportFilename(report))}</title><link rel="stylesheet" href="/report-assets/statement-shared.css"><style>
  @page{size:A4 landscape;margin:10mm}@page portrait{size:A4 portrait;margin:10mm}@page landscape{size:A4 landscape;margin:10mm}body{padding:16px}.page{width:1123px;max-width:100%;height:auto;min-height:730px;overflow:visible;display:flex;flex-direction:column;box-shadow:0 2px 12px #08064220}.page.portrait{width:794px;min-height:1060px;page:portrait}.page.landscape{page:landscape}.band{padding:24px 30px}.brand img{object-fit:contain}.body{padding:22px 30px;flex:1}.to h2{font-size:17px}.to p{margin-top:8px}.foot{position:static;margin:24px 30px 18px}.page+.page{margin-top:20px;break-before:page}table{table-layout:auto}thead th{white-space:normal}th.num,td.num{white-space:nowrap;text-align:right}td.negative{color:#b42338}tr.total td{font-weight:800;border-top:2px solid #080642;background:#f2f1f9}.doc h1{font-size:23px}thead{display:table-header-group}tr{break-inside:avoid}.sum{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));margin:18px 0}.tile b{font-size:17px}.sh{margin-top:18px}

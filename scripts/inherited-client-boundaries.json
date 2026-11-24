@@ -1457,5 +1457,29 @@
     "parents": [
       "features/accounting/console.tsx"
     ]
+  },
+  {
+    "parents": [
+      "features/finance-assistant/report-download.tsx"
+    ],
+    "file": "features/finance-assistant/compose-workspace.tsx"
+  },
+  {
+    "parents": [
+      "features/finance-assistant/workspace.tsx"
+    ],
+    "file": "features/finance-assistant/reconciliation-workspace.tsx"
+  },
+  {
+    "parents": [
+      "features/finance-assistant/workspace.tsx"
+    ],
+    "file": "features/finance-assistant/voice-input.tsx"
+  },
+  {
+    "parents": [
+      "features/finance-assistant/workspace.tsx"
+    ],
+    "file": "features/finance-assistant/document-journal-workspace.tsx"
   }
 ]
