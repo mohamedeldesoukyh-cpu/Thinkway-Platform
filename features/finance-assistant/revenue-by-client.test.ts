@@ -25,7 +25,7 @@ test("200 source entries become named client totals and total row, with detail o
  const calls:{name:string;args:Record<string,unknown>}[]=[];
  const db={rpc:async(name:string,args:Record<string,unknown>)=>{
   calls.push({name,args});
-  return {error:null,data:name==="tw_finance_statement_snapshot"?{count:200,rows,accounts:[{currency:"EGP",credit:"1001.00",debit:"1.00"}]}:[{id:"exact",code:args.p_search,name:args.p_search==="CLT-1"?"Mind Share":"Fresh"},{id:"wrong",code:"CLT-10",name:"Wrong partial match"}]};
+  return {error:null,data:name==="tw_finance_statement_snapshot"?{count:200,rows,accounts:[{currency:"EGP",credit:"1001.00",debit:"1.00"}]}:[{id:"exact",code:"121001",shared_code:args.p_search,name:args.p_search==="CLT-1"?"Mind Share":"Fresh"},{id:"wrong",code:args.p_search,shared_code:"CLT-10",name:"Wrong partial match"}]};
  }};
  const evidence=await executeFinanceReport(db,setup,null,plan);
  assert.equal(calls[0].args.p_account,"410000");assert.equal(calls[0].args.p_company,company);

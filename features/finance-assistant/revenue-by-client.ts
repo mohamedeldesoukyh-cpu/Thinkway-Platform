@@ -8,7 +8,7 @@ import { readLedgerDetails, type LedgerRow } from "./ledger-details";
 type Plan = Extract<FinancePlan,{action:"revenue_by_client"}> & {from:string;to:string};
 const amount = z.string().regex(/^-?\d+(\.\d{1,2})?$/);
 const totalsSchema = z.object({accounts:z.array(z.object({currency:z.string(),debit:amount,credit:amount}))});
-const clientsSchema = z.array(z.object({id:z.string(),code:z.string().nullable(),name:z.string()}));
+const clientsSchema = z.array(z.object({id:z.string(),code:z.string().nullable(),shared_code:z.string().nullable().optional(),name:z.string()}));
 
 /** Group exact snapshot amounts, including offsets and unassigned revenue; never model arithmetic. */
 export function groupClientRevenue(rows:LedgerRow[], names:Map<string,string>){
@@ -53,7 +53,9 @@ export async function revenueByClient(db:FinanceReportClient,setup:AccountingSet
   for(const code of new Set(rows.filter(r=>r.transaction_type!=="closing").map(r=>r.party).filter((code):code is string=>!!code))){
     const found=await db.rpc("tw_accounting_party_lookup",{p_company:company.id,p_kind:"client",p_search:code,p_selected:null});
     if(found.error)throw Error("Client directory unavailable.");
-    const exact=clientsSchema.parse(found.data).filter(c=>c.code===code);
+    // Directory `code` may be the legacy GL account. Ledger party identifiers
+    // refer to the shared Media client code, which the lookup returns separately.
+    const exact=clientsSchema.parse(found.data).filter(c=>(c.shared_code??c.code)===code);
     if(exact.length===1)names.set(code,exact[0].name);
   }
   const grouped=groupClientRevenue(rows,names);
