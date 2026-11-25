@@ -72,6 +72,7 @@ export default async function ClientIoPreviewPage({ params, searchParams }: Page
         </div>
       ) : (
         <DocumentPreviewClient
+          closeHref={returnTo}
           contained
           toolbarLeft={<div className="flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap items-center gap-2">

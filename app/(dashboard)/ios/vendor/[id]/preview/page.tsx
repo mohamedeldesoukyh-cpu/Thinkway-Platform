@@ -40,6 +40,7 @@ export default async function VendorIoPreviewPage({ params }: PageProps) {
       description={`${typed.document_number ?? id} — branded insertion order`}
     >
       <DocumentPreviewClient
+          closeHref={`/ios/vendor?io=${id}`}
           contained
           toolbarLeft={<div className="flex flex-wrap items-center gap-2">
         <PageBackButton
