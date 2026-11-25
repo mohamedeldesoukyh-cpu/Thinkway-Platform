@@ -5,6 +5,7 @@ import {
   computeDeliverableClientPrice,
   computeDeliverableTotalClientCost,
   deliverableCommercialDefaults,
+  seedDeliverableCommercials,
   formatDeliverablePrice,
   formatDeliverableTotalClientPrice,
   QUOTATION_DELIVERABLE_DEFAULT_COMMERCIAL_MODE,
@@ -80,4 +81,14 @@ test("clearing free_for_client restores computed client price", () => {
 
   assert.equal(restored.free_for_client, false);
   assert.ok((restored.revenue ?? 0) > 0);
+});
+
+test("opening unpriced detail uses the displayed master price and preserves mode on edits", () => {
+ const seed = seedDeliverableCommercials({platform:"instagram",type:"ig_post",quantity:1}, {cost:65000,revenue:91000,commercial_input_mode:"cost_revenue",af_pct:15,cost_currency:"EGP"});
+ const focused = withDeliverableCommercialPatch(seed,{cost:65000},1);
+ assert.equal(focused.revenue,91000);
+ assert.equal(focused.commercial_input_mode,"cost_revenue");
+ const typed = withDeliverableCommercialPatch(focused,{revenue:100000},1);
+ assert.equal(computeDeliverableTotalClientCost(typed,1),115000);
+ assert.equal(withDeliverableCommercialPatch(typed,{cost:70000},1).revenue,100000);
 });

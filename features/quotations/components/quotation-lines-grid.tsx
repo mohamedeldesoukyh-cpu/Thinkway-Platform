@@ -161,6 +161,9 @@ function QuotationPackLineRow({
 
   const syncCommercialsFromDeliverables = useCallback(
     (roll: {
+      mode: QuotationRowDraft["mode"];
+      gpPctInput: number;
+      gpValueInput: number;
       cost: number;
       revenue: number;
       gpPct: number;
@@ -169,12 +172,12 @@ function QuotationPackLineRow({
       afPct: number;
     }) => {
       onDraftChange(item.id, {
-        mode: "cost_revenue",
+        mode: roll.mode,
         afPct: roll.afPct,
         cost: roll.cost,
         revenue: roll.revenue,
-        gpPct: roll.gpPct,
-        gpValue: roll.gpValue,
+        gpPct: roll.gpPctInput,
+        gpValue: roll.gpValueInput,
         costCurrency: roll.costCurrency,
       });
     },

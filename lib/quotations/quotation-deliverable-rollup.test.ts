@@ -125,3 +125,19 @@ assert.equal(
 assert.equal(deliverableLineCost(deliverable({ cost: 5000, quantity: 2 })), 10000);
 
 console.log("quotation-deliverable-rollup.test.ts: all assertions passed");
+
+// Keep the selected calculation method through edits, aggregation and save inputs.
+for (const mode of ["cost_markup_pct", "cost_gp_pct", "cost_gp_value", "cost_revenue"] as const) {
+  for (const cost of [60000, 65000, 70000]) {
+    const d = deliverable({ commercial_input_mode: mode, cost, gp_pct: 40, gp_value: 26000, revenue: 91000 });
+    const rolled = rollupDeliverableCommercials([d], { lineCurrency: "EGP", fxRateToEgp: 1 })!;
+    assert.equal(rolled.mode, mode);
+    assert.equal(rolled.gpPctInput, 40);
+    if (mode === "cost_revenue") assert.equal(rolled.revenue, 91000);
+    if (mode === "cost_markup_pct") assert.equal(rolled.revenue, cost * 1.4);
+    if (mode === "cost_gp_value") assert.equal(rolled.gpValueInput, 26000);
+    const reopened = rollupDeliverableCommercials(JSON.parse(JSON.stringify([d])), { lineCurrency: "EGP", fxRateToEgp: 1 })!;
+    assert.equal(reopened.mode, mode);
+  }
+}
+assert.equal(rollupDeliverableCommercials([deliverable(), deliverable({commercial_input_mode:"cost_markup_pct"})], {lineCurrency:"EGP",fxRateToEgp:1})!.mode,"cost_revenue");

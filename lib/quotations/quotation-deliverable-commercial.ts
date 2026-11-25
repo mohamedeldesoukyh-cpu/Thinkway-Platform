@@ -188,3 +188,10 @@ export function formatDeliverableGpPct(
   if (metrics.revenue <= 0) return null;
   return `${metrics.gpPct.toFixed(1)}%`;
 }
+
+/** Initialize an unpriced detail editor from the same master values it displays. */
+export function seedDeliverableCommercials(deliverable: QuotationDeliverable, defaults: ReturnType<typeof deliverableCommercialDefaults>): QuotationDeliverable {
+  if (Number(deliverable.cost)>0 || Number(deliverable.revenue)>0 || deliverable.free_for_client) return deliverable;
+  if (!(Number(defaults.cost)>0 || Number(defaults.revenue)>0)) return deliverable;
+  return { ...deliverable, ...defaults, commercial_input_mode: deliverable.commercial_input_mode ?? defaults.commercial_input_mode };
+}
