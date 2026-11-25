@@ -21,8 +21,8 @@ test("PDF cover and closing use compatible overlays without changing the HTML pr
 
 test("PDF veils retain transparent photo areas instead of hiding the mosaic", async () => {
   for (const [overlay, maximumMinAlpha, minimumFade] of [
-    [QUOTATION_PDF_COVER_OVERLAY, 150, 100],
-    [QUOTATION_PDF_CLOSING_OVERLAY, 248, 5],
+    [QUOTATION_PDF_COVER_OVERLAY, 100, 100],
+    [QUOTATION_PDF_CLOSING_OVERLAY, 200, 40],
   ] as const) {
     const { data, info } = await sharp(Buffer.from(overlay.split(",")[1], "base64")).raw().toBuffer({ resolveWithObject: true });
     assert.equal(info.channels, 4);
