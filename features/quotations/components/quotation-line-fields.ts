@@ -246,6 +246,7 @@ export function useQuotationLineFields(
       return;
     }
     const key = [
+      derivedCommercials.mode, derivedCommercials.gpPctInput, derivedCommercials.gpValueInput,
       derivedCommercials.cost,
       derivedCommercials.revenue,
       derivedCommercials.gpValue,
@@ -312,10 +313,10 @@ export function useQuotationLineFields(
             revenue: rolled.revenue,
             cost: rolled.cost,
             cost_currency: entryCurrency,
-            gp_pct: rolled.gpPct,
-            gp_value: rolled.gpValue,
+            gp_pct: rolled.gpPctInput,
+            gp_value: rolled.gpValueInput,
             af_pct: rolled.afPct,
-            mode: "cost_revenue",
+            mode: rolled.mode,
           }
         : { deliverables };
 

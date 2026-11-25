@@ -402,13 +402,13 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
                   ? { deliverables: stripDeliverableCommercialAmounts(payload.deliverables) }
                   : {}),
                 mode: (useRolled
-                  ? "cost_revenue"
+                  ? rolled!.mode
                   : payload.mode ?? item.commercial_input_mode) as CommercialInputMode,
                 cost: useRolled ? rolled!.cost : (payload.cost ?? item.cost),
                 cost_currency: payload.cost_currency ?? item.cost_currency,
-                gp_pct: useRolled ? rolled!.gpPct : (payload.gp_pct ?? item.gp_pct),
+                gp_pct: useRolled ? rolled!.gpPctInput : (payload.gp_pct ?? item.gp_pct),
                 revenue: useRolled ? rolled!.revenue : (payload.revenue ?? item.revenue),
-                gp_value: useRolled ? rolled!.gpValue : (payload.gp_value ?? item.gp_value),
+                gp_value: useRolled ? rolled!.gpValueInput : (payload.gp_value ?? item.gp_value),
                 af_pct: useRolled ? rolled!.afPct : (payload.af_pct ?? item.af_pct),
               },
               options: {

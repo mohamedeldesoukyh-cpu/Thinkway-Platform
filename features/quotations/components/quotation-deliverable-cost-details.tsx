@@ -40,6 +40,7 @@ import {
   computeDeliverableClientPrice,
   computeDeliverableTotalClientCost,
   deliverableCommercialDefaults,
+  seedDeliverableCommercials,
   isDeliverableFreeForClient,
   QUOTATION_DELIVERABLE_DEFAULT_COMMERCIAL_MODE,
   withDeliverableCommercialPatch,
@@ -358,8 +359,28 @@ export function QuotationDeliverableCostDetails({
   const directRates = useQuotationDirectRates();
   const didAutoOpenRef = useRef(false);
   const fieldsGridRef = useRef<HTMLDivElement>(null);
-  const [localDeliverable, setLocalDeliverable] = useState(deliverable);
-  const localDeliverableRef = useRef(deliverable);
+  const defaults = useMemo(() => {
+    const base = deliverableCommercialDefaults(item);
+    if (!draft) return base;
+    const deliverableEmpty =
+      !(Number(deliverable.cost) > 0) &&
+      !(Number(deliverable.revenue) > 0) &&
+      deliverable.free_for_client !== true;
+    if (!deliverableEmpty) return base;
+    if (draft.cost <= 0 && draft.revenue <= 0) return base;
+    return {
+      ...base,
+      commercial_input_mode: draft.mode,
+      cost_currency: draft.costCurrency || base.cost_currency,
+      cost: draft.cost,
+      revenue: draft.revenue,
+      gp_pct: draft.gpPct,
+      gp_value: draft.gpValue,
+      af_pct: draft.afPct,
+    };
+  }, [item, draft, deliverable.cost, deliverable.revenue, deliverable.free_for_client]);
+  const [localDeliverable, setLocalDeliverable] = useState(() => seedDeliverableCommercials(deliverable, defaults));
+  const localDeliverableRef = useRef(localDeliverable);
   const openSnapshotRef = useRef<string | null>(null);
   const fxRate = draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1;
   const [currencyPending, setCurrencyPending] = useState(false);
@@ -391,41 +412,23 @@ export function QuotationDeliverableCostDetails({
   // Sync from parent only while closed so reopen shows draft kept after outside-close.
   useEffect(() => {
     if (!open) {
-      setLocalDeliverable(deliverable);
-      localDeliverableRef.current = deliverable;
+      const seeded = seedDeliverableCommercials(deliverable, defaults);
+      setLocalDeliverable(seeded);
+      localDeliverableRef.current = seeded;
     }
-  }, [deliverable, open]);
+  }, [deliverable, open, defaults]);
 
   useEffect(() => {
     if (!defaultOpen || didAutoOpenRef.current) return;
     didAutoOpenRef.current = true;
-    const normalized = withDeliverableCommercialPatch(deliverable, {}, fxRate);
+    const normalized = withDeliverableCommercialPatch(seedDeliverableCommercials(deliverable, defaults), {}, fxRate);
     setLocalDeliverable(normalized);
     localDeliverableRef.current = normalized;
     openSnapshotRef.current = deliverableSnapshot(normalized);
     setOpen(true);
-  }, [defaultOpen, deliverable, fxRate]);
+  }, [defaultOpen, deliverable, fxRate, defaults]);
 
-  const defaults = useMemo(() => {
-    const base = deliverableCommercialDefaults(item);
-    if (!draft) return base;
-    const deliverableEmpty =
-      !(Number(deliverable.cost) > 0) &&
-      !(Number(deliverable.revenue) > 0) &&
-      deliverable.free_for_client !== true;
-    if (!deliverableEmpty) return base;
-    if (draft.cost <= 0 && draft.revenue <= 0) return base;
-    return {
-      ...base,
-      commercial_input_mode: draft.mode,
-      cost_currency: draft.costCurrency || base.cost_currency,
-      cost: draft.cost,
-      revenue: draft.revenue,
-      gp_pct: draft.gpPct,
-      gp_value: draft.gpValue,
-      af_pct: draft.afPct,
-    };
-  }, [item, draft, deliverable.cost, deliverable.revenue, deliverable.free_for_client]);
+
 
   const freeForClient = isDeliverableFreeForClient(localDeliverable);
   const mode =
@@ -471,7 +474,8 @@ export function QuotationDeliverableCostDetails({
     localDeliverableRef.current = next;
     setLocalDeliverable(next);
     if (open || embedded) {
-      queueMicrotask(() => onLiveChange?.(next));
+      // Update summaries in the same input event; Save only persists.
+      onLiveChange?.(next);
     }
   }
 

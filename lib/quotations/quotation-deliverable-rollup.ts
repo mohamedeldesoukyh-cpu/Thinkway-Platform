@@ -1,5 +1,5 @@
 import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
-import { computeAgencyFee, computeCommercials } from "@/lib/commercial/commercial-engine";
+import { computeAgencyFee, computeCommercials, type CommercialInputMode } from "@/lib/commercial/commercial-engine";
 
 import {
   computeDeliverableClientPrice,
@@ -8,6 +8,9 @@ import {
 } from "@/lib/quotations/quotation-deliverable-commercial";
 
 export type DeliverableCommercialRollup = {
+  mode: CommercialInputMode;
+  gpPctInput: number;
+  gpValueInput: number;
   cost: number;
   /** Base client cost before agency fee. */
   revenue: number;
@@ -108,6 +111,12 @@ export function rollupDeliverableCommercials(
   const line = computeCommercials({ mode: "cost_revenue", cost, revenue });
 
   return {
+    // A single package retains its explicitly selected pricing method.
+    // Mixed packages need a fixed aggregate price at the parent-line level.
+    mode: deliverables.length === 1 && !deliverables[0].free_for_client
+      ? deliverables[0].commercial_input_mode ?? "cost_markup_pct" : "cost_revenue",
+    gpPctInput: deliverables.length === 1 ? Number(deliverables[0].gp_pct) || 0 : line.gpPct,
+    gpValueInput: line.gpValue,
     cost: line.cost,
     revenue: line.revenue,
     afValue,
