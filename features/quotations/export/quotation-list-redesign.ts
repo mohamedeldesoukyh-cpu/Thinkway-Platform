@@ -2,7 +2,8 @@ import { buildQuotationProposalReport } from "./quotation-proposal-report";
 import { withArabicReportFont } from "@/lib/reports/document/arabic-report-font";
 import { reportCreatorName } from "@/lib/reports/document/report-creator-name";
 import { QUOTATION_LIST_REDESIGN_CSS } from "./quotation-list-redesign-styles";
-import { getThinkwayLogoDarkDataUri } from "@/lib/reports/document/thinkway-report-logo-embed";
+import { getThinkwayLogoDarkDataUri, getThinkwayIconDataUri } from "@/lib/reports/document/thinkway-report-logo-embed";
+import { quotationPhotoMosaic } from "./quotation-photo-mosaic";
 import { rateReportPlatformIcon } from "@/features/rate-cards/report-icons";
 import { escapeHtml as e, safeProfileUrl } from "@/features/rate-cards/report";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
@@ -147,7 +148,7 @@ export function buildRedesignedQuotationCreatorList(doc: QuotationDocument): str
   const footer = (page:number) => `<footer><span>${e(doc.serial)}</span><s></s><span>${page} / ${total}</span></footer>`;
   const header = (range:string, sub:string) => `<header class="ph">${brand}<div class="ph__c">${clientLogo("ph__client-logo")}<div class="ph__titles"><span class="ph__client" dir="auto">${e(doc.clientName)}</span><b class="ph__title" dir="auto">${e(doc.name)}</b></div><span class="ph__kind">${reportTitle}</span></div><div class="ph__r"><em>${e(range)}</em><span>${e(sub)}</span></div></header>`;
   const portraits = creators.map(c => image(c.group.avatarUrl)).filter(Boolean);
-  const mosaic = `<div class="mosaic" aria-hidden="true">${[...portraits,...portraits.slice().reverse()].map(src => `<img src="${src}" alt="">`).join("")}</div>`;
+  const mosaic = `<div class="mosaic" aria-hidden="true">${quotationPhotoMosaic(portraits, [logo, image(getThinkwayIconDataUri())], doc.serial).map(tile => `<img${tile.kind === "logo" ? ' class="mosaic__logo"' : ""} src="${tile.src}" alt="">`).join("")}</div>`;
   const tiers = new Map<string,number>(); creators.forEach(c => tiers.set(c.tier,(tiers.get(c.tier)??0)+1));
   const pills = [...tiers].map(([tier,count]) => tierLabel(tier).replace(`>${e(tier)}<`,`>${count} ${e(tier)}<`)).join("");
   const cover = `<section class="page page--cov">${mosaic}<div class="veil"></div><div class="cov"><div class="cov__main"><div class="cov__brand">${brand}<span class="cov__rule"></span><span class="cov__for">Prepared for</span></div><p class="cov__recipient" dir="auto">${e(partnerName)}</p><h1 dir="auto">${e(doc.name)}</h1><div class="cov__strip"><b>${reportTitle}</b><i></i><span>${e(doc.serial)}</span><i></i><span>${e(doc.issueDateLabel)}</span></div><div class="cov__count"><b>${creators.length}</b><div class="cov__count-txt"><div><u>creators</u><small>shortlisted for review</small></div><div class="cov__tiers">${pills}</div></div></div>${packageTotal}</div>${clientLogo("cov__client-logo")}</div>${footer(1)}</section>`;
