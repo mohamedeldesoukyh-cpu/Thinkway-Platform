@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Props = {
+  closeHref?: string;
   pageActions?: { remove: (index: number) => void; undo: () => void; restore: () => void; removedCount: number };
   contained?: boolean;
   html?: string;
@@ -62,6 +63,7 @@ function nearestZoomIndex(zoom: number): number {
 }
 
 export function DocumentPreviewShell({
+  closeHref: explicitCloseHref,
   html,
   pageActions,
   src,
@@ -75,7 +77,7 @@ export function DocumentPreviewShell({
   paginationReadyValue = "ready",
 }: Props) {
   const pathname = usePathname();
-  const closeHref = pathname?.replace(/\/preview\/?$/, "") || "/";
+  const closeHref = explicitCloseHref ?? (pathname?.replace(/\/preview\/?$/, "") || "/");
   const [maximized, setMaximized] = useState(true);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [pageCount, setPageCount] = useState(0);

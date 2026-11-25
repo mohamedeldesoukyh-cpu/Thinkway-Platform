@@ -8,6 +8,7 @@ import { RemovedPagesContext } from "./report-page-selection-context";
 import { DocumentPreviewShell } from "./document-preview-shell";
 
 type Props = {
+  closeHref?: string;
   allowPageRemoval?: boolean;
   contained?: boolean;
   html?: string;
