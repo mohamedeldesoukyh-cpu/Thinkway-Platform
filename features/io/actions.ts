@@ -1015,14 +1015,15 @@ export async function sendVendorIoAction(
   const senderName = (profile as { full_name?: string | null } | null)?.full_name ?? null;
 
   // Persist the exact document before creating a link or sending an email.
-  // Paid/signed IO guards may reject this update; never email an unusable link.
+  // Keep delivery HTML separate from payment-locked commercial terms.
+  // Signed IOs still reject replacement snapshots; never email an unusable link.
   if (sendByEmail) {
     const { data: savedDocument, error: documentError } = await supabase
       .from("vendor_ios")
-      .update({ terms_html: sentDocumentHtml } as never)
+      .update({ signing_document_html: sentDocumentHtml } as never)
       .eq("id", id).select("id").maybeSingle();
     if (documentError || !savedDocument) {
-      return { ok: false, message: "The signing document could not be saved. Nothing was sent. This IO may be locked by a recorded payment or signature; contact your administrator to review the document." };
+      return { ok: false, message: "The signing document could not be saved. Nothing was sent. The IO may already be signed, or you may not have permission to update it; contact your administrator to review the document." };
     }
   }
 
