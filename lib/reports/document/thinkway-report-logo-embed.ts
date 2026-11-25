@@ -28,6 +28,11 @@ export function getThinkwayLogoDarkDataUri(): string | null {
   return loadPublicAssetDataUri(THINKWAY_LOGO_PUBLIC_PATHS.dark);
 }
 
+/** T and W extracted from the approved white-and-blue Thinkway wordmark. */
+export function getThinkwayIconDataUri(): string | null {
+  return loadPublicAssetDataUri("/tw-monogram-report.png");
+}
+
 /** Embed light-background Thinkway logo as a data URI for Puppeteer-safe PDF export. */
 export function getThinkwayLogoLightDataUri(): string | null {
   return loadPublicAssetDataUri(THINKWAY_LOGO_PUBLIC_PATHS.light);
