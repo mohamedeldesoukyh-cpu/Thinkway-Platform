@@ -156,7 +156,15 @@ export async function GET(request: Request, context: RouteContext) {
 
     if (format === "pdf") {
       const pdfHtml = buildQuotationHtml(doc, { siteOrigin, logoSrcs, excludedPages, forPdf: true });
-      const pdfResult = isQuotationListTemplate(template) ? { ok: true as const, buffer: await renderRateCardPdf(pdfHtml, quotationListPdfOptions(doc)) } : await renderHtmlToPdf(pdfHtml, QUOTATION_PDF_OPTIONS);
+      const pdfResult = isQuotationListTemplate(template)
+        ? await renderRateCardPdf(pdfHtml, quotationListPdfOptions(doc)).then(
+            buffer => ({ ok: true as const, buffer }),
+            error => {
+              console.error("[quotation-export] PDF rendering failed:", error);
+              return { ok: false as const, error: error instanceof Error ? error.message : String(error) };
+            }
+          )
+        : await renderHtmlToPdf(pdfHtml, QUOTATION_PDF_OPTIONS);
       if (!pdfResult.ok) {
         return NextResponse.json(
           { error: pdfUnavailableMessage(pdfResult.error) },

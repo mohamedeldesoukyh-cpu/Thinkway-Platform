@@ -1,5 +1,6 @@
 import { omitReportPages } from "@/features/discovery/document-preview/report-page-selection";
 import { isPricedCreatorListTemplate } from "./quotation-template";
+import { applyQuotationListPdfStyles } from "./quotation-list-pdf-styles";
 import { buildQuotationCreatorListHtml } from "./quotation-creator-list";
 import { isQuotationListTemplate } from "./quotation-template";
 import { applyMobileDocumentLayout } from "@/lib/reports/document/mobile-document-layout";
@@ -44,7 +45,8 @@ export function buildQuotationHtml(
   options?: BuildQuotationHtmlOptions
 ): string {
   if (isQuotationListTemplate(doc.template)) {
-    const html = omitReportPages(withOtherServices(buildQuotationCreatorListHtml(doc), doc), options?.excludedPages ?? []);
+    const report = withOtherServices(buildQuotationCreatorListHtml(doc), doc);
+    const html = omitReportPages(options?.forPdf ? applyQuotationListPdfStyles(report) : report, options?.excludedPages ?? []);
     return isPricedCreatorListTemplate(doc.template) ? html : applyMobileDocumentLayout(html);
   }
   return applyMobileDocumentLayout(withOtherServices(buildQuotationTemplateHtml(doc, options), doc));
