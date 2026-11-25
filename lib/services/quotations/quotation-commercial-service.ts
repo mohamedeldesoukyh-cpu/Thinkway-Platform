@@ -130,12 +130,12 @@ export async function updateQuotationItemCommercials(
   });
 
   const line = normalizeCommercialLine({
-    mode: useRolled ? "cost_revenue" : input.mode,
+    mode: useRolled ? rolled!.mode : input.mode,
     cost: useRolled ? rolled!.cost : input.cost,
     costCurrency: input.cost_currency,
-    gpPct: useRolled ? null : input.gp_pct,
+    gpPct: useRolled ? rolled!.gpPctInput : input.gp_pct,
     revenue: useRolled ? rolled!.revenue : input.revenue,
-    gpValue: useRolled ? null : input.gp_value,
+    gpValue: useRolled ? rolled!.gpValueInput : input.gp_value,
     afPct: input.af_pct,
     fxRateToEgp: rate,
   });
