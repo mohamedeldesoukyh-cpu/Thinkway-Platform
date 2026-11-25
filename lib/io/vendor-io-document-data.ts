@@ -1,3 +1,4 @@
+import { resolveVendorIoVatAmount } from "./vendor-io-vat";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { formatPaymentMethodLabel } from "@/lib/vendors/format-utils";
@@ -71,7 +72,7 @@ export async function loadVendorIoDocumentData(
       .single(),
     supabase
       .from("vendor_io_lines")
-      .select("campaign_line_id, campaign_lines:campaign_line_id(id, name, document_number, metadata, cost_before_vat, cost, revenue_before_vat, revenue, usage_rights_amount)")
+      .select("campaign_line_id, campaign_lines:campaign_line_id(id, name, document_number, metadata, cost_before_vat, cost, revenue_before_vat, revenue, usage_rights_amount, cost_vat_amount)")
       .eq("vendor_io_id", vendorIoId),
   ]);
 
@@ -182,6 +183,7 @@ export async function loadVendorIoDocumentData(
     revenue_before_vat: number | null;
     revenue: number | null;
     usage_rights_amount?: number | null;
+    cost_vat_amount?: number | null;
   };
 
   const linkedLines = (lineLinks ?? [])
@@ -207,10 +209,7 @@ export async function loadVendorIoDocumentData(
           }))
         );
 
-  const vatAmount = (deliverables ?? []).reduce(
-    (sum, row) => sum + Number((row as { cost_vat_amount?: number }).cost_vat_amount ?? 0),
-    0
-  );
+  const vatAmount = resolveVendorIoVatAmount(linkedLines, deliverables ?? []);
   const vatPercent =
     Number((deliverables?.[0] as { cost_vat_percent?: number } | undefined)?.cost_vat_percent ?? 0);
 
@@ -339,3 +338,4 @@ export async function loadVendorIoDocumentData(
       .filter((n): n is string => Boolean(n)),
   };
 }
+
