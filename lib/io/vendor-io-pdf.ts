@@ -388,7 +388,7 @@ export async function renderHtmlToPdf(
     return { ok: false, error: message };
   } finally {
     if (browser) {
-      await browser.close();
+      await browser.close().catch(() => {});
     }
   }
 }
@@ -575,7 +575,7 @@ export async function renderHtmlPagesToImages(
     return { ok: false, error: message };
   } finally {
     if (browser) {
-      await browser.close();
+      await browser.close().catch(() => {});
     }
   }
 }

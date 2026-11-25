@@ -15,13 +15,23 @@ export function ratePdfBatches(html:string,pagesPerBatch=6):string[]{
 }
 
 /** Release Chromium between batches so large creator lists cannot exhaust it. */
-export async function renderRateCardPdf(html:string,options:HtmlToPdfOptions):Promise<Buffer>{
+export async function renderRateCardPdf(html:string,options:HtmlToPdfOptions,render=renderHtmlToPdf):Promise<Buffer>{
  const merged=await PDFDocument.create();
- for(const batch of ratePdfBatches(html)){
-  const result=await renderHtmlToPdf(batch,options);
-  if(!result.ok)throw new Error(`Rate-card PDF render failed: ${result.error}`);
+ async function appendBatch(batch:string):Promise<void>{
+  const result=await render(batch,options);
+  if(!result.ok){
+   const pages=ratePdfBatches(batch,1);
+   // A renderer process can run out of resources while decoding a whole batch.
+   // Retry only process/frame crashes, with smaller documents in fresh browsers.
+   if(pages.length>1 && /target closed|detached frame|frame.*detached|session closed|page crashed/i.test(result.error)){
+    for(const smaller of ratePdfBatches(batch,Math.ceil(pages.length/2)))await appendBatch(smaller);
+    return;
+   }
+   throw new Error(`Report PDF render failed: ${result.error}`);
+  }
   const source=await PDFDocument.load(result.buffer);
   for(const page of await merged.copyPages(source,source.getPageIndices()))merged.addPage(page);
  }
+ for(const batch of ratePdfBatches(html))await appendBatch(batch);
  return Buffer.from(await merged.save());
 }
