@@ -25,12 +25,10 @@ export function assignmentInstallmentNumbers(
   return new Map([...byAssignment].filter(([, ids]) => ids.has(invoiceId)).map(([id, ids]) => [id, ids.size]));
 }
 
-export function invoiceInstallmentLabel(ordinal: number | undefined, description: string): string | null {
-  if (!ordinal || !Number.isInteger(ordinal) || ordinal < 1) return null;
-  const suffix = ordinal % 100 >= 11 && ordinal % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[ordinal % 10] ?? "th";
-  // Use the persisted billing percentage, never a guess from the remaining balance.
+export function invoiceInstallmentLabel(_ordinal: number | undefined, description: string): string | null {
   const percentage = description.match(/(\d+(?:\.\d+)?)% of original billable amount/)?.[1];
-  return `${ordinal}${suffix} installment${percentage ? ` — ${percentage}%` : ""}`;
+  const value = Number(percentage);
+  return percentage && value > 0 && value < 100 ? percentage + "% of original billable amount" : null;
 }
 
 /** Read only, scoped to assignments already authorized by the invoice document loader. */

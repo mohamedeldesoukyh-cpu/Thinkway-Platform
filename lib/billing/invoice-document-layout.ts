@@ -1,3 +1,4 @@
+import { invoiceInstallmentLabel } from "./invoice-installments";
 import type {
   InvoiceDocumentData,
   InvoiceLineItemRow,
@@ -20,6 +21,7 @@ export function resolveInvoiceDocumentLayout(
 function billingPercentageLabel(lines: InvoiceLineItemRow[]): string {
   const matches=lines.map(line=>line.description.match(/(\d+(?:\.\d+)?)% of original billable amount/));
   if(!matches.some(Boolean))return '';
+  if(matches.every(match => !match || Number(match[1]) === 100)) return '';
   const percentages=[...new Set(matches.map(match=>match?.[1]??'100'))];
   return percentages.length===1 ? percentages[0]+'% of original billable amount' : 'Mixed billing: '+percentages.map(value=>value+'%').join(', ')+' of respective original item amounts';
 }
@@ -101,7 +103,7 @@ function creatorDescription(lines: InvoiceLineItemRow[]): string {
   }
   const deliverables = [...items].map(([label, quantity]) => quantity + " × " + label).join(" + ");
   const description = [name, deliverables].filter(Boolean).join(" — ");
-  return mixed ? description : withBillingPercentage(description, lines) + (billingPercentageLabel(lines) ? "" : " · 100% of original billable amount");
+  return mixed ? description : withBillingPercentage(description, lines);
 }
 
 /** Aggregate child invoice rows into one row per creator / campaign line. */
@@ -230,9 +232,14 @@ function applyPackageLayout(data: InvoiceDocumentData): InvoiceDocumentData {
 
   return {
     ...data,
-    lineItems: packageLines.map(line => ({ ...line, installmentLabel: [...new Set(data.lineItems
-      .filter(source => source.installmentLabel)
-      .map(source => `${source.creatorName || source.lineDocumentNumber || "Assignment"}: ${source.installmentLabel}`))].join(" · ") || null })),
+    agencyFeesInTotals: true,
+    lineItems: packageLines.map((line, index) => ({ ...line,
+      summaryCreators: index === 0 ? aggregateInvoiceLinesByCreator(data.lineItems).map(creator => {
+        const description = creator.description;
+        const split = description.indexOf(" — ");
+        return split < 0 ? description : description.slice(0, split) + " (" + description.slice(split + 3) + ")";
+      }) : undefined,
+    })),
   };
 }
 
@@ -246,7 +253,10 @@ export function applyInvoiceDocumentLayout(
   data: InvoiceDocumentData,
   layout: InvoiceDocumentLayout
 ): InvoiceDocumentData {
-  data = { ...data, lineItems: [...data.lineItems].sort((a, b) => Number(Boolean(a.otherService)) - Number(Boolean(b.otherService))) };
+  data = { ...data, agencyFeesInTotals: layout === "package", lineItems: data.lineItems.map(line => ({...line,
+    description: line.description.replace(/\s*[·-]\s*100(?:\.0+)?% of original billable amount/g, ""),
+    installmentLabel: invoiceInstallmentLabel(undefined, line.description),
+  })).sort((a, b) => Number(Boolean(a.otherService)) - Number(Boolean(b.otherService))) };
   if (layout === "detailed") return data;
   if (layout === "by_creator") {
     return {
