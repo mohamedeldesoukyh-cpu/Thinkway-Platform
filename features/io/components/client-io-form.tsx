@@ -45,6 +45,7 @@ import type {
 } from "@/lib/io/client-io-milestones";
 import {
   getClientIoPaymentTermsPreset,
+  applyPaymentTermsClause,
   type ClientIoPaymentTermsPresetId,
 } from "@/lib/io/client-io-payment-terms";
 import { useCampaignCurrency } from "@/features/campaigns/components/campaign-money";
@@ -222,12 +223,33 @@ export function ClientIoForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- save completion snapshot
   }, [saveState]);
 
+  const presetRollback = useRef<{ billingTerms: typeof billingTerms; terms: typeof terms; useDefaultTerms: boolean } | null>(null);
+  const [pendingPresetId, setPendingPresetId] = useState<ClientIoPaymentTermsPresetId | null>(null);
+  function previewPaymentPreset(id: ClientIoPaymentTermsPresetId) {
+    presetRollback.current = { billingTerms, terms, useDefaultTerms };
+    const preset = getClientIoPaymentTermsPreset(id);
+    setBillingTerms(preset.billingTerms);
+    setTerms(applyPaymentTermsClause(useDefaultTerms ? defaultTerms : terms, preset.clauseBody));
+    setUseDefaultTerms(false);
+    setPendingPresetId(id);
+  }
+
   useEffect(() => {
     if (!presetState.message) return;
+    setPendingPresetId(null);
     if (presetState.ok) {
       toast.success(presetState.message);
       router.refresh();
-    } else toast.error(presetState.message);
+    } else {
+      const previous = presetRollback.current;
+      if (previous) {
+        setBillingTerms(previous.billingTerms);
+        setTerms(previous.terms);
+        setUseDefaultTerms(previous.useDefaultTerms);
+      }
+      toast.error(presetState.message);
+    }
+    presetRollback.current = null;
   }, [presetState, router]);
 
   useEffect(() => {
@@ -486,11 +508,13 @@ export function ClientIoForm({
                         name="preset_id"
                         value={id}
                         size="sm"
-                        variant="outline"
+                        variant={billingTerms === preset.billingTerms ? "default" : "outline"}
+                        aria-pressed={billingTerms === preset.billingTerms}
+                        onClick={() => previewPaymentPreset(id)}
                         title={preset.description}
                         disabled={saving || applyingPreset}
                       >
-                        {applyingPreset ? "Applying…" : preset.label}
+                        {applyingPreset && pendingPresetId === id ? `${preset.label} · Saving…` : preset.label}
                       </Button>
                     );
                   })}
@@ -508,6 +532,7 @@ export function ClientIoForm({
                 <Input
                   id="billing_terms"
                   name="billing_terms"
+                  disabled={applyingPreset}
                   value={billingTerms}
                   onChange={(e) => {
                     setBillingTerms(e.target.value);
@@ -516,7 +541,8 @@ export function ClientIoForm({
                   placeholder="Payment schedule label (e.g. Net 30 Days)"
                   className={DETAIL_FORM_INPUT_CLASS}
                 />
-                {draftDirty ? (
+                {applyingPreset ? <p role="status" className="text-xs text-muted-foreground">Saving payment terms and refreshing the document…</p> : null}
+                {draftDirty && !applyingPreset ? (
                   <div className="flex flex-wrap items-center gap-2">
                     <Button type="submit" size="sm" disabled={saving}>
                       {saving ? "Saving…" : "Save payment terms & clause"}
@@ -624,7 +650,7 @@ export function ClientIoForm({
             type="submit"
             variant={draftDirty ? "default" : "outline"}
             size="sm"
-            disabled={saving || !draftDirty}
+            disabled={saving || applyingPreset || !draftDirty}
           >
             {saving ? "Saving…" : draftDirty ? "Save draft" : "Saved"}
           </Button>
