@@ -721,7 +721,7 @@ export function buildDecisionCenter(input: {
 
   // Draft composer exists — complete composition / generate PDF (STAB-010).
   // Do not say "Generate Client IO" when #CIO-* already exists.
-  if (stageId === "client-io" && signals.hasClientIo && signals.clientIoStatus === "draft") {
+  if (signals.lineCount > 0 && signals.status !== "cancelled" && signals.status !== "completed" && signals.hasClientIo && signals.clientIoStatus === "draft") {
     pushUnique(
       blockers,
       makeBlocker({
@@ -747,7 +747,7 @@ export function buildDecisionCenter(input: {
     );
   }
 
-  if (stageId === "client-io" && signals.clientIoStatus === "generated") {
+  if (signals.lineCount > 0 && signals.status !== "cancelled" && signals.status !== "completed" && signals.clientIoStatus === "generated") {
     pushUnique(
       blockers,
       makeBlocker({
@@ -1122,7 +1122,9 @@ export function buildDecisionCenter(input: {
           waitingFor: tab === "billing" ? "Finance" : resolveWaitingFor(waitingFor, owner),
           waitingLabel: tab === "billing" ? "Payouts" : "Resolution",
           sinceLabel: since,
-          reason: trimmed,
+          reason: /payout/i.test(trimmed)
+            ? "Creator balances remain unpaid. Finance should review payment terms and due dates; unpaid does not necessarily mean overdue."
+            : trimmed,
           impact: "Ops/Finance follow-up only — campaign progression may continue.",
           unlockLabel: "Clears when payouts/collections catch up.",
           primaryAction:

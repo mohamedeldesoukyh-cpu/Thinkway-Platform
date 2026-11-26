@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import "./client-ios-table.css";
 import { useMemo, useSyncExternalStore } from "react";
 
 import {
@@ -39,7 +40,10 @@ const serverDateReady = () => false;
 function ClientIoLocalDate({ value }: { value: string | null }) {
   const ready = useSyncExternalStore(subscribeToLocalDate, localDateReady, serverDateReady);
   if (!value) return <>—</>;
-  return <time dateTime={value}>{ready ? new Date(value).toLocaleString() : "…"}</time>;
+  return <time dateTime={value} className="client-io-date">
+    <span>{ready ? new Date(value).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }) : "…"}</span>
+    <span>{ready ? new Date(value).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : ""}</span>
+  </time>;
 }
 
 function renderClientIoStatusBadge(
@@ -61,6 +65,7 @@ function buildClientIosColumns(
   const columns: OperationalConfigurableColumnDef<ClientIoRow>[] = [
     {
       id: "io_number",
+      colWidth: "120px",
       label: "IO #",
       monoCell: true,
       renderCell: (row) => (
@@ -71,17 +76,15 @@ function buildClientIosColumns(
     },
     {
       id: "campaign",
+      colWidth: "320px",
       label: "Campaign",
       renderCell: (row) => (
         <Link
           href={`/campaigns/${row.campaign_header_id}`}
-          className={
-            platformV6
-              ? "platform-v6-link"
-              : "text-[11px] text-foreground/90 hover:underline"
-          }
+          className={cn("client-io-campaign", platformV6 && "platform-v6-link")}
         >
-          <DocumentNumber value={row.campaign_document_number} /> · {row.campaign_name}
+          <span className="client-io-reference"><DocumentNumber value={row.campaign_document_number} /></span>
+          <span>{row.campaign_name}</span>
         </Link>
       ),
     },
@@ -90,31 +93,36 @@ function buildClientIosColumns(
   if (showClientColumn) {
     columns.push({
       id: "client",
+      colWidth: "220px",
       label: "Client",
-      renderCell: (row) => row.client_name,
+      renderCell: (row) => <span className="client-io-name">{row.client_name}</span>,
     });
   }
 
   columns.push(
     {
       id: "status",
+      colWidth: "150px",
       label: "Status",
       renderCell: (row) => renderClientIoStatusBadge(row.status, platformV6),
     },
     {
       id: "sent",
+      colWidth: "130px",
       label: "Sent",
       cellClassName: platformV6 ? "text-[var(--tw-text-3)]" : "text-muted-foreground",
       renderCell: (row) => <ClientIoLocalDate value={row.sent_at} />,
     },
     {
       id: "approved",
+      colWidth: "130px",
       label: "Approved",
       cellClassName: platformV6 ? "text-[var(--tw-text-3)]" : "text-muted-foreground",
       renderCell: (row) => <ClientIoLocalDate value={row.approved_at} />,
     },
     {
       id: "actions",
+      colWidth: "150px",
       label: "Actions",
       locked: true,
       headerClassName: platformV6 ? undefined : "text-right",
@@ -206,7 +214,7 @@ export function ClientIosTable({
       columns={columns}
       rows={rows}
       rowKey={(row) => row.id}
-      className={platformV6 ? "platform-v6-data-table" : undefined}
+      className={cn("client-io-register-table", platformV6 && "platform-v6-data-table")}
       rowClassName={(row) =>
         cn(!platformV6 && selectedId === row.id && "bg-muted/50")
       }
