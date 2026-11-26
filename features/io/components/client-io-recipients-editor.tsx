@@ -1,6 +1,9 @@
 "use client";
 
 import { PlusIcon, Trash2Icon } from "lucide-react";
+import { useId, useRef, useState } from "react";
+import { loadIoRecipientSuggestions } from "@/features/io/recipient-suggestions-action";
+import type { RecipientSuggestion } from "@/lib/io/recipient-suggestions";
 
 import { Button } from "@/components/ui/button";
 import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
@@ -35,6 +38,28 @@ export function ClientIoRecipientsEditor({
 }: Props) {
   const confirmDelete = useConfirmDelete();
   const fromEmail = getEmailFromAddress();
+  const suggestionsId = useId();
+  const [suggestions, setSuggestions] = useState<RecipientSuggestion[]>([]);
+  const [suggestionStatus, setSuggestionStatus] = useState("");
+  const loaded = useRef(false);
+  async function loadSuggestions() {
+    if (loaded.current) return;
+    loaded.current = true;
+    setSuggestionStatus("Loading saved contacts…");
+    try {
+      setSuggestions(await loadIoRecipientSuggestions());
+      setSuggestionStatus("");
+    } catch {
+      loaded.current = false;
+      setSuggestionStatus("Suggestions could not load. You can still enter a recipient manually; focus the field again to retry.");
+    }
+  }
+  function editContact(index: number, field: "name" | "email", value: string) {
+    const selected = suggestions.find((item) => item.email.toLowerCase() === value.trim().toLowerCase());
+    if (selected) updateRecipient(index, { name: selected.name, email: selected.email });
+    else if (field === "email") onChange(applyRecipientEmailEdit(recipients, index, value));
+    else updateRecipient(index, { name: value });
+  }
 
   function updateRecipient(index: number, patch: Partial<ClientIoRecipientEntry>) {
     const main = clientIoDocumentRecipients(recipients);
@@ -77,6 +102,10 @@ export function ClientIoRecipientsEditor({
           : "Send delivers to everyone listed below."}
       </p>
       <div className="space-y-2">
+        <datalist id={suggestionsId}>
+          {suggestions.map((contact) => <option key={contact.email.toLowerCase()} value={contact.email} label={contact.name || contact.email} />)}
+        </datalist>
+        <p className="text-xs text-muted-foreground" role="status">{suggestionStatus || "Start typing a name or email to find previously saved contacts."}</p>
         {recipients.length === 0 ? (
           <p className="rounded-md border border-dashed border-border/70 bg-muted/15 px-3 py-4 text-sm text-muted-foreground">
             No recipients yet. Add a contact below.
@@ -85,7 +114,7 @@ export function ClientIoRecipientsEditor({
           recipients.map((recipient, index) => (
             <div
               key={`recipient-${index}`}
-              className="grid gap-2 rounded-md border border-border/60 bg-muted/10 p-3 lg:grid-cols-[5rem_6rem_minmax(0,1fr)_minmax(0,1fr)_auto] sm:grid-cols-2"
+              className="grid grid-cols-2 gap-2 rounded-md border border-border/60 bg-muted/10 p-3"
             >
               <select aria-label="Recipient role" className={DETAIL_FORM_INPUT_CLASS} value={recipient.role ?? "to"}
                 disabled={disabled} onChange={e => updateRecipient(index, { role: e.target.value as "to" | "cc" | "bcc" })}>
@@ -97,8 +126,11 @@ export function ClientIoRecipientsEditor({
                 <option value="main">Main</option><option value="other">Others</option>
               </select>
               <Input aria-label="Contact name"
+                list={suggestionsId}
+                autoComplete="off"
+                onFocus={() => void loadSuggestions()}
                 value={recipient.name}
-                onChange={(e) => updateRecipient(index, { name: e.target.value })}
+                onChange={(e) => editContact(index, "name", e.target.value)}
                 placeholder="Contact name"
                 className={DETAIL_FORM_INPUT_CLASS}
                 disabled={disabled}
@@ -107,10 +139,12 @@ export function ClientIoRecipientsEditor({
                 type="text"
                 aria-label="Recipient email"
                 inputMode="email"
-                autoComplete="email"
+                autoComplete="off"
+                list={suggestionsId}
+                onFocus={() => void loadSuggestions()}
                 value={recipient.email}
                 onChange={(e) =>
-                  onChange(applyRecipientEmailEdit(recipients, index, e.target.value))
+                  editContact(index, "email", e.target.value)
                 }
                 placeholder="email@client.com (or paste several)"
                 className={DETAIL_FORM_INPUT_CLASS}
