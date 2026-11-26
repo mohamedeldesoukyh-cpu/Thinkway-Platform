@@ -1,4 +1,6 @@
 "use client";
+import { DocumentWindowLink } from "@/components/navigation/document-window-link";
+
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { assignmentClientBilling } from "@/lib/assignments/client-billing-commercial";
 
@@ -744,7 +746,7 @@ export function AssignmentInfluencerDetailSheet({
               <div className="tw-cm__f">
                 {vendorIoId ? (
                   <Button asChild variant="outline" size="sm" className="tw-b sm">
-                    <Link href={`/ios/vendor/${vendorIoId}/preview`}>Open vendor IO</Link>
+                    <DocumentWindowLink href={`/ios/vendor/${vendorIoId}/preview`}>Open vendor IO</DocumentWindowLink>
                   </Button>
                 ) : (
                   <Button type="button" variant="outline" size="sm" className="tw-b sm" disabled>

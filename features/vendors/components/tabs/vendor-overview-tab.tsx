@@ -1,4 +1,5 @@
 "use client";
+import { VendorAgencyCard } from "../vendor-agency-card";
 
 import { useActionState, useEffect, useState } from "react";
 import { FileTextIcon, UserIcon } from "lucide-react";
@@ -144,7 +145,7 @@ export function VendorOverviewTab({
                 />
                 <FieldError messages={state.fieldErrors?.display_name} />
               </VendorFormField>
-              <VendorFormField label="Management agency" htmlFor="legal_name">
+              <VendorFormField label="Legal / registered name" htmlFor="legal_name">
                 <Input
                   id="legal_name"
                   name="legal_name"
@@ -256,16 +257,6 @@ export function VendorOverviewTab({
               <FieldError messages={state.fieldErrors?.influencer_url} />
             </VendorFormField>
 
-            <VendorFormField label="Agency contact name" htmlFor="management_agency">
-              <Input
-                id="management_agency"
-                name="management_agency"
-                className={VENDOR_FORM_INPUT_CLASS}
-                defaultValue={vendor.management_agency ?? ""}
-                disabled={isPending}
-              />
-            </VendorFormField>
-
             <VendorFormGrid>
               <VendorFormField label="Categories / niche" htmlFor="categories">
                 <Input
@@ -329,6 +320,8 @@ export function VendorOverviewTab({
               disabled={isPending}
             />
           </VendorFormSection>
+          {state.fieldErrors && Object.entries(state.fieldErrors).filter(([field]) => field.startsWith("agency_")).map(([field, errors]) => <div role="alert" key={field} className="text-sm text-red-700">{field.replaceAll("_", " ")}: {errors?.join(" ")}</div>)}
+          <VendorAgencyCard vendor={vendor} disabled={isPending}/>
           </form>
           <div className="grid gap-[11px]">
             {portalAccessPanel}

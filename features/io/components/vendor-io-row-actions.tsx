@@ -1,4 +1,6 @@
 "use client";
+import { DocumentWindowLink } from "@/components/navigation/document-window-link";
+
 
 import { MoreHorizontalIcon } from "lucide-react";
 import { useRef, useState } from "react";
@@ -88,13 +90,13 @@ export function VendorIoRowActions({ row, onViewDetail, compact = false }: Props
             Details
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <a
+            <DocumentWindowLink
               href={`/ios/vendor/${row.id}/preview`}
               target="_blank"
               rel="noopener noreferrer"
             >
               View IO
-            </a>
+            </DocumentWindowLink>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <a

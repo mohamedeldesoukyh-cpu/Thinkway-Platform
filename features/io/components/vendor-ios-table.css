@@ -1,0 +1,18 @@
+/* Quotation register styling, scoped to Vendor IOs. */
+.vendor-io-quotation-style {font-family:var(--font-sans),Geist,Inter,sans-serif;min-width:0}
+.vendor-io-quotation-style .tw-hd {background:var(--primary,#0052ff);color:var(--primary-foreground,#fff);padding:18px 20px;border-radius:12px;margin-bottom:0;flex-wrap:wrap}
+.vendor-io-quotation-style .tw-hd :is(h1,p) {color:inherit}
+.vendor-io-quotation-style .tw-hd p {opacity:.85}
+.vendor-io-quotation-style .tw-kpi {gap:0;border-radius:0 0 12px 12px;overflow:hidden;background:var(--primary,#0052ff)}
+.vendor-io-quotation-style .tw-kpi .tw-k {background:transparent;border:0;border-right:1px solid #ffffff30;border-radius:0;box-shadow:none}
+.vendor-io-quotation-style .tw-kpi .tw-k :is(i,u,b) {color:#fff}
+.vendor-io-quotation-style .tw-kpi .tw-k b {font-family:var(--font-geist-mono),monospace;font-size:22px}
+.vendor-io-quotation-style input[type="search"] {padding-left:36px!important}
+.vendor-io-register-table :is(td,th) {padding:12px 14px;vertical-align:middle;white-space:normal;overflow-wrap:break-word}
+.vendor-io-register-table :is(td,td a,td button,td span) {font-family:var(--font-sans),Geist,Inter,sans-serif;font-size:12px;line-height:1.45}
+.vendor-io-register-table th {font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.vendor-io-register-table .vendor-io-campaign {display:block;white-space:normal;overflow-wrap:anywhere;font-weight:500}
+.vendor-io-register-table .vendor-io-reference {display:block;color:var(--muted-foreground);margin-bottom:3px;font-size:11px}
+.vendor-io-register-table button,.vendor-io-register-table a[data-slot="button"] {border-radius:6px;white-space:nowrap}
+.vendor-io-register-table textarea {width:100%;min-height:64px;white-space:normal}
+.vendor-io-quotation-style .tw-hd button {background:var(--background);color:var(--foreground)}
