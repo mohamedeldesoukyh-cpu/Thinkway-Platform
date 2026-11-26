@@ -280,15 +280,15 @@ export function CampaignDetailChrome({
           >
             Decision center
           </button>
-          <span>
+          <span className="wr-decision-copy">
             <span className="msg">{decisionMsg}</span>{" "}
             <span className="sub">
-              {narrative.dependencyDetail}
+              {narrative.dependencyDetail !== decisionMsg ? narrative.dependencyDetail : null}
               {narrative.ownerLabel ? ` · owner ${narrative.ownerLabel}` : ""}
               {narrative.waitingSince && narrative.waitingSince !== "—" ? ` · ${narrative.waitingSince}` : ""}
             </span>
           </span>
-          <span className="wr-decision-meta"><span><i>Campaign</i>{lifecycle.businessStateLabel}</span><span><i>Waiting for</i>{dc.blockers[0]?.waitingFor ?? intel.waitingFor}</span><span><i>Risk</i>{intel.riskLabel}</span></span>
+          <span className="wr-decision-meta"><span><i>Campaign status</i>{lifecycle.businessStateLabel}</span><span><i>Waiting for</i>{dc.blockers[0]?.waitingFor ?? intel.waitingFor}</span><span><i>Risk level</i>{intel.riskLabel}</span></span>
           <span className="tw-sp" />
           <button type="button" className="go" onClick={onContinue}>
             {dc.primaryAction}

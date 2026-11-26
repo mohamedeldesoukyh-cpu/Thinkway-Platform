@@ -73,6 +73,9 @@ body:has(.twwr) {
 .twwr .wr-decision .lb { font-size: 9px; }
 .twwr .wr-decision .msg { font-size: 11.5px; }
 .twwr .wr-decision .sub { font-size: 11px; }
+.twwr .twcd .wr-decision { flex-wrap: wrap; gap: 10px 16px; }
+.twwr .wr-decision-copy { display: grid; gap: 3px; flex: 1 1 320px; overflow-wrap: anywhere; }
+.twwr .wr-decision-copy .sub { display: block; white-space: normal; }
 .twwr .wr-decision-meta { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: #3e4659; }
 .twwr .wr-decision-meta > span { display: inline-flex; align-items: baseline; gap: 5px; }
 .twwr .wr-decision-meta i { font-size: 8.5px; font-style: normal; font-weight: 700; text-transform: uppercase; color: #64748b; }

@@ -54,6 +54,24 @@ function objects(overrides: Partial<DecisionCenterObjects> = {}): DecisionCenter
 }
 
 describe("campaign decision center", () => {
+  it("prioritizes a draft or unsent Client IO over unpaid balances while stage is Assignments", () => {
+    for (const status of ["draft", "generated"] as const) {
+      const dc = buildDecisionCenter({
+        stageId: "lines", stageLabel: "Assignments", businessState: "waiting", enforcement: "soft",
+        owner: "Commercial", waitingFor: "Commercial", nextAction: "Open Client IO", nextActionTab: "client-io",
+        expectedResult: "Client review", missing: [], hardBlockers: [],
+        workspaceBlockers: ["Creator payouts outstanding"],
+        signals: signals({ clientIoStatus: status, lineCount: 12 }), daysWaiting: 0,
+        objects: objects({ clientIo: { id: "cio-draft", document_number: "CIO-11", status } }),
+      });
+      assert.equal(dc.blockers[0].objectKind, "client_io");
+      assert.equal(dc.blockers[0].waitingFor, "Commercial");
+      assert.equal(dc.blockers[0].actionTab, "client-io");
+      const payout = dc.blockers.find((b) => /payout/i.test(b.title));
+      assert.equal(payout?.severity, "operational_attention");
+      assert.match(payout?.reason ?? "", /does not necessarily mean overdue/);
+    }
+  });
   it("shows every outstanding invoice and other follow-ups without a green all-clear", () => {
     const dc = buildDecisionCenter({
       stageId: 'billing', stageLabel: 'Finance', businessState: 'waiting', enforcement: 'soft',
