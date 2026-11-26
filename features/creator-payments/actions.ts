@@ -40,6 +40,9 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
     const ios = [...new Map((ioResult.data ?? []).reverse().map(io => [io.assignment_id, io])).values()];
     if (!ios.length)
         return { rows: [] as PaymentRow[], batches: [] as PaymentBatch[] };
+    const paymentStates = await db.rpc('creator_payment_io_states' as never, {p_ios:ios.map(io=>io.id)} as never);
+    if (paymentStates.error) throw new Error('Could not check payment eligibility. Refresh payments.');
+    const stateByIo = new Map(((paymentStates.data ?? []) as unknown as {io_id:string;eligible:boolean;can_update:boolean}[]).map(state=>[state.io_id,state]));
     const assignmentIds = ios.map(io => io.assignment_id);
     const [assignments, creators, terms, entries, campaigns, plans, supplierInvoices, publications, links] = await Promise.all([
         paymentRowsByIds(assignmentIds,ids=>db.from('campaign_influencers').select('id,campaign_line_id,agreed_fee,cost_before_vat,cost_vat_percent,currency,vendor_payment_status').in('id', ids).order('id')),
@@ -87,7 +90,9 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
             campaign: campaign?.name ?? campaign?.document_number ?? 'Campaign',
             creator: account?.profile_display_name || creator?.legal_name || creator?.display_name || 'Creator', username: account?.username || account?.handle || undefined, ioId: io.id, ioNumber: io.document_number ?? 'IO', ioStatus: io.is_superseded ? 'superseded' : io.status,
             revisionPending: pendingPaid>0, pendingPaid: money(pendingPaid),
-            payable: pendingPaid<=0 && !io.is_superseded && !['cancelled','rejected','void','voided'].includes(io.status),
+            payable: pendingPaid<=0 && stateByIo.get(io.id)?.eligible===true,
+            paymentDetailsNeedUpdate: stateByIo.get(io.id)?.can_update===true && stateByIo.get(io.id)?.eligible!==true,
+            paymentDetailsConfirmed: Boolean(io.is_superseded && stateByIo.get(io.id)?.eligible),
             currency: a?.currency ?? io.currency_code, fee, vat,
             costFxOverride: fxByLine.get(a?.campaign_line_id ?? "")?.cost_fx_override ?? null, currencyRates,
             paid: money(paid || (!ledger.length && a?.vendor_payment_status === 'paid' ? fee + Math.round(fee * vat) / 100 : 0)),
@@ -106,6 +111,17 @@ export async function loadCreatorPayments(scope: Scope) {
     catch (e) {
         return fail(e);
     }
+}
+export async function updateCreatorPaymentDetails(input:{ioId:string;fee:number;vat:number;currency:string}) {
+    try {
+        const db=await access(true);
+        const data=z.object({ioId:z.string().uuid(),fee:z.number().finite().nonnegative(),vat:z.number().min(0).max(100),currency:z.string().regex(/^[A-Z]{3}$/)}).parse(input);
+        const result=await db.rpc('update_creator_payment_details' as never,{p_io:data.ioId,p_fee:data.fee,p_vat:data.vat,p_currency:data.currency} as never);
+        if(result.error) throw new Error(result.error.message);
+        revalidatePath('/campaigns','layout');
+        revalidatePath('/vendors','layout');
+        return {ok:true as const};
+    } catch(error) {return fail(error);}
 }
 export async function setCreatorPaymentCostPending(assignmentIds:string[],pending:boolean) {
     try {
