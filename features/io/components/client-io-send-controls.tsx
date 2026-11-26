@@ -97,6 +97,8 @@ export function ClientIoSendControls({
             ? "Open Client IO tab → add recipients"
             : "Add at least one recipient email above"}
         </span>
+      ) : compact ? (
+        !hasTo ? <span className="text-[11px] text-muted-foreground">Add a TO recipient in Client IO recipients</span> : null
       ) : (
         <span title={recipientSummary} className="max-w-xl break-words text-[11px] text-muted-foreground">
           {recipientSummary} {recipientsNeedSave ? "(unsaved)" : ""}

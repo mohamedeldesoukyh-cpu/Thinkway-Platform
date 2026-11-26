@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ClientIoVersionSummary } from "@/lib/domains/io/types";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
-import Link from "next/link";
+import { DocumentWindowLink } from "@/components/navigation/document-window-link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, FileText, Layers, LayoutList } from "lucide-react";
 
@@ -72,7 +72,7 @@ export function ClientIoViewMenu({
         <DropdownMenuLabel>Client IO layout</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link target="_blank" rel="noopener noreferrer" href={`${base}?layout=detailed&returnTo=${returnTo}`} className="flex cursor-pointer items-start gap-2">
+          <DocumentWindowLink target="_blank" rel="noopener noreferrer" href={`${base}?layout=detailed&returnTo=${returnTo}`} className="flex cursor-pointer items-start gap-2">
             <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <span>
               <span className="block font-medium">Detailed</span>
@@ -80,10 +80,10 @@ export function ClientIoViewMenu({
                 Pricing per assignment line
               </span>
             </span>
-          </Link>
+          </DocumentWindowLink>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link target="_blank" rel="noopener noreferrer" href={`${base}?layout=package&returnTo=${returnTo}`} className="flex cursor-pointer items-start gap-2">
+          <DocumentWindowLink target="_blank" rel="noopener noreferrer" href={`${base}?layout=package&returnTo=${returnTo}`} className="flex cursor-pointer items-start gap-2">
             <Layers className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <span>
               <span className="block font-medium">Package</span>
@@ -91,10 +91,10 @@ export function ClientIoViewMenu({
                 Single campaign total
               </span>
             </span>
-          </Link>
+          </DocumentWindowLink>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link
+          <DocumentWindowLink
             target="_blank"
             rel="noopener noreferrer"
             href={`${base}?layout=package_main&returnTo=${returnTo}`}
@@ -107,7 +107,7 @@ export function ClientIoViewMenu({
                 Package totals with main assignment lines only
               </span>
             </span>
-          </Link>
+          </DocumentWindowLink>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuLabel>Approved IO</DropdownMenuLabel>
@@ -115,14 +115,14 @@ export function ClientIoViewMenu({
           <DropdownMenuItem onSelect={(event) => { event.preventDefault(); void loadVersions(true); }}>Unable to load versions · Retry</DropdownMenuItem>
         ) : versions.length === 0 ? <p className="px-2 py-2 text-xs text-muted-foreground">No saved versions available.</p> : versions.map((version) => (
           <DropdownMenuItem key={version.id} asChild>
-            <Link target="_blank" rel="noopener noreferrer" href={'/ios/client/' + version.id + '/preview?saved=1&returnTo=' + returnTo} className="flex items-start gap-2">
+            <DocumentWindowLink target="_blank" rel="noopener noreferrer" href={'/ios/client/' + version.id + '/preview?saved=1&returnTo=' + returnTo} className="flex items-start gap-2">
               <FileText className="mt-0.5 size-4 shrink-0" />
               <span className="min-w-0 flex-1">
                 <span className="block font-medium">{formatDocumentNumberForDisplay(version.document_number ?? "Client IO")} · Version {version.revision_number + 1}</span>
                 <span className="block text-xs text-muted-foreground">{version.approved_at ? 'Approved ' + new Date(version.approved_at).toLocaleDateString() : version.status.replaceAll("_", " ")}{version.is_superseded ? " · superseded" : ""}</span>
               </span>
               {version.approved_at || version.status === "approved" ? <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">Approved</span> : null}
-            </Link>
+            </DocumentWindowLink>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
