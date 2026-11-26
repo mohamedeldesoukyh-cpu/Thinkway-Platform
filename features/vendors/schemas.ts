@@ -1,3 +1,4 @@
+import { vendorAgencyShape, vendorRegistrationShape } from "./registration";
 import { z } from "zod";
 
 import { currencyCodeSchema } from "@/lib/master-data/currency-schema";
@@ -125,6 +126,7 @@ export const createVendorSchema = z.object({
 });
 
 export const updateVendorOverviewSchema = z.object({
+  ...vendorAgencyShape,
   influencer_id: z.string().uuid(),
   display_name: z.string().trim().min(1).max(200),
   legal_name: z.string().trim().max(200).optional().or(z.literal("")),
@@ -163,6 +165,7 @@ export const updateVendorOverviewSchema = z.object({
 });
 
 export const updateVendorLegalSchema = z.object({
+  ...vendorRegistrationShape,
   influencer_id: z.string().uuid(),
   trade_license: z.string().trim().max(100).optional(),
   contract_status: contractStatusSchema,

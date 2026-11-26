@@ -1,4 +1,6 @@
 "use client";
+import { DocumentWindowLink } from "@/components/navigation/document-window-link";
+
 
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
@@ -35,9 +37,9 @@ export function VendorIoDocumentActions({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Button size="sm" variant="outline" asChild>
-        <a href={`/ios/vendor/${row.id}/preview`} target="_blank" rel="noopener noreferrer">
+        <DocumentWindowLink href={`/ios/vendor/${row.id}/preview`} target="_blank" rel="noopener noreferrer">
           View IO
-        </a>
+        </DocumentWindowLink>
       </Button>
       <Button size="sm" variant="outline" asChild>
         <a

@@ -1,4 +1,6 @@
 "use client";
+import { DocumentWindowLink } from "@/components/navigation/document-window-link";
+
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
 
@@ -343,12 +345,12 @@ function PaymentOpsDetail({
                     : ""}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <Link
+                  <DocumentWindowLink
                     href={`/ios/vendor/${payout.io.id}/preview`}
                     className="text-[var(--brand-product)] underline-offset-2 hover:underline"
                   >
                     View IO
-                  </Link>
+                  </DocumentWindowLink>
                 </div>
                 {payout.io_versions.length > 1 ? (
                   <div className="mt-2 space-y-1 border-t pt-2">

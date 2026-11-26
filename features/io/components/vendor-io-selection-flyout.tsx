@@ -1,4 +1,5 @@
 "use client";
+import { openDocumentPreview } from "@/lib/navigation/preview-navigation";
 
 import {
   CheckCircle2Icon,
@@ -220,9 +221,14 @@ export function VendorIoSelectionFlyout({
       if (!proceed) return;
     }
 
+    const returnTo = window.location.pathname + window.location.search + window.location.hash;
+    if (selectedRows.length === 1) {
+      openDocumentPreview(`/ios/vendor/${selectedRows[0].id}/preview?returnTo=${encodeURIComponent(returnTo)}`);
+      return;
+    }
     selectedRows.forEach((row, index) => {
       window.setTimeout(() => {
-        window.open(`/ios/vendor/${row.id}/preview`, "_blank", "noopener,noreferrer");
+        window.open(`/ios/vendor/${row.id}/preview?returnTo=${encodeURIComponent(returnTo)}`, "_blank", "noopener,noreferrer");
       }, index * 200);
     });
 

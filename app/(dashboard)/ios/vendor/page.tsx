@@ -1,3 +1,4 @@
+import "@/features/io/components/vendor-ios-table.css";
 import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { IoSearchFilters } from "@/features/io/components/io-search-filters";
@@ -21,7 +22,8 @@ export default async function VendorIosPage({ searchParams }: Props) {
   const campaignId = params.campaign ?? selected?.campaign_header_id ?? null;
 
   return (
-    <FinanceSuiteShell
+    <div className="vendor-io-quotation-style"><FinanceSuiteShell
+      hideDefaultActions
       title="Vendor IO register"
       description="Insertion orders — one per creator assignment"
       backFallbackHref={campaignId ? `/campaigns/${campaignId}` : undefined}
@@ -50,7 +52,7 @@ export default async function VendorIosPage({ searchParams }: Props) {
           }
         />
       </PlatformErrorBoundary>
-    </FinanceSuiteShell>
+    </FinanceSuiteShell></div>
   );
 }
 
