@@ -53,6 +53,11 @@ test("approved document rendering returns immutable signed snapshot without rebu
   const db={from(table:string){assert.equal(table,"vendor_io_signatures");return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{signed_html:"<p>Exact signed document</p>"},error:null};}};}} as unknown as SupabaseClient;
   assert.equal(await renderLiveVendorIoHtml(db,"io"),"<p>Exact signed document</p>");
 });
+
+test("delivered unsigned preview keeps the exact sent snapshot", async () => {
+  const db = {from(table: string) {return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:table === 'vendor_io_signatures' ? null : {sent_at:'2026-11-26',signing_document_html:'<p>Original sent details</p>',terms_html:'Older generated version'},error:null};}};}} as unknown as SupabaseClient;
+  assert.equal(await renderLiveVendorIoHtml(db, 'io'), '<p>Original sent details</p>');
+});
 test("email GET and creator portal cannot perform an unsigned approval", () => {
   const page=readFileSync("app/io-approval/vendor/page.tsx","utf8");
   assert.doesNotMatch(page,/completeVendorIoApprovalByToken|approve_vendor_io_by_token/);

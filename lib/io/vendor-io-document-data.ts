@@ -1,3 +1,4 @@
+import { creatorRegistration } from '@/lib/vendors/creator-registration';
 import { resolveVendorIoVatAmount } from "./vendor-io-vat";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -8,14 +9,7 @@ import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
 import type { VendorIoDocumentData, VendorIoDeliverableRow } from "@/lib/io/vendor-io-document-types";
 import { resolveVendorIoTotalDue, sumVendorIoLineAmounts } from "@/lib/io/vendor-io-line-amount";
 
-function formatAddress(parts: Array<string | null | undefined>): string | null {
-  const joined = parts.filter(Boolean).join(", ");
-  return joined || null;
-}
 
-function jsonString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
 
 function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
   if (value == null) return null;
@@ -59,7 +53,7 @@ export async function loadVendorIoDocumentData(
     supabase
       .from("influencers")
       .select(
-        "id, display_name, legal_name, email, phone, nationality, country_code, languages, categories, payment_details, payment_terms, vendor_io_terms_text, metadata, city"
+        "id, display_name, legal_name, email, phone, nationality, country_code, languages, categories, payment_details, payment_terms, vendor_io_terms_text, metadata, city, tax_registration_number, management_agency"
       )
       .eq("id", typedVio.influencer_id)
       .single(),
@@ -93,6 +87,8 @@ export async function loadVendorIoDocumentData(
     payment_details: Record<string, unknown>;
     payment_terms: string | null;
     vendor_io_terms_text: string | null;
+    tax_registration_number?: string | null;
+    management_agency?: string | null;
     metadata: Record<string, unknown>;
     city: string | null;
   };
@@ -227,7 +223,6 @@ export async function loadVendorIoDocumentData(
     ]),
   ];
 
-  const metadata = typedInfluencer.metadata ?? {};
   const rawPaymentDetails = typedInfluencer.payment_details ?? {};
   const beneficiaryName =
     (typeof rawPaymentDetails.beneficiary_name === "string" &&
@@ -285,13 +280,9 @@ export async function loadVendorIoDocumentData(
       email: typedInfluencer.email,
       phone: typedInfluencer.phone,
       nationality: typedInfluencer.nationality,
-      address: formatAddress([
-        jsonString(metadata.address),
-        typedInfluencer.city,
-        typedInfluencer.country_code,
-      ]),
-      nationalId:
-        jsonString(metadata.national_id) ?? jsonString(metadata.trade_license) ?? null,
+      registration: creatorRegistration(typedInfluencer),
+      address: creatorRegistration(typedInfluencer).address,
+      nationalId: creatorRegistration(typedInfluencer).documentNumber,
       categories: typedInfluencer.categories ?? [],
       countryCode: typedInfluencer.country_code,
       languages: typedInfluencer.languages ?? [],

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { uploadInfluencerDocumentAction,getInfluencerDocumentDownloadUrlAction } from '@/features/vendors/actions';
 import type { VendorDetail } from '@/types/database';
-export function VendorLegalAttachment({vendor,type,label}:{vendor:VendorDetail;type:'trade_license'|'national_id'|'tax_document';label:string}) {
+export function VendorLegalAttachment({vendor,type,label}:{vendor:VendorDetail;type:VendorDetail['documents'][number]['document_type'];label:string}) {
  const input=useRef<HTMLInputElement>(null);const [busy,setBusy]=useState(false);const router=useRouter();
  const documents=vendor.documents.filter(d=>d.document_type===type);
  return <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs">

@@ -130,7 +130,11 @@ export function renderVendorIoHtml(data: VendorIoDocumentData): string {
    ${card(
      "Influencer / Agency",
      fld("Name", influencerName) +
-       fld("National ID / Trade License", display(data.influencer.nationalId)) +
+       fld(data.influencer.registration?.documentLabel ?? "National ID / Trade License", display(data.influencer.nationalId)) +
+       (data.influencer.registration?.documentExpiry ? fld("Document expiry", display(data.influencer.registration.documentExpiry)) : "") +
+       (data.influencer.registration?.taxId ? fld("Tax ID", display(data.influencer.registration.taxId)) : "") +
+       (data.influencer.registration?.vatNumber ? fld("VAT number", display(data.influencer.registration.vatNumber)) : "") +
+       (data.influencer.registration?.agency ? Object.entries({"Management agency":data.influencer.registration.agency.name,"Agency contact":data.influencer.registration.agency.contact,"Agency email":data.influencer.registration.agency.email,"Agency phone":data.influencer.registration.agency.phone,"Agency address":data.influencer.registration.agency.address,"Agency Trade License / CR":data.influencer.registration.agency.registrationNumber,"Agency Tax / VAT":data.influencer.registration.agency.taxNumber}).filter(([,value])=>value).map(([label,value])=>fld(label,display(value))).join("") : "") +
        fld("Email", display(data.influencer.email)) +
        `<div class="qf"><span class="k">Address</span><span class="v" style="max-width:60%">${display(data.influencer.address)}</span></div>`
    )}

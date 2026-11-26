@@ -1,3 +1,4 @@
+import type { CreatorRegistration } from '@/lib/vendors/creator-registration';
 export type ClientIoStatus =
   | "draft"
   | "generated"
@@ -102,6 +103,7 @@ export type VendorIoRow = {
   influencer_name: string;
   /** Vendor contact email when present — drives Send by Email vs Mark as Delivered Manually. */
   influencer_email: string | null;
+  creator_registration?: CreatorRegistration;
   creator_avatar_url: string | null;
   /** Influencer default Vendor IO terms JSON (null = platform default). */
   vendor_io_terms_text: string | null;

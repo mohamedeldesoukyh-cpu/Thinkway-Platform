@@ -1,4 +1,5 @@
 "use client";
+import { useVendorUndoState } from "@/features/vendors/components/vendor-undo-state";
 import { VendorAgencyCard } from "../vendor-agency-card";
 
 import { useActionState, useEffect, useState } from "react";
@@ -60,14 +61,14 @@ export function VendorOverviewTab({
   onCancel?: () => void;
   shortcutsEnabled?: boolean;
 }) {
-  const [status, setStatus] = useState(vendor.status);
-  const [country, setCountry] = useState(vendor.country_code ?? "");
-  const [nationality, setNationality] = useState(vendor.nationality ?? "");
-  const [gender, setGender] = useState(vendor.gender ?? "");
-  const [ioTerms, setIoTerms] = useState<ClientIoTerm[]>(
+  const [status, setStatus] = useVendorUndoState(vendor.status);
+  const [country, setCountry] = useVendorUndoState(vendor.country_code ?? "");
+  const [nationality, setNationality] = useVendorUndoState(vendor.nationality ?? "");
+  const [gender, setGender] = useVendorUndoState(vendor.gender ?? "");
+  const [ioTerms, setIoTerms] = useVendorUndoState<ClientIoTerm[]>(
     () => parseTermsText(vendor.vendor_io_terms_text) ?? VENDOR_IO_DEFAULT_TERMS
   );
-  const [usePlatformIoTerms, setUsePlatformIoTerms] = useState(
+  const [usePlatformIoTerms, setUsePlatformIoTerms] = useVendorUndoState(
     () => !parseTermsText(vendor.vendor_io_terms_text)
   );
 
@@ -207,6 +208,7 @@ export function VendorOverviewTab({
             <VendorFormGrid>
               <VendorFormField label="Country">
                 <SearchableSelect
+                  id="creator-country"
                   value={country}
                   onValueChange={setCountry}
                   options={COUNTRY_OPTIONS}
@@ -294,6 +296,7 @@ export function VendorOverviewTab({
                 disabled={isPending}
               />
             </VendorFormField>
+            <VendorAgencyCard vendor={vendor} disabled={isPending}/>
           </VendorFormSection>
 
           <VendorFormSection
@@ -321,7 +324,6 @@ export function VendorOverviewTab({
             />
           </VendorFormSection>
           {state.fieldErrors && Object.entries(state.fieldErrors).filter(([field]) => field.startsWith("agency_")).map(([field, errors]) => <div role="alert" key={field} className="text-sm text-red-700">{field.replaceAll("_", " ")}: {errors?.join(" ")}</div>)}
-          <VendorAgencyCard vendor={vendor} disabled={isPending}/>
           </form>
           <div className="grid gap-[11px]">
             {portalAccessPanel}

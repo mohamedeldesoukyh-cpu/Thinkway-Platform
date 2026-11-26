@@ -821,9 +821,6 @@ export async function getVendorWorkspace(
 
   let crm_completeness: CompletenessBreakdown | null = null;
   if (crm_profile) {
-    const storedMissing = Array.isArray(crm_profile.completeness_missing)
-      ? (crm_profile.completeness_missing as CompletenessBreakdown["missing"])
-      : [];
     crm_completeness = computeCompletenessBreakdown({
       influencer: {
         display_name: base.display_name,
@@ -845,14 +842,6 @@ export async function getVendorWorkspace(
       bankAccountCount: bank_accounts.length,
       verifiedDefaultBank: bank_accounts.some((b) => b.is_default && b.is_verified),
     });
-    if (storedMissing.length > 0 && crm_profile.completeness_score != null) {
-      crm_completeness = {
-        ...crm_completeness,
-        overall: Number(crm_profile.completeness_score),
-        missing:
-          storedMissing.length > 0 ? storedMissing : crm_completeness.missing,
-      };
-    }
   }
 
   const payment_readiness = computePaymentReadiness({

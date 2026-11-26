@@ -1,4 +1,5 @@
 "use client";
+import { useVendorUndoState } from "@/features/vendors/components/vendor-undo-state";
 
 import { format } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
@@ -58,10 +59,10 @@ export function VendorBankDetailsSection({ workspace }: VendorBankDetailsSection
     () => hasVendorBankDetails(workspace.payment_details),
     [workspace.payment_details]
   );
-  const [paymentTerms, setPaymentTerms] = useState<string>(
+  const [paymentTerms, setPaymentTerms] = useVendorUndoState<string>(
     workspace.payment_terms ?? "net_30"
   );
-  const [paymentMethod, setPaymentMethod] = useState(paymentDetails.payment_method);
+  const [paymentMethod, setPaymentMethod] = useVendorUndoState(paymentDetails.payment_method);
 
   const [, formAction, isPending] = useFormActionWithToast(
     updateVendorBankDetailsAction,
@@ -110,7 +111,7 @@ export function VendorBankDetailsSection({ workspace }: VendorBankDetailsSection
                 onValueChange={setPaymentTerms}
                 disabled={isPending}
               >
-                <SelectTrigger className={cn(DETAIL_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+                <SelectTrigger id="creator-payment-terms" className={cn(DETAIL_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
                   <SelectValue placeholder="Select terms" />
                 </SelectTrigger>
                 <SelectContent>

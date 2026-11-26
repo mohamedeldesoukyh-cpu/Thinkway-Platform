@@ -374,3 +374,11 @@
 .vendor-detail-suite .tw-vtwo {gap:20px;grid-template-columns:minmax(0,2fr) minmax(280px,1fr)}
 @media(max-width:1100px){.vendor-detail-suite .tw-vtwo{grid-template-columns:1fr}}
 @media(max-width:640px){.vendor-detail-suite .tw-ms2{grid-template-columns:repeat(2,minmax(0,1fr))}.vendor-detail-suite .tw-mh{padding:12px}.vendor-detail-suite .platform-v6-wide-form-body{padding:14px!important}}
+
+/* Share quotation page edges across masthead, tabs and scrollable content. */
+.vendor-detail-suite .tw-frozen{max-width:none;padding:0;width:100%;margin:0;position:relative;flex-shrink:0}
+.vendor-detail-suite .tw-main{max-width:none;padding:0 0 20px;width:100%;margin:0}
+
+/* One quotation-style edit/save toolbar for the entire creator page. */
+.vendor-detail-suite .tw-main button[type="submit"],.vendor-detail-suite .tw-main button[form],.vendor-detail-suite .cbd-footer .cbd-primary{display:none}
+.vendor-detail-suite .tw-main:disabled input,.vendor-detail-suite .tw-main:disabled textarea,.vendor-detail-suite .tw-main:disabled [role="combobox"]{opacity:1;color:var(--tw-ink)}

@@ -1,5 +1,7 @@
 "use client";
 
+import { VendorEditSession, useVendorEditSession } from "./vendor-edit-session";
+import { WorkspaceUndoProvider, useWorkspaceUndo } from "@/lib/productivity/workspace-undo";
 import { creatorFinancialDisplay } from "@/features/vendors/financial-display";
 
 import Link from "next/link";
@@ -69,25 +71,6 @@ function isVendorWorkspaceTabId(value: string): value is VendorWorkspaceTabId {
   return (VENDOR_WORKSPACE_TAB_IDS as readonly string[]).includes(value);
 }
 
-const TAB_SAVE_LABELS: Record<VendorWorkspaceTabId, string> = {
-  overview: "Save overview",
-  commercial: "Save commercial",
-  platforms: "Save platforms",
-  assignments: "Save",
-  quotations: "Save",
-  billing: "Save billing",
-  documents: "Save",
-  contracts: "Save legal",
-  activity: "Save",
-};
-
-const TAB_FORM_IDS: Partial<Record<VendorWorkspaceTabId, string>> = {
-  overview: "vendor-overview-form",
-  commercial: "vendor-commercial-form",
-  platforms: "platform-accounts-form",
-  billing: "vendor-bank-details-form",
-  contracts: "vendor-legal-form",
-};
 
 function statusTone(status: InfluencerStatus): string {
   if (status === "active") return "";
@@ -99,101 +82,33 @@ function statusLabel(status: InfluencerStatus): string {
   return VENDOR_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status;
 }
 
-function dimTone(value: number): "r" | "y" | "g" {
-  if (value >= 80) return "g";
-  if (value >= 40) return "y";
-  return "r";
-}
 
-function CompletenessPill({
-  completeness,
-}: {
-  completeness: CompletenessBreakdown | null;
-}) {
-  const [open, setOpen] = useState(false);
-  const overall = Math.round(completeness?.overall ?? 0);
-  const missing = completeness?.missing ?? [];
-  const dims = completeness?.dimensions;
-
-  return (
-    <span style={{ position: "relative" }}>
-      <button
-        type="button"
-        className="tw-cpill"
-        aria-expanded={open}
-        onClick={(event) => {
-          event.stopPropagation();
-          setOpen((value) => !value);
-        }}
-      >
-        <span className="tw-cpill__r" style={{ ["--cpill-pct" as string]: overall }} />
-        {overall}% complete
-        {missing.length > 0 ? ` · ${missing.length} missing` : ""}
-      </button>
-      {open ? (
-        <span
-          className="tw-cpop"
-          onClick={(event) => event.stopPropagation()}
-          onKeyDown={(event) => event.stopPropagation()}
-          role="dialog"
-          aria-label="Profile completeness"
-        >
-          <h5>Profile completeness</h5>
-          <p>
-            Completeness is informational. Missing fields block invites and payouts where
-            noted — they do not hide the creator from Discovery.
-          </p>
-          {dims ? (
-            <div className="tw-cgrid">
-              {(
-                [
-                  ["Overall", overall],
-                  ["Identity", dims.identity],
-                  ["Commercial", dims.commercial],
-                  ["Legal", dims.legal],
-                  ["Finance", dims.finance],
-                  ["Client compliance", dims.client_compliance],
-                ] as const
-              ).map(([label, value]) => (
-                <div key={label}>
-                  <i>{label}</i>
-                  <b className={dimTone(value)}>{Math.round(value)}%</b>
-                </div>
-              ))}
-            </div>
-          ) : null}
-          {missing.length > 0 ? (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-              {missing.slice(0, 10).map((item) => (
-                <span key={item.code} className="tw-mchip">
-                  {item.label.replace(/^Missing /i, "")}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p style={{ margin: 0 }}>No missing fields on file.</p>
-          )}
-        </span>
-      ) : null}
-    </span>
-  );
+function CompletenessPill({completeness,onSelect}:{completeness:CompletenessBreakdown|null;onSelect:(code:string)=>void}) {
+ const missing=completeness?.missing??[];
+ return <DropdownMenu><DropdownMenuTrigger asChild><button type="button" className="tw-cpill" aria-label="Show missing creator details">{Math.round(completeness?.overall??0)}% complete · {missing.length} missing</button></DropdownMenuTrigger>
+ <DropdownMenuContent align="end" className="max-h-[60vh] w-80 overflow-y-auto"><div className="px-2 py-2 text-sm font-semibold">Missing details</div>{missing.length ? missing.map((item,index)=><DropdownMenuItem key={item.code} onSelect={()=>onSelect(item.code)} className="whitespace-normal"><span className="mr-2 text-muted-foreground">{index+1}.</span>{item.label.replace(/^Missing /i,"")}</DropdownMenuItem>):<div className="p-2 text-sm">No missing details.</div>}</DropdownMenuContent></DropdownMenu>;
 }
 
 const tabPanelClassName =
   "mt-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden outline-none focus-visible:outline-none";
 
-export function VendorWorkspaceView({
+export function VendorWorkspaceView(props:VendorWorkspaceViewProps) { return <WorkspaceUndoProvider><VendorEditSession revision={props.workspace.updated_at}><VendorWorkspaceContent {...props}/></VendorEditSession></WorkspaceUndoProvider>; }
+
+function VendorWorkspaceContent({
   workspace,
   defaultTab = "overview",
   portalAccessPanel,
   creatorSocialPanel,
   currencyOptions = [],
 }: VendorWorkspaceViewProps) {
+  const session=useVendorEditSession()!;
+  const history=useWorkspaceUndo();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [depOpen, setDepOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [missingTarget,setMissingTarget] = useState<string|null>(null);
 
   const countryLabel = useMemo(() => {
     return formatCreatorCountryLabels({
@@ -214,6 +129,7 @@ export function VendorWorkspaceView({
 
   const initialTab = isVendorWorkspaceTabId(defaultTab) ? defaultTab : "overview";
   const [activeTab, setActiveTab] = useState<VendorWorkspaceTabId>(initialTab);
+  const [billingVisited,setBillingVisited]=useState(initialTab==="billing");
 
   useEffect(() => {
     setActiveTab(isVendorWorkspaceTabId(defaultTab) ? defaultTab : "overview");
@@ -228,6 +144,7 @@ export function VendorWorkspaceView({
       if (!isVendorWorkspaceTabId(value)) {
         return;
       }
+      if(value==="billing")setBillingVisited(true);
       setActiveTab(value);
       const params = new URLSearchParams(searchParams.toString());
       params.set("tab", value);
@@ -235,6 +152,23 @@ export function VendorWorkspaceView({
     },
     [pathname, router, searchParams]
   );
+
+  const jumpToMissing = (code:string) => {
+    const tab = code==='display_name'||code==='contact'||code==='country'?'overview':code==='rates'?'commercial':code==='platform'?'platforms':code==='vat_number'?'contracts':code==='bank'||code==='bank_verified'||code==='payment_terms'?'billing':'documents';
+    if(!session.editing)session.start();
+    setMissingTarget(code); handleTabChange(tab);
+  };
+  useEffect(()=>{
+    if(!missingTarget) return;
+    const selectors:Record<string,string>={display_name:'#display_name',contact:'#email',country:'#creator-country',rates:'[name="base_rate"]',platform:'#creator-add-platform',vat_number:'#tax_id',payment_terms:'#creator-payment-terms',bank:'.cbd-field input',bank_verified:'.cbd-field input'};
+    const selector=selectors[missingTarget]??'#creator-missing-document button';
+    let done=false;
+    const focus=()=>{const field=document.querySelector<HTMLElement>(selector);if(!field||!field.getClientRects().length)return;field.scrollIntoView({block:'center',behavior:'smooth'});field.focus({preventScroll:true});done=true;};
+    const frame=requestAnimationFrame(focus);
+    const observer=new MutationObserver(()=>{if(!done)focus();});observer.observe(document.body,{childList:true,subtree:true});
+    const timeout=setTimeout(()=>observer.disconnect(),5000);
+    return ()=>{cancelAnimationFrame(frame);observer.disconnect();clearTimeout(timeout);};
+  },[activeTab,missingTarget]);
 
   const { counts, financials } = workspace;
   const display = useMemo(() => creatorFinancialDisplay(workspace.assignments, workspace.payouts), [workspace.assignments, workspace.payouts]);
@@ -306,7 +240,6 @@ export function VendorWorkspaceView({
     ]
   );
 
-  const saveFormId = TAB_FORM_IDS[activeTab];
   const metaParts = [
     countryLabel !== "—" ? countryLabel : null,
     counts.platforms ? `${counts.platforms} platforms` : null,
@@ -322,13 +255,6 @@ export function VendorWorkspaceView({
           className="mt-0 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
         >
           <div className="tw-frozen">
-            <nav aria-label="Creator navigation" className="flex flex-wrap items-center gap-2 pb-3">
-              <Link href="/vendors" className="tw-b sm">← Back to creators</Link>
-              <form action="/vendors" method="get" role="search" className="ml-auto flex items-center gap-2">
-                <input type="search" name="q" aria-label="Search creators" placeholder="Search another creator…" className="h-9 min-w-0 rounded-lg border border-border bg-background px-3 text-sm" />
-                <button type="submit" className="tw-b sm">Search creators</button>
-              </form>
-            </nav>
             <div className="tw-mast">
               <div className="tw-mh">
                 <Link href="/vendors" className="tw-hmk" aria-label="Back to vendors">
@@ -365,7 +291,7 @@ export function VendorWorkspaceView({
                   <span className="sub">{metaParts.join(" · ")}</span>
                 ) : null}
                 <span style={{ flex: 1 }} />
-                <CompletenessPill completeness={workspace.crm_completeness} />
+                <CompletenessPill completeness={workspace.crm_completeness} onSelect={jumpToMissing}/>
                 <DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
                   <DropdownMenuTrigger asChild>
                     <button type="button" className="tw-b sm" aria-label="Actions">
@@ -373,6 +299,7 @@ export function VendorWorkspaceView({
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild><Link href="/vendors">Back to creators / search creators</Link></DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setDepOpen(true)}>
                       View dependencies
                     </DropdownMenuItem>
@@ -383,25 +310,8 @@ export function VendorWorkspaceView({
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <button type="button" className="tw-b sm" onClick={handleCancel}>
-                  Cancel
-                </button>
-                {saveFormId ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const form = document.getElementById(saveFormId);
-                      if (form instanceof HTMLFormElement) form.requestSubmit();
-                    }}
-                    className="tw-b sm pri"
-                  >
-                    {TAB_SAVE_LABELS[activeTab]}
-                  </button>
-                ) : (
-                  <button type="button" className="tw-b sm pri">
-                    {TAB_SAVE_LABELS[activeTab]}
-                  </button>
-                )}
+                <button type="button" className="tw-b sm" disabled={session.saving} onClick={session.editing?session.discard:session.start}>{session.editing?'Discard':'Edit'}</button>
+                {session.editing&&<><button type="button" className="tw-b sm" aria-label="Undo (Ctrl+Z)" disabled={session.saving} onClick={()=>history?.step('undo')}>↶</button><button type="button" className="tw-b sm" aria-label="Redo (Ctrl+Y)" disabled={session.saving} onClick={()=>history?.step('redo')}>↷</button><button type="button" className="tw-b sm pri" disabled={session.saving} onClick={()=>void session.save()}>{session.saving?'Saving…':'Save changes'}</button></>}
               </div>
 
               <div className="tw-ms2" aria-label="Creator metrics">
@@ -437,7 +347,7 @@ export function VendorWorkspaceView({
             </div>
           </div>
 
-          <div className="tw-main">
+          <fieldset disabled={!session.editing||session.saving} className="tw-main min-w-0 border-0">
             <OperationalWorkspaceTabContent value="overview" className={tabPanelClassName}>
               <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <VendorOverviewTab
@@ -474,7 +384,7 @@ export function VendorWorkspaceView({
             </OperationalWorkspaceTabContent>
             <OperationalWorkspaceTabContent value="billing" className={tabPanelClassName}>
               <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                {activeTab === "billing" ? (
+                {billingVisited ? (
                   <VendorBillingTab
                     workspace={workspace}
                     currencyOptions={currencyOptions}
@@ -485,7 +395,7 @@ export function VendorWorkspaceView({
             </OperationalWorkspaceTabContent>
             <OperationalWorkspaceTabContent value="documents" className={tabPanelClassName}>
               <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                <VendorDocumentsTab vendor={workspace} onCancel={handleCancel} />
+                <VendorDocumentsTab missingDocumentType={missingTarget??undefined} vendor={workspace} onCancel={handleCancel} />
               </OperationalWorkspaceTabPanel>
             </OperationalWorkspaceTabContent>
             <OperationalWorkspaceTabContent value="contracts" className={tabPanelClassName}>
@@ -502,7 +412,7 @@ export function VendorWorkspaceView({
                 <VendorActivityTab workspace={workspace} onCancel={handleCancel} />
               </OperationalWorkspaceTabPanel>
             </OperationalWorkspaceTabContent>
-          </div>
+          </fieldset>
         </Tabs>
 
         <VendorDependencyDialog
