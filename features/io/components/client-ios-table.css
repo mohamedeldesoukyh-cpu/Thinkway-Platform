@@ -1,0 +1,22 @@
+/* Match the quotation register's Geist typography and compact row rhythm. */
+.client-io-register-table {
+  font-family: var(--font-sans), Geist, Inter, "Segoe UI", system-ui, sans-serif;
+  color: var(--foreground);
+}
+.client-io-register-table :is(td, th, a, span, button) { font-size: 11px; line-height: 1.45; }
+.client-io-register-table :is(td, th) {
+  padding: 12px 16px;
+  vertical-align: middle;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.client-io-register-table th { font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.client-io-register-table .client-io-campaign,
+.client-io-register-table .client-io-name { display: block; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.client-io-register-table .client-io-campaign { font-weight: 500; }
+.client-io-register-table .client-io-campaign:hover { color: var(--primary); }
+.client-io-register-table .client-io-reference { display: block; color: var(--muted-foreground); margin-bottom: 3px; font-weight: 400; }
+.client-io-register-table .client-io-date { display: grid; gap: 2px; font-variant-numeric: tabular-nums; }
+.client-io-register-table .client-io-date span:last-child { color: var(--muted-foreground); }
+.client-io-register-table button,
+.client-io-register-table a[data-slot="button"] { height: 28px; border-radius: 6px; padding: 0 10px; white-space: nowrap; }
