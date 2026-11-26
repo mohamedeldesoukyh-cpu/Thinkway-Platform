@@ -18,6 +18,8 @@ export type BankDetails = {
     registered: boolean;
 };
 export type PaymentRow = {
+    paymentDetailsNeedUpdate?: boolean;
+    paymentDetailsConfirmed?: boolean;
     revisionPending?: boolean;
     pendingPaid?: number;
     creatorInvoice?: {number:string;date:string;country:string;revision:number};

@@ -11,6 +11,7 @@ import { paymentCurrencyRate } from './payment-plan';
 import { validateBank } from './aaib';
 import { DecimalInput } from './decimal-input';
 import { PaymentHistory } from './payment-history';
+import { UpdatePaymentDetailsButton } from './update-payment-details-button';
 
 export const paymentNumber = (value: number) => Number.isFinite(value) ? value.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
 export function PaymentMoney({value,currency}:{value:number;currency:string}) {
@@ -64,6 +65,8 @@ export function PlanningRow({row,draft,dirty,selected,canWrite,allowPreparation,
     </div>}
     <PaymentHistory row={row} canWrite={canWrite} onSaved={onSaved} allowAdd={allowPreparation} redesigned open={open} onOpenChange={setOpen} beforeActions={<>
       {allowPreparation&&editable&&<button className={`b b--sm ${entryOpen||dirty?'':'b--pri'}`} aria-expanded={entryOpen||dirty} aria-controls={`entry-${id}`} onClick={()=>setEntryOpen(!entryOpen)}>{entryOpen||dirty?'Payment entry':'Prepare payment'}</button>}
+      {allowPreparation&&row.paymentDetailsNeedUpdate&&<UpdatePaymentDetailsButton row={row} disabled={!canWrite||busy||dirty} onSaved={onSaved}/>}
+      {row.paymentDetailsConfirmed&&<span className="text-xs text-muted-foreground">Payment details updated · Original IO unchanged</span>}
       <button className="b b--sm b--ghost" onClick={()=>onBank(row)}>{missing?'Complete bank details':row.bank.registered?'Bank details':'Confirm bank registration'}</button>
     </>}/>
   </article>;
