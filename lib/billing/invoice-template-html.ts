@@ -221,8 +221,10 @@ function renderLineRows(lines: InvoiceLineItemRow[], currency: string): string {
       const sub = !line.otherService && line.subDescription
         ? `<span class="dsub">${display(line.subDescription)}</span>`
         : "";
+      const creators = line.summaryCreators?.length
+        ? `<ul style="margin:6px 0;padding-left:16px;line-height:1.5">${line.summaryCreators.map(creator => `<li style="margin:3px 0;overflow-wrap:anywhere">${display(creator)}</li>`).join("")}</ul>` : "";
       return `<tr>
-        <td><span class="dmain">${display(line.otherService ? "Other Services" : line.creatorName || formatDocumentReferences(line.description))}</span>${line.creatorHandle && !line.otherService ? `<span class="dsub">${display(line.creatorHandle)}</span>` : ""}${line.otherService ? `<span class="dsub">${display(line.serviceDescription)}</span>` : line.creatorName ? `<span class="dsub">${display(formatDocumentReferences(line.description))}</span>` : ""}${line.installmentLabel ? `<span class="dsub"><strong>${display(line.installmentLabel)}</strong></span>` : ""}${sub}</td>
+        <td><span class="dmain">${display(line.otherService ? "Other Services" : line.creatorName || formatDocumentReferences(line.description))}</span>${line.creatorHandle && !line.otherService ? `<span class="dsub">${display(line.creatorHandle)}</span>` : ""}${line.otherService ? `<span class="dsub">${display(line.serviceDescription)}</span>` : line.creatorName ? `<span class="dsub">${display(formatDocumentReferences(line.description))}</span>` : ""}${line.installmentLabel ? `<span class="dsub"><strong>${display(line.installmentLabel)}</strong></span>` : ""}${creators}${sub}</td>
         <td class="r">${line.quantity.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         <td class="r">${formatMoneyAmount(line.revenueBeforeVat)}</td>
         <td class="r mut">${esc(formatTaxLabel(line))}</td>
@@ -331,9 +333,10 @@ export function buildInvoiceTemplateHtml(data: InvoiceDocumentData): string {
   <table class="tbl">
     <thead><tr><th style="width:46%">Description</th><th class="r">Qty</th>
       <th class="r">Unit Price (${esc(currency)})</th><th class="r">Tax</th><th class="r">Amount (${esc(currency)})</th></tr></thead>
-    <tbody>${renderLineRows(data.lineItems, currency)}</tbody>
+    <tbody>${renderLineRows(data.agencyFeesInTotals ? data.lineItems.filter(line => line.id !== "package-agency-fee") : data.lineItems, currency)}</tbody>
   </table>
   <div class="tot-wrap"><div class="tot-box">
+    ${data.agencyFeesInTotals && data.commercialBreakdown.agencyFeeAmount > 0 ? `<div class="tot-row sh"><span class="k">Services (excl. agency fees)</span><span class="v">${formatMoney(roundMoney(vat.subtotal - data.commercialBreakdown.agencyFeeAmount), currency)}</span></div><div class="tot-row sh"><span class="k">Agency fees (AF)</span><span class="v">${formatMoney(data.commercialBreakdown.agencyFeeAmount, currency)}</span></div>` : ""}
     <div class="tot-row sh"><span class="k">Subtotal (excl. VAT)</span><span class="v">${formatMoney(vat.subtotal, currency)}</span></div>
     <div class="tot-row sh"><span class="k">${esc(vat.vatLabel)}</span><span class="v">${formatMoney(vat.taxAmount, currency)}</span></div>
     <div class="grand"><span class="k">Total Amount Due</span><span class="v">${formatMoney(vat.total, currency)}</span></div>

@@ -17,11 +17,13 @@ assert.equal(assignmentInstallmentNumbers("second", history, lines).get("a"), 2)
 assert.equal(assignmentInstallmentNumbers("second", history, lines).get("b"), 1);
 assert.equal(assignmentInstallmentNumbers("third", history, lines).get("a"), 3);
 assert.equal(assignmentInstallmentNumbers("void", history, lines).size, 0);
-assert.equal(invoiceInstallmentLabel(2, "Creator A · 50% of original billable amount"), "2nd installment — 50%");
-assert.equal(invoiceInstallmentLabel(3, "Creator A · 25% of original billable amount"), "3rd installment — 25%");
-assert.equal(invoiceInstallmentLabel(11, "Creator A"), "11th installment");
-assert.equal(invoiceInstallmentLabel(12, "Creator A"), "12th installment");
-assert.equal(invoiceInstallmentLabel(13, "Creator A"), "13th installment");
-assert.equal(invoiceInstallmentLabel(21, "Creator A"), "21st installment");
+assert.equal(invoiceInstallmentLabel(2, "Creator A · 50% of original billable amount"), "50% of original billable amount");
+assert.equal(invoiceInstallmentLabel(3, "Creator A · 25% of original billable amount"), "25% of original billable amount");
+assert.equal(invoiceInstallmentLabel(11, "Creator A"), null);
+assert.equal(invoiceInstallmentLabel(12, "Creator A"), null);
+assert.equal(invoiceInstallmentLabel(13, "Creator A"), null);
+assert.equal(invoiceInstallmentLabel(21, "Creator A"), null);
 assert.equal(invoiceInstallmentLabel(undefined, "Creator A"), null);
 console.log("Invoice installment scenarios passed");
+
+assert.equal(invoiceInstallmentLabel(1, "Creator · 100% of original billable amount"), null);
