@@ -9,7 +9,7 @@ import { InvoiceStatusBadge } from "@/components/finance/invoice-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InvoiceTaxAttachments } from "./invoice-tax-attachments";
-import { DocumentWindowLink } from "@/components/navigation/document-window-link";
+import { InvoiceViewMenu } from "@/features/billing/components/invoice-view-menu";
 import { DocumentNumber } from "@/components/ui/document-number";
 import {
   OperationalConfigurableTable,
@@ -243,11 +243,7 @@ function buildFinanceInvoiceRegisterColumns(
           renderCell: (row: FinanceInvoiceRegisterRow) => (
             <div className="flex flex-wrap items-center gap-2">
               {onOpenDetailCell(row, onOpenDetail, appearance)}
-              <Button asChild variant="outline" size="sm" className="h-7 whitespace-nowrap px-2 text-[11px]">
-                <DocumentWindowLink href={`/billing/invoices/${row.id}/preview?layout=detailed`} aria-label={`View Invoice ${row.document_number}`}>
-                  View Invoice
-                </DocumentWindowLink>
-              </Button>
+              <InvoiceViewMenu invoiceId={row.id} />
               <InvoiceTaxAttachments invoiceId={row.id} invoiceNumber={row.document_number} />
             </div>
           ),

@@ -1,4 +1,6 @@
 "use client";
+import { DocumentWindowLink } from "@/components/navigation/document-window-link";
+
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -609,8 +611,8 @@ export function ClientIoForm({
                 <option value="package_main">Package main — main assignments only</option>
               </select>
             </label>
-            <a className="text-sm text-primary underline underline-offset-4" target="_blank" rel="noopener noreferrer"
-              href={`/ios/client/${row.id}/preview?layout=${documentLayout}`}>Preview selected format</a>
+            <DocumentWindowLink className="text-sm text-primary underline underline-offset-4"
+              href={`/ios/client/${row.id}/preview?layout=${documentLayout}`}>Preview selected format</DocumentWindowLink>
             <Button
               form="client-io-generate"
               type="submit"

@@ -37,6 +37,7 @@ export function InvoiceViewMenu({
         {suite ? (
           <button type="button" className="tw-b sm">
             {label}
+            <ChevronDown className="size-3.5 opacity-70" aria-hidden />
           </button>
         ) : (
           <Button variant={variant} size={size} className="gap-1.5">
@@ -46,7 +47,7 @@ export function InvoiceViewMenu({
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel>Invoice layout</DropdownMenuLabel>
+        <DropdownMenuLabel>View invoice as</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <DocumentWindowLink href={`${base}?layout=detailed`} className="flex cursor-pointer items-start gap-2">
