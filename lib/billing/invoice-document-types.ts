@@ -8,6 +8,7 @@ export type InvoiceLineItemRow = {
   serviceDescription?: string | null;
   serviceAgencyFee?: number;
   installmentLabel?: string | null;
+  summaryCreators?: string[];
   quantity: number;
   unitPrice: number;
   lineTotal: number;
@@ -24,6 +25,7 @@ export type InvoiceCommercialBreakdown = {
 };
 
 export type InvoiceDocumentData = {
+  agencyFeesInTotals?: boolean;
   invoiceId: string;
   documentNumber: string;
   issueDate: string;

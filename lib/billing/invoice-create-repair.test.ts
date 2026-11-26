@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { runPreInvoiceCreateRepairPipeline } from "./repair-invoice-create-pipeline";
+import { runPreInvoiceCreateRepairPipeline, syncCampaignLineCommercialRollupsFromDeliverables } from "./repair-invoice-create-pipeline";
 
 // Read-only empty fixtures isolate the append-repair entry point. Other repair
 // stages still execute; new-invoice preparation must never enter append repair.
@@ -28,6 +28,22 @@ async function queriesFor(repairAppend: boolean) {
 }
 
 async function main() {
+  let childReads = 0;
+  const batchDb = {
+    from(table: string) {
+      if (table === "assignment_deliverables") childReads++;
+      const result = Promise.resolve({ error: null, data: table === "campaign_lines"
+        ? Array.from({ length: 26 }, (_, index) => ({ id: `line-${index}`, pricing_mode: "deliverable" })) : [] });
+      const query: any = new Proxy({}, { get(_target, key) {
+        if (key === "then") return result.then.bind(result);
+        if (["update", "insert", "delete"].includes(String(key))) throw new Error("No commercial data must not trigger writes");
+        return () => query;
+      } });
+      return query;
+    },
+  } as unknown as SupabaseClient;
+  await syncCampaignLineCommercialRollupsFromDeliverables(batchDb, "test-campaign");
+  assert.equal(childReads, 1, "26 assignments should use one eligibility lookup, not 26 serial queries");
   const newInvoice = await queriesFor(false);
   const append = await queriesFor(true);
   assert(newInvoice.length > 0, "normal preparation still runs");

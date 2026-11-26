@@ -62,7 +62,7 @@ function NavigationLoadingOverlay() {
       if (!detail || typeof detail.href !== "string") return;
       const destination = new URL(detail.href, window.location.href);
       if (destination.origin !== window.location.origin) return;
-      const href = destination.pathname + destination.search;
+      const href = destination.pathname + destination.search + destination.hash;
       setPreviewClosing(detail.close);
       startPreviewTransition(() => {
         if (detail.close) {

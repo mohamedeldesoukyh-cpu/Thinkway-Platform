@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { DocumentNumber } from "@/components/ui/document-number";
+import { PreviewDownloadMenu } from "@/features/discovery/document-preview/preview-download-menu";
+import { DocumentWindowLink } from "@/components/navigation/document-window-link";
+import { X } from "lucide-react";
 import {
   FinanceSuiteEmpty,
 } from "@/components/finance/suite";
@@ -163,20 +166,19 @@ export function InvoiceWorkspaceView({ invoice, returnTo = "/finance/invoices" }
           <span className="tw-cs">{identityMeta}</span>
           <span className="tw-sp" />
           <InvoiceViewMenu invoiceId={invoice.id} suite />
-          <a
-            className="tw-b sm"
-            href={`/api/invoices/${invoice.id}/document?format=pdf&download=1`}
-          >
-            Download PDF
-          </a>
-          <a
+          <PreviewDownloadMenu formats={[
+            {format: "pdf", label: "PDF", href: `/api/invoices/${invoice.id}/document?format=pdf&download=1`},
+            {format: "html", label: "HTML", href: `/api/invoices/${invoice.id}/document?format=html&download=1`},
+          ]} />
+          <DocumentWindowLink
             className="tw-b sm pri"
             href={`/billing/invoices/${invoice.id}/preview?layout=detailed`}
             target="_blank"
             rel="noreferrer"
           >
             Send to client
-          </a>
+          </DocumentWindowLink>
+          <button type="button" className="tw-b sm" style={{ color: "#c62828" }} aria-label="Close invoice" onClick={() => router.push(returnTo)}><X size={18} /></button>
         </div>
         <InvoiceRegenerationPanel invoice={invoice} accountingCorrection={accountingCorrection} />
       </div>

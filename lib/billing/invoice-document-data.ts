@@ -1,6 +1,6 @@
 import { loadInvoicePaymentContext } from "@/lib/billing/invoice-payment-context";
 import { isOtherServiceAssignment } from "@/lib/commercial/other-service";
-import { invoiceInstallmentLabel, loadAssignmentInstallmentNumbers } from "@/lib/billing/invoice-installments";
+import { invoiceInstallmentLabel } from "@/lib/billing/invoice-installments";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
@@ -373,9 +373,6 @@ export async function loadInvoiceDocumentData(
   }
 
   const commercialBreakdown = computeInvoiceCommercialBreakdown(lines, commercialByLineId);
-  const installments = await loadAssignmentInstallmentNumbers(supabase, invoiceId,
-    [...new Set(lines.map(line => line.campaign_line_id).filter((id): id is string => Boolean(id)))]);
-
   const lineItems: InvoiceLineItemRow[] = lines.map((line) => ({
     id: line.id,
     description: line.campaign_line_id && serviceDescriptions.has(line.campaign_line_id) ? "Other Services" : line.description,
@@ -384,7 +381,7 @@ export async function loadInvoiceDocumentData(
     serviceAgencyFee: line.campaign_line_id && serviceDescriptions.has(line.campaign_line_id) && commercialByLineId.has(line.campaign_line_id)
       ? splitInvoicedCommercial(Number(line.revenue_before_vat), commercialByLineId.get(line.campaign_line_id)!).agencyFeeAmount : 0,
     creatorHandle: line.campaign_line_id ? creatorHandles.get(line.campaign_line_id) : null,
-    installmentLabel: invoiceInstallmentLabel(line.campaign_line_id ? installments.get(line.campaign_line_id) : undefined, line.description),
+    installmentLabel: invoiceInstallmentLabel(undefined, line.description),
     creatorName: line.campaign_line_id && !serviceDescriptions.has(line.campaign_line_id) ? creatorNames.get(line.campaign_line_id) ?? null : null,
     subDescription: buildLineSubDescription({
       deliverableLabel: line.deliverable_label,

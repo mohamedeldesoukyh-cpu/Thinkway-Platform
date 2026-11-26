@@ -303,29 +303,25 @@ export async function syncCampaignLineCommercialRollupsFromDeliverables(
   }
 
   let syncedLines = 0;
+  const rollupLines = lines.filter((line) => line.pricing_mode !== "package");
+  if (rollupLines.length === 0) return { syncedLines };
+  // Load commercial eligibility once, instead of one network round trip per assignment.
+  const { data: commercialRows, error: commercialError } = await supabase
+    .from("assignment_deliverables")
+    .select("campaign_line_id, revenue_before_vat, usage_rights_amount, agency_fee_amount")
+    .in("campaign_line_id", rollupLines.map((line) => line.id));
+  if (commercialError) throw new Error(commercialError.message);
+  const eligibleLines = new Set((commercialRows ?? []).filter((row) =>
+    Number(row.revenue_before_vat ?? 0) > 0.01 ||
+    Number(row.usage_rights_amount ?? 0) > 0.01 ||
+    Number(row.agency_fee_amount ?? 0) > 0.01
+  ).map((row) => String(row.campaign_line_id)));
   for (const line of lines) {
     const lineId = line.id;
     if (line.pricing_mode === "package") {
       continue;
     }
-    const { data: deliverableRows } = await supabase
-      .from("assignment_deliverables")
-      .select("revenue_before_vat, usage_rights_amount, agency_fee_amount")
-      .eq("campaign_line_id", lineId);
-
-    const hasDeliverableCommercial = (deliverableRows ?? []).some((row) => {
-      const typed = row as {
-        revenue_before_vat: number | null;
-        usage_rights_amount?: number | null;
-        agency_fee_amount?: number | null;
-      };
-      return (
-        Number(typed.revenue_before_vat ?? 0) > 0.01 ||
-        Number(typed.usage_rights_amount ?? 0) > 0.01 ||
-        Number(typed.agency_fee_amount ?? 0) > 0.01
-      );
-    });
-    if (!hasDeliverableCommercial) continue;
+    if (!eligibleLines.has(lineId)) continue;
 
     try {
       await syncLineCommercialRollupsFromDeliverables(supabase, lineId);

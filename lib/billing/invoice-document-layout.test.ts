@@ -117,17 +117,17 @@ const installmentSample = { ...sample, lineItems: sample.lineItems.map(line => (
 })) };
 for (const layout of ["detailed", "by_creator", "package"] as const) {
   const rendered = buildInvoiceTemplateHtml(applyInvoiceDocumentLayout(installmentSample, layout));
-  assert.ok(rendered.includes("2nd installment — 50%"), `${layout} retains the second installment`);
-  assert.ok(rendered.includes("1st installment — 50%"), `${layout} retains separate assignment numbering`);
+  assert.ok(!rendered.includes("installment"), `${layout} hides legacy ordinal labels`);
+  assert.ok(!rendered.includes("100% of original billable amount"), `${layout} hides full-billing labels`);
 }
 assert.equal(detailed.lineItems.length, 3);
 
 const byCreator = applyInvoiceDocumentLayout(sample, "by_creator");
 assert.equal(byCreator.lineItems.length, 2);
-assert.equal(byCreator.lineItems[0]!.description, "Creator A — 1 × Instagram reel + 1 × TikTok video · 100% of original billable amount");
+assert.equal(byCreator.lineItems[0]!.description, "Creator A — 1 × Instagram reel + 1 × TikTok video");
 assert.equal(byCreator.lineItems[0]!.revenueBeforeVat, 25_000);
 assert.equal(byCreator.lineItems[0]!.lineTotal, 28_500);
-assert.equal(byCreator.lineItems[1]!.description, "Creator B — 1 × Instagram reel · 100% of original billable amount");
+assert.equal(byCreator.lineItems[1]!.description, "Creator B — 1 × Instagram reel");
 
 const packaged = applyInvoiceDocumentLayout(sample, "package");
 assert.equal(packaged.lineItems.length, 2);
@@ -214,3 +214,11 @@ for (const layout of ['detailed','by_creator','summary'] as const) {
  assert.ok(!html.includes('INV-2026-0006'));
  assert.ok(!html.includes('TW-2026-0001'));
 }
+
+const summaryHtml = buildInvoiceTemplateHtml(packaged);
+assert.ok(summaryHtml.includes("<li"));
+assert.ok(summaryHtml.includes("Creator A (1 × Instagram reel + 1 × TikTok video)"));
+assert.ok(summaryHtml.includes("Agency fees (AF)"));
+assert.ok(!summaryHtml.includes('class="dmain">Agency fees'));
+assert.ok(summaryHtml.indexOf("Agency fees (AF)") < summaryHtml.indexOf('class="k">VAT (14%)'));
+assert.equal(resolveInvoiceDocumentVat(packaged).total, resolveInvoiceDocumentVat(sample).total);
