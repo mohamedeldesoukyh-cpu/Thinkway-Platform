@@ -1,10 +1,10 @@
+import { PreviewDownloadMenu } from "@/features/discovery/document-preview/preview-download-menu";
 import { DocumentPreviewClient } from "@/features/discovery/document-preview/document-preview-client";
 import { documentReturnPath } from "@/lib/navigation/document-return";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { PageBackButton } from "@/components/navigation/page-back-button";
 import { InvoicePreviewLayoutToggle } from "@/features/billing/components/invoice-preview-layout-toggle";
 import { resolveInvoiceDocumentLayout } from "@/lib/billing/invoice-document-layout";
 import { renderLiveInvoiceHtml } from "@/lib/billing/render-live-invoice-html";
@@ -60,39 +60,13 @@ export default async function InvoicePreviewPage({
         </div>
       ) : (
         <DocumentPreviewClient
+          closeHref={documentReturnPath(query.returnTo, `/billing/invoices/${id}`)}
           contained
-          toolbarLeft={<div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <PageBackButton
-            fallbackHref={documentReturnPath(query.returnTo, `/billing/invoices/${id}`)}
-            label={query.returnTo ? "Back to previous page" : "Back to invoice workspace"}
-            variant="text"
-          />
-          <Suspense fallback={null}>
-            <InvoicePreviewLayoutToggle invoiceId={id} activeLayout={layout} />
-          </Suspense>
-        </div>
-        {!errorMessage ? (
-          <div className="flex flex-wrap gap-2">
-            <a
-              className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"
-              href={`/api/invoices/${id}/document?format=html&layout=${layout}&download=1`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Download HTML
-            </a>
-            <a
-              className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"
-              href={`/api/invoices/${id}/document?format=pdf&layout=${layout}&download=1`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Download PDF
-            </a>
-          </div>
-        ) : null}
-      </div>}
+          toolbarLeft={<Suspense fallback={null}><InvoicePreviewLayoutToggle invoiceId={id} activeLayout={layout} /></Suspense>}
+          toolbarRight={<PreviewDownloadMenu formats={[
+            {format: "pdf", label: "PDF", href: `/api/invoices/${id}/document?format=pdf&layout=${layout}&download=1`},
+            {format: "html", label: "HTML", href: `/api/invoices/${id}/document?format=html&layout=${layout}&download=1`},
+          ]} />}
           title={`Invoice ${typed.document_number ?? id}`}
           html={html}
         />

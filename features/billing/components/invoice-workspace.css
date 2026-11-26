@@ -1,0 +1,26 @@
+.finance-suite.invoice-quotation-style {
+  font-family: var(--font-sans), Geist, Inter, "Segoe UI", sans-serif;
+}
+.invoice-quotation-style .tw-inv-identity {
+  background: #0052ff;
+  color: white;
+  border-radius: 12px 12px 0 0;
+  padding: 18px 20px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.invoice-quotation-style .tw-inv-identity .tw-inv-no { color: white; font-size: 20px; }
+.invoice-quotation-style .tw-inv-identity .tw-cs { color: #dce7ff; white-space: normal; overflow-wrap: anywhere; }
+.invoice-quotation-style .tw-inv-identity .tw-b { background: white; color: #004bea; }
+.invoice-quotation-style .tw-kpi { gap: 0; border-radius: 12px; overflow: hidden; background: #0052ff; }
+.invoice-quotation-style .tw-kpi .tw-k { border: 0; border-right: 1px solid #ffffff30; border-radius: 0; box-shadow: none; background: transparent; padding: 16px; }
+.invoice-quotation-style .tw-kpi .tw-k i,
+.invoice-quotation-style .tw-kpi .tw-k u { color: #dce7ff; }
+.invoice-quotation-style .tw-kpi .tw-k b { color: white; font-size: 21px; font-family: var(--font-geist-mono), monospace; }
+.invoice-quotation-style .tw-kpi .tw-k.bad b { color: #ffe19a; }
+.invoice-quotation-style .tw-r :is(span, a),
+.invoice-quotation-style .tw-r .tw-nm { font-size: 11px; line-height: 1.5; }
+.invoice-quotation-style .tw-r .tw-nm,
+.invoice-quotation-style .tw-r .tw-s { display: block; white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+.invoice-quotation-style .tw-r { min-height: 60px; align-items: center; }
+.invoice-quotation-style .tw-hr { font-size: 10px; letter-spacing: .04em; }

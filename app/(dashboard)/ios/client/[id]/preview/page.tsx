@@ -1,6 +1,5 @@
+import { PreviewDownloadMenu } from "@/features/discovery/document-preview/preview-download-menu";
 import { DocumentPreviewClient } from "@/features/discovery/document-preview/document-preview-client";
-import Link from "next/link";
-import { X } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
@@ -74,37 +73,11 @@ export default async function ClientIoPreviewPage({ params, searchParams }: Page
         <DocumentPreviewClient
           closeHref={returnTo}
           contained
-          toolbarLeft={<div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href={returnTo} className="text-sm font-medium hover:underline">← Back to previous page</Link>
-          {!saved ? <Suspense fallback={null}>
-            <ClientIoPreviewLayoutToggle clientIoId={id} activeLayout={layout} />
-          </Suspense> : <span className="text-sm font-medium">Saved IO · Version {typed.revision_number + 1}{typed.approved_at || typed.status === "approved" ? <span className="ml-2 rounded-full bg-emerald-50 px-2 py-1 text-xs text-emerald-700">Approved</span> : null}</span>}
-        </div>
-        <div className="flex items-center gap-2">
-        {!errorMessage ? (
-          <div className="flex flex-wrap gap-2">
-            <a
-              className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"
-              href={`/api/client-ios/${id}/document?format=html&layout=${layout}&download=1${saved ? "&saved=1" : ""}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Download HTML
-            </a>
-            <a
-              className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"
-              href={`/api/client-ios/${id}/document?format=pdf&layout=${layout}&download=1${saved ? "&saved=1" : ""}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Download PDF
-            </a>
-          </div>
-        ) : null}
-        <Link href={returnTo} aria-label="Close Client IO preview" className="inline-flex h-8 items-center gap-1 rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"><X className="size-4" /> Close</Link>
-        </div>
-      </div>}
+          toolbarLeft={saved ? <span className="text-sm">Saved IO · Version {typed.revision_number + 1}</span> : <Suspense fallback={null}><ClientIoPreviewLayoutToggle clientIoId={id} activeLayout={layout} /></Suspense>}
+          toolbarRight={<PreviewDownloadMenu formats={[
+            {format: "pdf", label: "PDF", href: `/api/client-ios/${id}/document?format=pdf&layout=${layout}&download=1${saved ? "&saved=1" : ""}`},
+            {format: "html", label: "HTML", href: `/api/client-ios/${id}/document?format=html&layout=${layout}&download=1${saved ? "&saved=1" : ""}`},
+          ]} />}
           title={`Client IO ${typed.document_number ?? id}`}
           html={saved ? undefined : html}
           src={saved ? `/api/client-ios/${id}/document?format=html&saved=1` : undefined}

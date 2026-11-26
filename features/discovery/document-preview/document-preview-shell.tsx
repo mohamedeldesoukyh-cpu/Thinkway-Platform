@@ -1,4 +1,5 @@
-import {usePathname} from "next/navigation";
+import {usePathname, useSearchParams} from "next/navigation";
+import { documentReturnPath } from "@/lib/navigation/document-return";
 import {PreviewWindowControls} from "@/components/ui/preview-window-controls";
 
 import {
@@ -77,7 +78,8 @@ export function DocumentPreviewShell({
   paginationReadyValue = "ready",
 }: Props) {
   const pathname = usePathname();
-  const closeHref = explicitCloseHref ?? (pathname?.replace(/\/preview\/?$/, "") || "/");
+  const searchParams = useSearchParams();
+  const closeHref = documentReturnPath(searchParams.get("returnTo") ?? undefined, explicitCloseHref ?? (pathname?.replace(/\/preview\/?$/, "") || "/"));
   const [maximized, setMaximized] = useState(true);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [pageCount, setPageCount] = useState(0);

@@ -1,4 +1,5 @@
 import { documentReturnPath } from "@/lib/navigation/document-return";
+import "@/features/billing/components/invoice-workspace.css";
 import { notFound } from "next/navigation";
 
 import { FinanceSuiteRoot } from "@/components/finance/suite";
@@ -36,7 +37,7 @@ export default async function InvoicePage({ params, searchParams }: InvoicePageP
     : null;
 
   return (
-    <FinanceSuiteRoot>
+    <FinanceSuiteRoot className="invoice-quotation-style">
       <FinanceSuiteShell
         title={displayNumber ? `Invoice ${displayNumber}` : "Invoice"}
         description="Invoice detail — lines, collections, approvals and audit history"
