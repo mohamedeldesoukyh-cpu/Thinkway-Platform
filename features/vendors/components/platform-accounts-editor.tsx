@@ -1,4 +1,5 @@
 "use client";
+import { useVendorUndoState } from "@/features/vendors/components/vendor-undo-state";
 
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import {
@@ -228,7 +229,7 @@ export function PlatformAccountsEditor({ vendor }: PlatformAccountsEditorProps) 
     [vendor.platform_accounts]
   );
 
-  const [accounts, setAccounts] = useState<EditableAccount[]>(initial);
+  const [accounts, setAccounts] = useVendorUndoState<EditableAccount[]>(initial);
 
   const [state, formAction, isPending] = useActionState(
     savePlatformAccountsAction,
@@ -309,6 +310,7 @@ export function PlatformAccountsEditor({ vendor }: PlatformAccountsEditorProps) 
           type="button"
           variant="outline"
           size="sm"
+          id="creator-add-platform"
           onClick={() => setAccounts((prev) => [...prev, emptyAccount()])}
         >
           <PlusIcon data-icon="inline-start" />

@@ -1,4 +1,5 @@
 "use client";
+import { useVendorUndoState } from "@/features/vendors/components/vendor-undo-state";
 import { VendorAgencyCard } from "../vendor-agency-card";
 import { VendorLegalAttachment } from "../vendor-legal-attachment";
 
@@ -50,13 +51,13 @@ export function VendorLegalTab({
   /** When true, render form only (parent provides shell). */
   embedded?: boolean;
 }) {
-  const [contractStatus, setContractStatus] = useState(
+  const [contractStatus, setContractStatus] = useVendorUndoState(
     vendor.contract_status ?? "none"
   );
-  const [documentType,setDocumentType]=useState<'trade_license'|'national_id'>(vendor.metadata?.legal_document_type==='national_id'?'national_id':'trade_license');
+  const [documentType,setDocumentType]=useVendorUndoState<'trade_license'|'national_id'>(vendor.metadata?.legal_document_type==='national_id'?'national_id':'trade_license');
   const value=(key:string)=>typeof vendor.metadata?.[key]==='string'?vendor.metadata[key] as string:'';
-  const [numbers,setNumbers]=useState({trade_license:value('trade_license'),national_id:value('national_id_number')});
-  const [exclusivity, setExclusivity] = useState(vendor.exclusivity ?? "none");
+  const [numbers,setNumbers]=useVendorUndoState({trade_license:value('trade_license'),national_id:value('national_id_number')});
+  const [exclusivity, setExclusivity] = useVendorUndoState(vendor.exclusivity ?? "none");
 
   const [state, formAction, isPending] = useActionState(
     updateVendorLegalAction,
@@ -89,8 +90,9 @@ export function VendorLegalTab({
             <Input key={documentType} id={documentType==='trade_license'?'trade_license':'national_id_number'} name={documentType==='trade_license'?'trade_license':'national_id_number'} maxLength={100} value={numbers[documentType]} onChange={e=>setNumbers(current=>({...current,[documentType]:e.target.value}))} disabled={isPending} className={VENDOR_FORM_INPUT_CLASS}/>
           </VendorFormField>
           <VendorFormField label="Document expiry" htmlFor="legal_document_expiry"><Input id="legal_document_expiry" name="legal_document_expiry" type="date" defaultValue={value('legal_document_expiry')} disabled={isPending} className={VENDOR_FORM_INPUT_CLASS}/></VendorFormField>
-          {([['vat_number','VAT number'],['tax_id','Tax ID']] as const).map(([key,label])=><VendorFormField key={key} label={label} htmlFor={key}><Input id={key} name={key} maxLength={100} defaultValue={value(key)||(key==='tax_id'?vendor.tax_registration_number??'':'')} disabled={isPending} className={VENDOR_FORM_INPUT_CLASS}/></VendorFormField>)}
+          {([['vat_number','VAT number'],['tax_id','Tax ID']] as const).map(([key,label])=><VendorFormField key={key} label={label} htmlFor={key}><Input id={key} name={key} maxLength={100} defaultValue={key==='tax_id'?(vendor.tax_registration_number??''):value(key)} disabled={isPending} className={VENDOR_FORM_INPUT_CLASS}/></VendorFormField>)}
         </VendorFormGrid>
+        <VendorAgencyCard vendor={vendor} disabled={isPending}/>
         <div className="mt-4 grid gap-3"><VendorLegalAttachment vendor={vendor} type={documentType} label={documentType==='trade_license'?'Trade License / CR':'ID'}/><VendorLegalAttachment vendor={vendor} type="tax_document" label="tax certificate"/></div>
       </VendorFormSection>
       <VendorFormSection icon={MapPinIcon} title="Registered address" description="Legal address for registration and invoicing."><VendorFormGrid className="lg:grid-cols-3">
@@ -151,7 +153,6 @@ export function VendorLegalTab({
           </VendorFormField>
         </VendorFormGrid>
       </VendorFormSection>
-      <VendorAgencyCard vendor={vendor} disabled={isPending}/>
     </form>
   );
 

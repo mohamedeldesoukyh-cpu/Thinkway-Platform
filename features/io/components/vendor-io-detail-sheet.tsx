@@ -63,6 +63,13 @@ function formatIoDateTime(value: string | null | undefined): string {
 function VendorIoGeneralTab({ row }: { row: VendorIoRow }) {
   return (
     <div className="space-y-3 px-0.5">
+      {row.creator_registration && <DetailFieldGroup title="Current creator registration">
+        <DetailField label={row.creator_registration.documentLabel}>{row.creator_registration.documentNumber ?? "—"}</DetailField>
+        <DetailField label="Registered address">{row.creator_registration.address ?? "—"}</DetailField>
+        <DetailField label="Tax ID">{row.creator_registration.taxId ?? "—"}</DetailField>
+        <DetailField label="VAT number">{row.creator_registration.vatNumber ?? "—"}</DetailField>
+        {row.creator_registration.agency && Object.entries({"Management agency":row.creator_registration.agency.name,"Agency contact":row.creator_registration.agency.contact,"Agency email":row.creator_registration.agency.email,"Agency phone":row.creator_registration.agency.phone,"Agency address":row.creator_registration.agency.address,"Agency Trade License / CR":row.creator_registration.agency.registrationNumber,"Agency Tax / VAT":row.creator_registration.agency.taxNumber}).map(([label,value])=><DetailField key={label} label={label}>{value ?? "—"}</DetailField>)}
+      </DetailFieldGroup>}
       <DetailFieldGroup title="Order">
         <DetailField label="IO #">
           <DocumentNumber value={row.document_number} />

@@ -1,5 +1,7 @@
 "use client";
 import './bank-editor.css';
+import { useVendorEditSession } from "@/features/vendors/components/vendor-edit-session";
+import { useVendorUndoState } from "@/features/vendors/components/vendor-undo-state";
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { COMMERCIAL_CURRENCIES } from '@/lib/commercial/fx-aggregation';
@@ -28,7 +30,8 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row, creatorName }
     const [accountsError, setAccountsError] = useState('');
     const [duplicate, setDuplicate] = useState<{ id: string; name: string } | null>(null);
     const [makeDefault, setMakeDefault] = useState(false);
-    const [bank, setBank] = useState(initial);
+    const [bank, setBank] = useVendorUndoState(initial);
+    const editSession = useVendorEditSession();
     const [savedBank, setSavedBank] = useState(initial);
     const [accountMode, setAccountMode] = useState(initial.iban || !initial.account_number ? 'iban' : 'account');
     const [routeMode, setRouteMode] = useState(!initial.swift && initial.identifier ? 'clearing' : 'swift');
@@ -194,19 +197,20 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row, creatorName }
         if (!empty && accountMode === 'iban' && !bank.iban.trim()) errors.unshift('Enter an IBAN or select Account number.');
         if (!empty && matches.some(match => match.field === 'nickname')) errors.push('This AAIB beneficiary nickname is already used. Review the matching creator next to the nickname field.');
         setIssues(errors);
-        if (errors.length) return;
+        if (errors.length) return false;
         setPending(true);
         try {
             const r = await saveAaibBank(creatorId, activeBank, accountId, makeDefault);
-            if (!r.ok) { setIssues([r.message]); setDuplicate('duplicate' in r ? r.duplicate ?? null : null); return; }
+            if (!r.ok) { setIssues([r.message]); setDuplicate('duplicate' in r ? r.duplicate ?? null : null); return false; }
             notifyCreatorBankSaved(creatorId, r.defaultBank);
             forgetDraft(); setDraftNotice('');
             setAccountId(r.accountId); setDuplicate(null); setMakeDefault(false);
             const list = await loadCreatorBankAccounts(creatorId);
             if (list.ok) setAccounts(list.accounts);
-            setBank(r.bank); setSavedBank(r.bank); router.refresh(); toast.success(r.message); onSaved?.();
-        } catch { setIssues(['Could not save bank details. Please try again.']); } finally { setPending(false); }
+            setBank(r.bank); setSavedBank(r.bank); router.refresh(); toast.success(r.message); onSaved?.(); return true;
+        } catch { setIssues(['Could not save bank details. Please try again.']); return false; } finally { setPending(false); }
     }
+    useEffect(()=>editSession?.register("bank-account",{dirty,save,discard:()=>{forgetDraft();setBank(savedBank);}}));
     function field(key: Exclude<keyof BankDetails, 'registered'>, label: string, placeholder = '', note?: string) {
         return <label className="cbd-field">{label}{note && <span> · {note}</span>}<Input className="cbd-input" value={bank[key]} placeholder={placeholder} aria-required={required.includes(key)} onChange={e => update(key, ['country', 'currency', 'swift'].includes(key) ? e.target.value.toUpperCase().replace(/\s/g, '') : e.target.value)}/>{duplicateHint(key)}</label>;
     }

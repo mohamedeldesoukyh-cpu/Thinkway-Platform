@@ -1,4 +1,5 @@
 "use client";
+import { useVendorUndoState } from "@/features/vendors/components/vendor-undo-state";
 
 import { useActionState, useEffect, useState } from "react";
 import { BriefcaseIcon } from "lucide-react";
@@ -30,16 +31,16 @@ export function VendorCommercialTab({
 }) {
   const profile = workspace.crm_profile;
   const rateCard = (workspace.rate_card ?? {}) as Record<string, unknown>;
-  const [preferredCurrency, setPreferredCurrency] = useState(
+  const [preferredCurrency, setPreferredCurrency] = useVendorUndoState(
     profile?.preferred_currency ?? String(rateCard.currency ?? "")
   );
-  const [negotiationNotes, setNegotiationNotes] = useState(
+  const [negotiationNotes, setNegotiationNotes] = useVendorUndoState(
     profile?.negotiation_notes ?? ""
   );
-  const [baseRate, setBaseRate] = useState(
+  const [baseRate, setBaseRate] = useVendorUndoState(
     rateCard.base_rate != null ? String(rateCard.base_rate) : ""
   );
-  const [commercialNotes, setCommercialNotes] = useState(
+  const [commercialNotes, setCommercialNotes] = useVendorUndoState(
     typeof rateCard.commercial_notes === "string" ? rateCard.commercial_notes : ""
   );
 

@@ -1,3 +1,4 @@
+import { creatorRegistration } from '@/lib/vendors/creator-registration';
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { resolveVendorIoPaymentSchedule } from "@/lib/io/vendor-io-payment-terms";
 import { formatPaymentTermsLabel } from "@/lib/vendors/format-utils";
@@ -56,6 +57,10 @@ type VendorIoQueryRow = {
   campaign: { document_number: string; name: string } | null;
   influencer:
     | {
+        metadata?: Record<string, unknown>;
+        city?: string | null;
+        tax_registration_number?: string | null;
+        management_agency?: string | null;
         display_name: string;
         email?: string | null;
         payment_terms?: PaymentTerms | string | null;
@@ -63,6 +68,10 @@ type VendorIoQueryRow = {
         country_code?: string | null;
       }
     | Array<{
+        metadata?: Record<string, unknown>;
+        city?: string | null;
+        tax_registration_number?: string | null;
+        management_agency?: string | null;
         display_name: string;
         email?: string | null;
         payment_terms?: PaymentTerms | string | null;
@@ -120,6 +129,7 @@ export function mapVendorIoQueryRow(row: VendorIoQueryRow): VendorIoRow {
     influencer_id: row.influencer_id,
     influencer_name: usableInfluencerDisplayName(influencer?.display_name) ?? "—",
     influencer_email: influencer?.email?.trim() || null,
+    creator_registration: creatorRegistration(influencer ?? {}),
     creator_avatar_url: null,
     vendor_io_terms_text: influencer?.vendor_io_terms_text ?? null,
     deliverable_types: (row.scope_lines ?? []).flatMap(link =>

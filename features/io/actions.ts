@@ -996,7 +996,7 @@ export async function sendVendorIoAction(
       return { ok: false, message: emailReady.message };
     }
     try {
-      const html = await renderLiveVendorIoHtml(supabase, id);
+      const html = await renderLiveVendorIoHtml(supabase, id, { prepareCurrent: true });
       sentDocumentHtml = html;
       const pdf = await renderHtmlToPdf(html, INSERTION_ORDER_PDF_OPTIONS);
       if (pdf.ok && pdf.buffer.subarray(0, 5).equals(Buffer.from("%PDF-"))) currentPdfBuffer = pdf.buffer;
