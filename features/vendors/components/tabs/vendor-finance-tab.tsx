@@ -1,4 +1,5 @@
 "use client";
+import { useVendorUndoState } from "@/features/vendors/components/vendor-undo-state";
 
 import { useState } from "react";
 import { WalletIcon } from "lucide-react";
@@ -52,9 +53,9 @@ export function VendorFinanceTab({
   onCancel?: () => void;
 }) {
   const rate = parseRateCard(vendor.rate_card);
-  const [paymentTerms, setPaymentTerms] = useState(vendor.payment_terms ?? "");
-  const [currency, setCurrency] = useState(rate.currency ?? "USD");
-  const [vatRegistered, setVatRegistered] = useState(
+  const [paymentTerms, setPaymentTerms] = useVendorUndoState(vendor.payment_terms ?? "");
+  const [currency, setCurrency] = useVendorUndoState(rate.currency ?? "USD");
+  const [vatRegistered, setVatRegistered] = useVendorUndoState(
     (vendor as { vat_registered?: boolean }).vat_registered ?? false
   );
 
@@ -64,7 +65,7 @@ export function VendorFinanceTab({
   );
 
   const form = (
-    <form action={formAction} className="grid gap-[18px]">
+    <form id="vendor-finance-form" action={formAction} className="grid gap-[18px]">
       <input type="hidden" name="influencer_id" value={vendor.id} />
       <input type="hidden" name="payment_terms" value={paymentTerms} />
       <input type="hidden" name="pricing_currency" value={currency} />

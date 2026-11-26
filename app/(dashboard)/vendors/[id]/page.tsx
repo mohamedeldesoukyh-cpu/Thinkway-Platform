@@ -93,10 +93,11 @@ export default async function VendorProfilePage({
   return (
     <DashboardShell
       title="Creator Profile"
+      hideDesktopHeader
       hidePageHeader
       platformV6
       containedMain
-      mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
+      mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden !max-w-none !px-5 !py-4"
     >
       {errorMessage ? (
         <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-[11px] text-destructive">

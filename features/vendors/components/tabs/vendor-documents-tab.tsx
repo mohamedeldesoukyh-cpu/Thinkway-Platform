@@ -1,5 +1,6 @@
 "use client";
 
+import { VendorLegalAttachment } from "../vendor-legal-attachment";
 import { useMemo } from "react";
 
 import { DocumentWorkspace } from "@/features/documents";
@@ -20,8 +21,10 @@ import type { DocumentFilterAccessors } from "@/features/documents/document-type
 export function VendorDocumentsTab({
   vendor,
   onCancel,
+  missingDocumentType,
 }: {
   vendor: VendorDetail;
+  missingDocumentType?:string;
   onCancel?: () => void;
 }) {
   const config = useMemo(
@@ -45,6 +48,8 @@ export function VendorDocumentsTab({
   );
 
   return (
+    <>
+    {INFLUENCER_DOCUMENT_TYPE_OPTIONS.some(o=>o.value===(missingDocumentType??"").replace(/^client_/,"")) && <div id="creator-missing-document" className="mb-4 rounded-lg border p-4"><VendorLegalAttachment vendor={vendor} type={(missingDocumentType??"").replace(/^client_/,"") as VendorDetail["documents"][number]["document_type"]} label={(missingDocumentType??"").replace(/^client_/,"").replaceAll("_"," ")}/></div>}
     <DocumentWorkspace
       entityId={vendor.id}
       documents={vendor.documents}
@@ -53,5 +58,6 @@ export function VendorDocumentsTab({
       uploadDescription="Attach trade licenses, IDs, and other vendor files."
       onCancel={onCancel}
     />
+    </>
   );
 }

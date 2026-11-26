@@ -764,6 +764,9 @@ export async function updateVendorOverviewAction(
 
   revalidatePath("/vendors");
   revalidatePath(`/vendors/${parsed.data.influencer_id}`);
+  revalidatePath("/ios/vendor");
+  revalidatePath("/ios/vendor/[id]/preview", "page");
+  revalidatePath("/campaigns/[id]", "page");
 
   return { ok: true, message: "Overview saved." };
 }
@@ -819,6 +822,9 @@ export async function updateVendorLegalAction(
   }
 
   revalidatePath(`/vendors/${parsed.data.influencer_id}`);
+  revalidatePath("/ios/vendor");
+  revalidatePath("/ios/vendor/[id]/preview", "page");
+  revalidatePath("/campaigns/[id]", "page");
 
   return { ok: true, message: "Legal & contract saved." };
 }
@@ -869,6 +875,9 @@ export async function updateVendorFinanceAction(
   }
 
   revalidatePath(`/vendors/${parsed.data.influencer_id}`);
+  revalidatePath("/ios/vendor");
+  revalidatePath("/ios/vendor/[id]/preview", "page");
+  revalidatePath("/campaigns/[id]", "page");
 
   return { ok: true, message: "Rate card saved." };
 }

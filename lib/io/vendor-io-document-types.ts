@@ -1,3 +1,4 @@
+import type { CreatorRegistration } from '@/lib/vendors/creator-registration';
 export type VendorIoDeliverableRow = {
   platform: string;
   deliverableType: string;
@@ -32,6 +33,7 @@ export type VendorIoDocumentData = {
     nationality: string | null;
     address: string | null;
     nationalId: string | null;
+    registration?: CreatorRegistration;
     categories: string[];
     countryCode: string | null;
     languages: string[];
