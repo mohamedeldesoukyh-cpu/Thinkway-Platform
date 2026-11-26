@@ -53,6 +53,8 @@ export function InvoicePreviewLayoutToggle({
           <Link
             key={option.id}
             href={href}
+            replace
+            scroll={false}
             role="tab"
             aria-selected={active}
             className={cn(
