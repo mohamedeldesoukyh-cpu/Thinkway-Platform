@@ -51,9 +51,10 @@ export function ClientIoPreviewLayoutToggle({
 
         return (
           <Link
-            replace
             key={option.id}
             href={href}
+            replace
+            scroll={false}
             role="tab"
             aria-selected={active}
             className={cn(
