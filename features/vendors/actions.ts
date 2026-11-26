@@ -1,4 +1,5 @@
 "use server";
+import { mergeVendorRegistrationMetadata } from "./registration";
 
 import { revalidatePath } from "next/cache";
 
@@ -697,11 +698,15 @@ export async function updateVendorOverviewAction(
     return { ok: false, message: permission.error };
   }
 
-  const { data: existing } = await supabase
+  const { data: existing, error: loadError } = await supabase
     .from("influencers")
-    .select("country_code, country_codes")
+    .select("country_code, country_codes, metadata")
     .eq("id", parsed.data.influencer_id)
     .maybeSingle();
+
+  if (loadError || !existing) {
+    return { ok: false, message: loadError?.message ?? "Creator not found." };
+  }
 
   const countryWrite = persistInfluencerCountryFields({
     existingCountryCode: existing?.country_code,
@@ -746,7 +751,8 @@ export async function updateVendorOverviewAction(
       categories: parseCategoriesInput(parsed.data.categories ?? ""),
       languages: parseLanguagesInput(parsed.data.languages ?? ""),
       influencer_url: emptyToNull(parsed.data.influencer_url),
-      management_agency: emptyToNull(parsed.data.management_agency),
+      ...(parsed.data.agency_contact_name !== undefined ? {management_agency:emptyToNull(parsed.data.agency_contact_name)} : parsed.data.management_agency !== undefined ? {management_agency:emptyToNull(parsed.data.management_agency)} : {}),
+      metadata: mergeVendorRegistrationMetadata(existing?.metadata, parsed.data),
       notes: emptyToNull(parsed.data.notes),
       vendor_io_terms_text: vendorIoTermsText,
     } as never)
@@ -791,14 +797,16 @@ export async function updateVendorLegalAction(
   if (loadError || !current) {
     return { ok: false, message: loadError?.message ?? "Creator not found." };
   }
-  const legalMetadata: { metadata?: Record<string, unknown> } = parsed.data.trade_license === undefined ? {} : {
-    metadata: { ...current.metadata, trade_license: emptyToNull(parsed.data.trade_license) },
-  };
+  const permission = await requirePermission(supabase, "influencers.write");
+  if ("error" in permission) return {ok:false,message:permission.error};
+  const legalMetadata = {metadata:mergeVendorRegistrationMetadata(current.metadata, parsed.data)};
 
   const { error } = await supabase
     .from("influencers")
     .update({
       ...legalMetadata,
+      ...(parsed.data.tax_id !== undefined ? {tax_registration_number:emptyToNull(parsed.data.tax_id)} : {}),
+      ...(parsed.data.agency_contact_name !== undefined ? {management_agency:emptyToNull(parsed.data.agency_contact_name)} : {}),
       contract_status: parsed.data.contract_status as ContractStatus,
       contract_expiry: parsed.data.contract_expiry,
       exclusivity: (emptyToNull(parsed.data.exclusivity) ??

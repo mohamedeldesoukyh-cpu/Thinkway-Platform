@@ -1,17 +1,20 @@
 import { DocumentPreviewClient } from "@/features/discovery/document-preview/document-preview-client";
 import { notFound } from "next/navigation";
 
-import { PageBackButton } from "@/components/navigation/page-back-button";
+import { documentReturnPath } from "@/lib/navigation/document-return";
+import { PreviewDownloadMenu } from "@/features/discovery/document-preview/preview-download-menu";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { renderLiveVendorIoHtml } from "@/lib/io/render-live-vendor-io-html";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{returnTo?:string}>;
 };
 
-export default async function VendorIoPreviewPage({ params }: PageProps) {
+export default async function VendorIoPreviewPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const query = await searchParams;
   const supabase = await createSupabaseServerClient();
 
   const { data: vendorIo } = await supabase
@@ -40,32 +43,12 @@ export default async function VendorIoPreviewPage({ params }: PageProps) {
       description={`${typed.document_number ?? id} — branded insertion order`}
     >
       <DocumentPreviewClient
-          closeHref={`/ios/vendor?io=${id}`}
+          closeHref={documentReturnPath(query.returnTo, `/ios/vendor?io=${id}`)}
           contained
-          toolbarLeft={<div className="flex flex-wrap items-center gap-2">
-        <PageBackButton
-          fallbackHref={`/ios/vendor?io=${id}`}
-          label="Back to Vendor IOs"
-        />
-        <PageBackButton
-          fallbackHref={`/campaigns/${typed.campaign_header_id}`}
-          label="Campaign"
-        />
-        <a
-          className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"
-          href={`/api/vendor-ios/${id}/document?format=html&download=1`}
-          download
-        >
-          Download HTML
-        </a>
-        <a
-          className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"
-          href={`/api/vendor-ios/${id}/document?format=pdf&download=1`}
-          download
-        >
-          Download PDF
-        </a>
-      </div>}
+          toolbarLeft={<PreviewDownloadMenu formats={[
+            {format:"html",label:"HTML",href:`/api/vendor-ios/${id}/document?format=html&download=1`},
+            {format:"pdf",label:"PDF",href:`/api/vendor-ios/${id}/document?format=pdf&download=1`},
+          ]}/>}
         title={`Vendor IO ${typed.document_number ?? id}`}
         html={html}
       />

@@ -1,7 +1,9 @@
 "use client";
+import { VendorAgencyCard } from "../vendor-agency-card";
+import { VendorLegalAttachment } from "../vendor-legal-attachment";
 
 import { useActionState, useEffect, useState } from "react";
-import { ScaleIcon } from "lucide-react";
+import { ScaleIcon, MapPinIcon, FileTextIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
@@ -51,6 +53,9 @@ export function VendorLegalTab({
   const [contractStatus, setContractStatus] = useState(
     vendor.contract_status ?? "none"
   );
+  const [documentType,setDocumentType]=useState<'trade_license'|'national_id'>(vendor.metadata?.legal_document_type==='national_id'?'national_id':'trade_license');
+  const value=(key:string)=>typeof vendor.metadata?.[key]==='string'?vendor.metadata[key] as string:'';
+  const [numbers,setNumbers]=useState({trade_license:value('trade_license'),national_id:value('national_id_number')});
   const [exclusivity, setExclusivity] = useState(vendor.exclusivity ?? "none");
 
   const [state, formAction, isPending] = useActionState(
@@ -71,26 +76,33 @@ export function VendorLegalTab({
 
   const form = (
     <form id="vendor-legal-form" action={formAction} className="grid gap-[18px]">
+      <input type="hidden" name={documentType==='trade_license'?'national_id_number':'trade_license'} value={numbers[documentType==='trade_license'?'national_id':'trade_license']}/>
       <input type="hidden" name="influencer_id" value={vendor.id} />
       <input type="hidden" name="contract_status" value={contractStatus} />
       <input type="hidden" name="exclusivity" value={exclusivity} />
 
+      {state.fieldErrors&&<div role="alert" className="rounded-lg border border-red-300 p-3 text-sm text-red-700">{Object.entries(state.fieldErrors).map(([field,errors])=><p key={field}>{field.replaceAll('_',' ')}: {errors?.join(' ')}</p>)}</div>}
+      <VendorFormSection icon={FileTextIcon} title="Registration & certificates" description="Legal identification and tax details used for creator registration.">
+        <VendorFormGrid className="lg:grid-cols-3">
+          <VendorFormField label="Legal document type" htmlFor="legal_document_type"><select id="legal_document_type" name="legal_document_type" value={documentType} onChange={e=>setDocumentType(e.target.value as 'trade_license'|'national_id')} disabled={isPending} className={VENDOR_FORM_INPUT_CLASS}><option value="trade_license">Trade License / CR</option><option value="national_id">ID</option></select></VendorFormField>
+          <VendorFormField label={documentType==='trade_license'?'Trade License / CR number':'ID number'} htmlFor={documentType==='trade_license'?'trade_license':'national_id_number'}>
+            <Input key={documentType} id={documentType==='trade_license'?'trade_license':'national_id_number'} name={documentType==='trade_license'?'trade_license':'national_id_number'} maxLength={100} value={numbers[documentType]} onChange={e=>setNumbers(current=>({...current,[documentType]:e.target.value}))} disabled={isPending} className={VENDOR_FORM_INPUT_CLASS}/>
+          </VendorFormField>
+          <VendorFormField label="Document expiry" htmlFor="legal_document_expiry"><Input id="legal_document_expiry" name="legal_document_expiry" type="date" defaultValue={value('legal_document_expiry')} disabled={isPending} className={VENDOR_FORM_INPUT_CLASS}/></VendorFormField>
+          {([['vat_number','VAT number'],['tax_id','Tax ID']] as const).map(([key,label])=><VendorFormField key={key} label={label} htmlFor={key}><Input id={key} name={key} maxLength={100} defaultValue={value(key)||(key==='tax_id'?vendor.tax_registration_number??'':'')} disabled={isPending} className={VENDOR_FORM_INPUT_CLASS}/></VendorFormField>)}
+        </VendorFormGrid>
+        <div className="mt-4 grid gap-3"><VendorLegalAttachment vendor={vendor} type={documentType} label={documentType==='trade_license'?'Trade License / CR':'ID'}/><VendorLegalAttachment vendor={vendor} type="tax_document" label="tax certificate"/></div>
+      </VendorFormSection>
+      <VendorFormSection icon={MapPinIcon} title="Registered address" description="Legal address for registration and invoicing."><VendorFormGrid className="lg:grid-cols-3">
+        {([['legal_address_line1','Address line 1'],['legal_address_line2','Address line 2'],['legal_address_city','City'],['legal_address_country','Country'],['legal_address_postal_code','Postal code']] as const).map(([key,label])=><VendorFormField key={key} label={label} htmlFor={key}><Input id={key} name={key} defaultValue={value(key)} disabled={isPending} className={VENDOR_FORM_INPUT_CLASS}/></VendorFormField>)}
+      </VendorFormGrid></VendorFormSection>
       <VendorFormSection
         icon={ScaleIcon}
         title="Legal & contract"
-        description="Trade license number, contract status, expiry, and exclusivity terms. Upload supporting files in the Documents tab."
+        description="Contract status, expiry and exclusivity terms."
       >
         <VendorFormGrid className="lg:grid-cols-3">
-          <VendorFormField label="Trade license / commercial registration number" htmlFor="trade_license">
-            <Input
-              id="trade_license"
-              name="trade_license"
-              maxLength={100}
-              className={VENDOR_FORM_INPUT_CLASS}
-              defaultValue={typeof vendor.metadata?.trade_license === "string" ? vendor.metadata.trade_license : ""}
-              disabled={isPending}
-            />
-          </VendorFormField>
+
           <VendorFormField label="Contract status">
             <Select
               value={contractStatus}
@@ -139,6 +151,7 @@ export function VendorLegalTab({
           </VendorFormField>
         </VendorFormGrid>
       </VendorFormSection>
+      <VendorAgencyCard vendor={vendor} disabled={isPending}/>
     </form>
   );
 
