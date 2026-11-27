@@ -8,6 +8,7 @@ import { parseLineAssignment } from "@/lib/campaigns/line-assignment";
 import { classifyInstagramContentUrl } from "@/lib/performance/metrics-collector/instagram-content-url";
 import {
   addAgreedPlatform,
+  countsTowardPublicationPlatform,
   classifyPublicationValueScope,
   createEmptyAssignmentAgreedPlatformIndex,
 } from "@/lib/performance/publication-value-scope";
@@ -602,6 +603,7 @@ export function projectClientCampaignExecution(
   const deliverableById = new Map(source.deliverables.map((row) => [row.id, row]));
   const agreedIndex = createEmptyAssignmentAgreedPlatformIndex();
   for (const deliverable of source.deliverables) {
+    if (!countsTowardPublicationPlatform(deliverable.deliverableType)) continue;
     addAgreedPlatform(agreedIndex, {
       campaignLineId: deliverable.campaignLineId,
       influencerId: influencerIdByLine.get(deliverable.campaignLineId) ?? null,

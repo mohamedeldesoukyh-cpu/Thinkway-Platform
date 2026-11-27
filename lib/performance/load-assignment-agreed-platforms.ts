@@ -4,6 +4,7 @@ import { parseLineAssignment } from "@/lib/campaigns/line-assignment";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import {
   addAgreedPlatform,
+  countsTowardPublicationPlatform,
   createEmptyAssignmentAgreedPlatformIndex,
   type AssignmentAgreedPlatformIndex,
 } from "@/lib/performance/publication-value-scope";
@@ -16,6 +17,7 @@ type LineRow = {
 type DeliverableRow = {
   campaign_line_id: string;
   platform: string | null;
+  deliverable_type?: string | null;
 };
 
 export type AddedValueCreatorRef = {
@@ -184,7 +186,7 @@ export async function loadAssignmentAgreedPlatformIndex(
       if (influencerId) influencerByLineId.set(line.id, influencerId);
 
       for (const platform of assignment?.platforms ?? []) {
-        if ((platform.deliverables?.length ?? 0) === 0) continue;
+        if (!platform.deliverables?.some(countsTowardPublicationPlatform)) continue;
         addPlatform(metadataPlatformsByLine, line.id, platform.platform);
       }
       // commercial_rows are pricing only — never treat them as agreed scope.
@@ -197,7 +199,7 @@ export async function loadAssignmentAgreedPlatformIndex(
     if (lineIds.length > 0) {
       const { data: deliverables, error: deliverablesError } = await supabase
         .from("assignment_deliverables")
-        .select("campaign_line_id, platform")
+        .select("campaign_line_id, platform, deliverable_type")
         .in("campaign_line_id", lineIds);
 
       if (deliverablesError) {
@@ -208,6 +210,7 @@ export async function loadAssignmentAgreedPlatformIndex(
       } else {
         deliverablesQueryOk = true;
         for (const row of (deliverables ?? []) as DeliverableRow[]) {
+          if (!countsTowardPublicationPlatform(row.deliverable_type)) continue;
           addPlatform(deliverablePlatformsByLine, row.campaign_line_id, row.platform);
         }
       }

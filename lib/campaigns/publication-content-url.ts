@@ -23,6 +23,11 @@ export function publicationCollabLabel(name: string | null | undefined, notes: s
 }
 
 type CollabRow = { id: string; campaign_line_id: string | null; content_url: string | null; notes: string | null; influencer_name: string | null };
+/** Keep the clicked creator as the editor context, even for reciprocal attribution. */
+export function publicationCollabEditor<T extends CollabRow>(row: T, rows: T[], creators: PublicationCollabCreator[]) {
+  const publication = attributeCollabPublications(rows).find(item => item.id === row.id) ?? row;
+  return { publication, options: creators.filter(creator => creator.id !== publication.campaign_line_id).map(creator => ({value: creator.id, label: creator.name})) };
+}
 export function attributeCollabPublications<T extends CollabRow>(rows: T[]): T[] {
   return rows.map(row => {
     if (notesHaveCollabMarker(row.notes)) return row;
@@ -88,6 +93,12 @@ export function normalizePublicationContentUrl(
       }
     }
     let path = url.pathname.replace(/\/+$/, "");
+    // Instagram exposes the same shortcode via /p/, /reel/ and /reels/ links.
+    // Compare post identity, not the URL presentation chosen by each creator.
+    if (url.hostname === "instagram.com") {
+      const post = path.match(/^\/(?:p|reel|reels)\/([^/]+)$/);
+      if (post) path = `/p/${post[1]}`;
+    }
     if (!path) path = "";
     const query = url.searchParams.toString();
     return `${url.protocol}//${url.hostname}${path}${query ? `?${query}` : ""}`;

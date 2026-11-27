@@ -10,6 +10,7 @@ import type {
   CampaignPublicationRow,
 } from "@/lib/domains/campaign/types";
 import { getCampaignPerformanceBundle } from "@/lib/services/campaigns/campaign-publication-service";
+import { buildPerformanceSummary, buildPerformanceCharts } from "@/lib/performance/campaign-performance-aggregates";
 import { getPlatformOptionLabel } from "@/lib/campaigns/deliverable-taxonomy";
 import {
   addedValueCreatorPercent,
@@ -475,6 +476,8 @@ export async function loadPerformanceReportDocumentData(
   }
 
 
+  // Selected-publication reports must not retain the full campaign's totals/charts.
+  bundle = { ...bundle, summary: buildPerformanceSummary(bundle.publications), charts: buildPerformanceCharts(bundle.publications) };
   const influencerSections = await buildInfluencerSections(supabase, bundle);
   const uniqueCreatorCount = new Set(
     bundle.publications
