@@ -18,6 +18,6 @@ export function PreviewDownloadMenu({formats}: {formats: Array<{format:string;la
     finally { downloading.current = false; setPending(false); }
   }
   return <DropdownMenu><DropdownMenuTrigger asChild><Button size="icon-sm" variant="outline" disabled={pending} aria-busy={pending} aria-label={pending ? "Preparing download" : "Download report"} title={pending ? "Preparing download…" : "Download report"}><DownloadIcon className={pending ? "size-4 animate-pulse" : "size-4"}/></Button></DropdownMenuTrigger>
-    <DropdownMenuContent align="end"><DropdownMenuLabel>Download as</DropdownMenuLabel>{formats.map(({format,label,href}) => {const Icon = format === "html" ? FileCodeIcon : format === "pptx" ? PresentationIcon : format === "excel" || format === "csv" ? FileSpreadsheetIcon : FileTextIcon; return <DropdownMenuItem key={format} disabled={pending} onSelect={() => { void download(href, format); }}><Icon className="size-4"/>{label}</DropdownMenuItem>;})}</DropdownMenuContent>
+    <DropdownMenuContent align="end"><DropdownMenuLabel>Download as</DropdownMenuLabel>{formats.map(({format,label,href}) => {const Icon = format === "html" ? FileCodeIcon : format === "pptx" ? PresentationIcon : format === "xlsx" || format === "excel" || format === "csv" ? FileSpreadsheetIcon : FileTextIcon; return <DropdownMenuItem key={href} disabled={pending} onSelect={() => { void download(href, format); }}><Icon className="size-4"/>{label}</DropdownMenuItem>;})}</DropdownMenuContent>
   </DropdownMenu>;
 }

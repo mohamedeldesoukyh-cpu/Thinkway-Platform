@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { PageBackButton } from "@/components/navigation/page-back-button";
+import { documentReturnPath } from "@/lib/navigation/document-return";
 import { PerformanceReportPreviewDownloads } from "@/features/campaigns/components/performance/performance-report-preview-downloads";
 import { PerformanceReportPreviewVariantToggle } from "@/features/campaigns/components/performance/performance-report-preview-variant-toggle";
 import {
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 
 type CampaignPerformancePreviewPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ variant?: string; publicationIds?: string }>;
+  searchParams: Promise<{ variant?: string; publicationIds?: string; returnTo?: string }>;
 };
 
 function resolveVariant(raw: string | undefined): PerformanceReportVariant {
@@ -101,27 +101,11 @@ export default async function CampaignPerformancePreviewPage({
       ) : (
         <DocumentPreviewClient
           contained
-          toolbarLeft={<div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <PageBackButton
-              fallbackHref={`/campaigns/${id}?tab=publications`}
-              label="Back to Performance Center"
-              variant="text"
-            />
-            <Suspense fallback={null}>
-              <PerformanceReportPreviewVariantToggle campaignId={id} activeVariant={variant} />
-            </Suspense>
-          </div>
-          {!errorMessage ? (
-            <PerformanceReportPreviewDownloads
-              campaignId={id}
-              variant={variant}
-              publicationIds={publicationIds}
-            />
-          ) : null}
-        </div>
-      </div>}
+          paginationReadyAttr="data-performance-ready"
+          paginationReadyValue="true"
+          closeHref={documentReturnPath(query.returnTo, `/campaigns/${id}?tab=publications`)}
+          toolbarLeft={<Suspense fallback={null}><PerformanceReportPreviewVariantToggle campaignId={id} activeVariant={variant} /></Suspense>}
+          toolbarRight={<PerformanceReportPreviewDownloads campaignId={id} variant={variant} publicationIds={publicationIds} />}
           title={`${variantLabel} performance report ${typed.document_number ?? id}`}
           html={html}
         />

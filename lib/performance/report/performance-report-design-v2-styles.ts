@@ -392,8 +392,7 @@ strong{font-weight:600}
 @media print{
   body{background:#fff}
   .sheet{margin:0;box-shadow:none;border-radius:0}
-  .sheet:not(.cover):not(.divider):not(.close){display:block}
-  .sheet__body{display:block}
+  .sheet{display:flex;flex-direction:column}
   .sheet__foot{break-inside:avoid;page-break-inside:avoid}
 }
 
