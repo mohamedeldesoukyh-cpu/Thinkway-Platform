@@ -77,6 +77,7 @@ const nextConfig: NextConfig = {
   turbopack: { root: __dirname },
   outputFileTracingIncludes: {
     "/api/review/performance": ["./public/report-assets/performance-fonts/*"],
+    "/api/campaigns/*/performance/document": ["./public/report-assets/performance-fonts/*"],
     '/api/accounting/assistant/**/*': ['./public/report-assets/statement-*'],
     '/api/cron/finance-mail': ['./public/report-assets/statement-*'],
     '/api/webhooks/finance-mail': ['./public/report-assets/statement-*'],
