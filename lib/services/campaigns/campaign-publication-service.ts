@@ -1,6 +1,7 @@
 import { tryCreateServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { buildPerformanceSummary, buildPerformanceCharts } from "@/lib/performance/campaign-performance-aggregates";
 import { attachReportVideoCounters } from "@/lib/performance/report/report-video-counters";
+import { resolvePublicationShareLinks } from "@/lib/campaigns/resolve-publication-share-links";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { deliverableTypeShortLabel, getPlatformOptionLabel, canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
@@ -435,7 +436,7 @@ export async function getCampaignPerformanceBundle(
     campaignHeaderId
   );
   const scopedPublications = applyPublicationValueScopes(
-    await attachStoryPublicationPreviews(supabase, campaignHeaderId, publicationsSigned),
+    await attachStoryPublicationPreviews(supabase, campaignHeaderId, await resolvePublicationShareLinks(publicationsSigned)),
     agreedPlatformIndex
   );
 
