@@ -8,6 +8,10 @@ BEGIN
   IF public.creator_search_compact_name('Chef  Manar') <> 'chefmanar' THEN
     RAISE EXCEPTION 'Space-insensitive name normalization failed';
   END IF;
+  IF public.creator_search_compact_name('Omar''s Cooking') <> 'omarscooking'
+    OR public.creator_search_compact_name(E'Chef\tManar') <> 'chefmanar' THEN
+    RAISE EXCEPTION 'Name punctuation/whitespace normalization failed';
+  END IF;
   SELECT public.creator_search_compute_rank('chefmanar', 'chefmanar', ARRAY['chefmanar'],
     ARRAY[]::text[], ARRAY['chef manar'], 'chef manar', NULL) INTO actual;
   IF actual IS DISTINCT FROM 850::real THEN RAISE EXCEPTION 'Compact exact name rank: %', actual; END IF;

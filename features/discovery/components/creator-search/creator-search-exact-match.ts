@@ -7,7 +7,7 @@ function normalizeExactToken(value: string): string {
 }
 
 function normalizeDisplayName(value: string): string {
-  return normalizeDiscoverySearchText(normalizeExactToken(value)).replace(/\s+/g, "");
+  return normalizeDiscoverySearchText(normalizeExactToken(value)).replace(/[^\p{L}\p{N}]/gu, "");
 }
 
 function collectCreatorHandles(creator: UnifiedCreatorResult): string[] {

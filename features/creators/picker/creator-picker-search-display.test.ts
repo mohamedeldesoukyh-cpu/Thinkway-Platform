@@ -158,3 +158,8 @@ test("compact names and partial handles remain visible while typing", () => {
   assert.equal(resolveCreatorPickerSearchDisplay("@chefmanar", creators).creators.length, 0);
   assert.equal(resolveCreatorPickerSearchDisplay("someoneelse", creators).creators.length, 0);
 });
+
+test("compact names ignore apostrophes and separators", () => {
+  const creators = [makeCreator({ unified_id: "inf:omar", display_name: "Omar's Cooking" })];
+  assert.equal(resolveCreatorPickerSearchDisplay("omarscooking", creators).creators.length, 1);
+});
