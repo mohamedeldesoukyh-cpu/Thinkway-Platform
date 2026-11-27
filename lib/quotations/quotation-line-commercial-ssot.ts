@@ -23,6 +23,7 @@ export function stripDeliverableCommercialAmounts(
     ...deliverable,
     cost: null,
     revenue: null,
+    revenue_before_free: undefined,
     gp_pct: null,
     gp_value: null,
     af_pct: null,

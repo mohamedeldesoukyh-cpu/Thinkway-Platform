@@ -193,8 +193,8 @@ function displayDecimalText(value: number, blankWhenZero: boolean): string {
 function DraftDecimalInput({
   value,
   onCommit,
-  blankWhenZero = false,
-  placeholder = "00.0",
+  blankWhenZero = true,
+  placeholder = "0.00",
   ...props
 }: {
   value: number;
@@ -777,7 +777,7 @@ export function QuotationDeliverableCostDetails({
       {!freeForClient && mode === "cost_revenue" && <Field label="Unit client cost before agency fees" navField><DraftDecimalInput aria-label="Unit client cost before agency fees" className="in in--num" value={(localDeliverable.revenue ?? defaults.revenue ?? 0) / units} onCommit={next => patchLocal({ revenue: next * units })} /></Field>}
       {!freeForClient && mode === "cost_gp_value" && <Field label="GP value" navField><DraftDecimalInput aria-label="GP value" className="in in--num" value={gpValue} onCommit={next => patchLocal({ gp_value: next })} /></Field>}
       <Field label="Agency fee %" navField><DraftDecimalInput aria-label="Agency fee percent" className="in in--num" value={afPct} onCommit={next => patchLocal({ af_pct: next })} /></Field>
-      <label className="q-inline-select-all col-span-full"><input type="checkbox" checked={freeForClient} onChange={event => patchLocal({ free_for_client: event.target.checked })} />Free for the client</label>
+      <div className="col-span-full" style={{ paddingTop: 20 }}><label className="q-inline-select-all"><input type="checkbox" checked={freeForClient} onChange={event => patchLocal({ free_for_client: event.target.checked })} />Free for the client</label></div>
     </div>
     {units > 1 && <p className="q-help">Per-package cost · repeated ×{units}. Totals below include all repeats.</p>}
     {costCurrency !== paymentCurrency && onFxChange && <QuotationCreatorFxFields compact draft={resolveQuotationRowDraft(item, draft)} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} onChange={onFxChange} />}
