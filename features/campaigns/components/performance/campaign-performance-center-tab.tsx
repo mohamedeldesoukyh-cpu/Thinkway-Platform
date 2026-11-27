@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { AssignmentInfluencerDetailSheet } from "@/features/campaigns/components/assignment-hierarchy/assignment-influencer-detail-sheet";
 import { tryBuildAssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
 import { SearchIcon } from "lucide-react";
-import { uniqueCollabPublications } from "@/lib/campaigns/publication-content-url";
+import { uniqueCollabPublications, withPublicationCollabColors } from "@/lib/campaigns/publication-content-url";
 import { buildPerformanceSummary, buildPerformanceCharts } from "@/lib/performance/campaign-performance-aggregates";
 import { toast } from "sonner";
 
@@ -165,9 +165,9 @@ export function CampaignPerformanceCenterTab({
       hierarchyGroups: assignmentHierarchy?.groups,
     });
     if (!assignmentIndexHasAgreedPlatforms(index)) {
-      return publications;
+      return withPublicationCollabColors(publications);
     }
-    return applyPublicationValueScopes(publications, index);
+    return withPublicationCollabColors(applyPublicationValueScopes(publications, index));
   }, [assignmentHierarchy?.groups, publications, workspace.lines]);
   const summary = useMemo(() => buildPerformanceSummary(classifiedPublications), [classifiedPublications]);
   const charts = useMemo(() => buildPerformanceCharts(classifiedPublications), [classifiedPublications]);
@@ -707,7 +707,7 @@ export function CampaignPerformanceCenterTab({
             description="Matching the assignment platforms."
             summary={agreedSummary}
             rows={agreedFiltered}
-            allRows={publications}
+            allRows={classifiedPublications}
             selectScopeIds={filteredSelectIds}
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
@@ -729,7 +729,7 @@ export function CampaignPerformanceCenterTab({
             description="Posted on platforms that are not contracted on the assignment."
             summary={addedValueSummary}
             rows={addedValueFiltered}
-            allRows={publications}
+            allRows={classifiedPublications}
             selectScopeIds={addedValueSelectIds}
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
