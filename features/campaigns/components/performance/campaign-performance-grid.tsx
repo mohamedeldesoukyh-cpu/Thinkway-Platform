@@ -45,6 +45,7 @@ import {
   publicationCollabEditor,
   collabCellStyle,
   attributeCollabPublications,
+  groupCollabPublications,
   publicationCollabLabel,
   normalizePublicationContentUrl,
 } from "@/lib/campaigns/publication-content-url";
@@ -242,7 +243,7 @@ export function CampaignPerformanceGrid({
     [allRows, rows]
   );
 
-  const sorted = useMemo(() => sortRows(rows, sortKey, sortDir), [rows, sortKey, sortDir]);
+  const sorted = useMemo(() => groupCollabPublications(attributeCollabPublications(sortRows(rows, sortKey, sortDir))), [rows, sortKey, sortDir]);
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const pageRows = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const scopeIds = selectScopeIds ?? sorted.map((row) => row.id);

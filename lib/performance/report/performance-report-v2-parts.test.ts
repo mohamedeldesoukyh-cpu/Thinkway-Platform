@@ -161,3 +161,20 @@ test('client cards exclude follower forecasts and show independent actual video 
  assert.match(actual,/<span>Impr.<\/span><strong>2.4K<\/strong>/);
 });
 
+
+// Regression: two distinct Instagram collaborations retain their table colours
+// in single-card report rendering, even after report filters select one creator.
+import { withPublicationCollabColors, collabCellStyle, setPublicationCollab } from '@/lib/campaigns/publication-content-url';
+test('report cards preserve campaign Collab colours and added-value labels', () => {
+  const rows = withPublicationCollabColors([
+    pub({id:'manar',campaign_line_id:'manar',content_url:'https://instagram.com/p/Df5Y5OXRaY-/',notes:setPublicationCollab(null,true,{id:'morcos',name:'Morcos'})}),
+    pub({id:'adham',campaign_line_id:'adham',content_url:'https://instagram.com/p/DgKum7sx6DR/',value_scope:'added_value',notes:setPublicationCollab(null,true,{id:'wagdi',name:'Wagdi'})}),
+  ]);
+  assert.notEqual(collabCellStyle(rows[0],rows)?.borderLeft,collabCellStyle(rows[1],rows)?.borderLeft);
+  for (const row of rows) {
+    const html=renderPcard(row);
+    assert.ok(html.includes(collabCellStyle(row,rows)!.backgroundColor));
+    assert.ok(html.includes(collabCellStyle(row,rows)!.borderLeft));
+  }
+  assert.match(renderPcard(rows[1]), /Added value/i);
+});

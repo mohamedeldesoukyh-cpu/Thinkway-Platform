@@ -1,4 +1,4 @@
-import { collabCellStyle, publicationCollabLabel } from "@/lib/campaigns/publication-content-url";
+import { uniqueCollabPublications, collabCellStyle, publicationCollabLabel } from "@/lib/campaigns/publication-content-url";
 import { videoMetricTotals, videoCounters, reportedTotal } from './reported-metrics';
 import {
   formatCompactCount,
@@ -118,7 +118,7 @@ export function buildPerformanceReportExcelBuffer(
   const agreedRows = mapPublicationRows(agreedPublications);
   const addedValueRows = mapPublicationRows(addedValuePublications);
 
-  const cpeValues = data.bundle.publications
+  const cpeValues = uniqueCollabPublications(data.bundle.publications)
     .map((p) => p.cpe)
     .filter((v): v is number => v != null);
   const averageCpe =
