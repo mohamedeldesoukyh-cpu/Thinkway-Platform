@@ -1,3 +1,4 @@
+import { readFreeClientPrice } from "@/lib/commercial/free-client-price";
 import { readRevenueShare, revenueShareAmount } from "@/lib/campaigns/revenue-share";
 import { loadVendorIoReopenEligibility } from "@/lib/io/vendor-io-query-helpers";
 import { creatorFxAmount } from "@/lib/commercial/creator-fx";
@@ -547,6 +548,7 @@ export async function getCampaignWorkspace(
       name: line.name,
       description: line.description?.trim() || null,
       usage_period: readAssignmentUsagePeriod(line.metadata),
+      ...readFreeClientPrice(line.metadata),
       status: line.status,
       assignment_status:
         (line.assignment_status as CampaignLineWorkspace["assignment_status"]) ??
