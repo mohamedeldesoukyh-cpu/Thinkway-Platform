@@ -110,6 +110,11 @@ export function normalizePublicationContentUrl(
     const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
     url.hash = "";
     url.hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+    // TikTok identifies a post by video ID, independent of handle and share params.
+    if (["tiktok.com", "m.tiktok.com"].includes(url.hostname)) {
+      const video = url.pathname.match(/^\/(?:@[^/]+\/)?video\/(\d+)\/?$/);
+      if (video) return `https://tiktok.com/video/${video[1]}`;
+    }
     // Drop common share/tracking query params so the same post matches.
     for (const key of [...url.searchParams.keys()]) {
       if (
