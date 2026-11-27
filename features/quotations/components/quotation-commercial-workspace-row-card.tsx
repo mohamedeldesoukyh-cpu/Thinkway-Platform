@@ -2,8 +2,8 @@ import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import { QuotationDecimalInput } from "./quotation-decimal-input";
 import { QuotationCreatorFxFields } from "./quotation-creator-fx-fields";
 import { COMMERCIAL_CURRENCIES } from "@/lib/commercial/fx-aggregation";
-import { computeCommercials, type CommercialInputMode } from "@/lib/commercial/commercial-engine";
-import { applyCommercialWorkspaceBulkOp } from "@/lib/quotations/commercial-workspace/bulk-transforms";
+import { type CommercialInputMode } from "@/lib/commercial/commercial-engine";
+import { applyCommercialWorkspaceBulkOp, patchCommercialWorkspaceDraft } from "@/lib/quotations/commercial-workspace/bulk-transforms";
 import type { CommercialWorkspaceColumnId } from "@/lib/quotations/commercial-workspace/column-preferences";
 import { resolveQuotationCreatorProfileSource } from "@/lib/quotations/quotation-creator-source";
 import type { QuotationRowDraft } from "@/features/quotations/quotation-row-math";
@@ -42,12 +42,7 @@ export function QuotationCommercialWorkspaceRowCard({row,selected,canManage,show
   const profile=resolveQuotationCreatorProfileSource(row.item,row.item.platform?[row.item.platform]:[]);
   const name=profile.displayName || row.item.creator_name || row.influencerName;
   const money=(value:number)=>new Intl.NumberFormat("en-US",{maximumFractionDigits:2}).format(value);
-  const patch=(changes:Partial<QuotationRowDraft>)=>{
-    const next={...d,...changes};
-    if(next.mode==="cost_markup_pct") { onStageDraft(applyCommercialWorkspaceBulkOp(next,{kind:"apply_markup_pct",pct:next.gpPct})); return; }
-    const c=computeCommercials({mode:next.mode,cost:next.cost,revenue:next.revenue,gpPct:next.gpPct,gpValue:next.gpValue});
-    onStageDraft({...next,revenue:c.revenue,gpPct:c.gpPct,gpValue:c.gpValue});
-  };
+  const patch=(changes:Partial<QuotationRowDraft>)=>onStageDraft(patchCommercialWorkspaceDraft(d, changes));
   return <div className="qx-cwrow" style={{gridTemplateColumns:commercialGridColumns(show)}}>
     <span><input type="checkbox" checked={selected} onChange={onToggleSelected} aria-label={`Select ${name}`} /></span>
     <div className="q-cw-identity"><CreatorAvatarImage avatarUrl={profile.avatarUrl} profileUrl={profile.profile_url} alt={name} sizeClassName="!size-[26px]" /><div><b>{name}</b><small>{row.optionLabel || "Deliverables"}</small>{show("currency") && <select className="q-cw-currency" aria-label={`Currency for ${name}`} value={d.costCurrency} disabled={!canManage} onChange={e=>onStageDraft(applyCommercialWorkspaceBulkOp(d,{kind:"set_currency",currency:e.target.value}))}>{COMMERCIAL_CURRENCIES.map(code=><option key={code}>{code}</option>)}</select>}</div></div>

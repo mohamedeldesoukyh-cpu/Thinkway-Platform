@@ -22,6 +22,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const linePatchSchema = z.object({
   lineId: z.string().uuid(),
+  free_for_client: z.boolean().optional(),
+  client_price_before_free: z.object({ revenue: z.number().min(0), usage: z.number().min(0) }).nullable().optional(),
   revenue_before_vat: z.number().min(0),
   cost_before_vat: z.number().min(0),
   usage_rights_amount: z.number().min(0),
@@ -265,6 +267,8 @@ export async function updateAssignmentLineCommercialsAction(
       const mutation: UpdateCampaignLineInput = {
         campaign_id: campaignId,
         line_id: patch.lineId,
+        free_for_client: patch.free_for_client,
+        client_price_before_free: patch.client_price_before_free,
         influencer_id: influencerId,
         assignment_json: JSON.stringify({ platforms }),
         pricing_mode: pricingMode,

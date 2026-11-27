@@ -131,6 +131,8 @@ export type CreatorPlatformAccountSummary = {
 };
 
 export type CampaignLineWorkspace = {
+  free_for_client?: boolean;
+  client_price_before_free?: { revenue: number; usage: number } | null;
   client_io_approved?: boolean;
   went_live_date?: string | null;
   id: string;

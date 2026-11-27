@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 
 import type { QuotationRowDraft } from "@/features/quotations/quotation-row-math";
 
-import { applyCommercialWorkspaceBulkOp } from "./bulk-transforms";
+import { applyCommercialWorkspaceBulkOp, patchCommercialWorkspaceDraft } from "./bulk-transforms";
 
 function draft(partial?: Partial<QuotationRowDraft>): QuotationRowDraft {
   return {
@@ -79,4 +79,12 @@ describe("applyCommercialWorkspaceBulkOp", () => {
     });
     assert.equal(af.afPct, 12);
   });
+});
+
+it("manual client cost starts blank and stays independent of internal cost", () => {
+  const manual = patchCommercialWorkspaceDraft(draft({mode:"cost_markup_pct",cost:10000,revenue:10000}), {mode:"cost_revenue"});
+  assert.equal(manual.revenue,0);
+  assert.equal(patchCommercialWorkspaceDraft(manual,{cost:15000}).revenue,0);
+  const priced = patchCommercialWorkspaceDraft(manual,{revenue:25000});
+  assert.equal(patchCommercialWorkspaceDraft(priced,{cost:18000}).revenue,25000);
 });

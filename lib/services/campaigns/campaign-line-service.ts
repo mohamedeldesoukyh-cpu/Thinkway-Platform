@@ -1,3 +1,4 @@
+import { readFreeClientPrice, toggleFreeClientPrice } from "@/lib/commercial/free-client-price";
 import { isDeepStrictEqual } from "node:util";
 import { readCreatorFx } from "@/lib/commercial/creator-fx";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -371,6 +372,8 @@ export async function createCampaignLine(
 
 export type UpdateCampaignLineInput = CampaignLineMutationInput & {
   line_id: string;
+  free_for_client?: boolean;
+  client_price_before_free?: { revenue: number; usage: number } | null;
   confirm_commercial_sync?: boolean;
   commercial_sync_idempotency_key?: string;
 };
@@ -450,6 +453,10 @@ export async function updateCampaignLine(
     return { ok: false, message: "This creator assignment is locked by its Vendor IO. Use the existing IO revision / finance override process before replacing the creator." };
   }
 
+  const savedFreePrice = readFreeClientPrice(existingLineMeta.metadata);
+  const freePrice = parsed.free_for_client === undefined ? savedFreePrice : toggleFreeClientPrice(savedFreePrice, Number(existingLineMeta.revenue_before_vat ?? existingLineMeta.revenue ?? 0), Number(existingLineMeta.usage_rights_amount ?? 0), parsed.free_for_client);
+  if (parsed.free_for_client === true && !savedFreePrice.free_for_client && parsed.client_price_before_free) freePrice.client_price_before_free = parsed.client_price_before_free;
+  if (parsed.free_for_client === true) parsed = { ...parsed, revenue: 0, revenue_before_vat: 0, usage_rights_amount: 0 };
   const revenueBeforeVat = parsed.revenue_before_vat ?? parsed.revenue;
   const costBeforeVat = parsed.cost_before_vat ?? parsed.cost;
   const costVatChanged = Number(existingLineMeta.cost_vat_percent ?? 0) !== Number(parsed.cost_vat_percent)
@@ -458,7 +465,7 @@ export async function updateCampaignLine(
     || Boolean(existingLineMeta.revenue_vat_exempt) !== Boolean(parsed.revenue_vat_exempt);
 
   if (existingLineMeta.invoice_id || existingLineMeta.vendor_io_id || existingLineMeta.metadata?.pending_vendor_io_id) {
-    const clientChanged = revenueBeforeVat !== Number(existingLineMeta.revenue_before_vat ?? existingLineMeta.revenue)
+    const clientChanged = (parsed.free_for_client !== undefined && parsed.free_for_client !== savedFreePrice.free_for_client) || revenueBeforeVat !== Number(existingLineMeta.revenue_before_vat ?? existingLineMeta.revenue)
       || Number(parsed.agency_fee_percent) !== Number(existingLineMeta.agency_fee_percent ?? 0)
       || Number(parsed.usage_rights_amount) !== Number(existingLineMeta.usage_rights_amount ?? 0)
       || revenueVatChanged || replacingCreator
@@ -700,6 +707,8 @@ export async function updateCampaignLine(
     end_date: parsed.end_date,
     metadata: {
       ...((existingLineMeta.metadata as Record<string, unknown>) ?? {}),
+      free_for_client: freePrice.free_for_client && revenueBeforeVat === 0 && parsed.usage_rights_amount === 0,
+      client_price_before_free: freePrice.client_price_before_free,
       [LINE_ASSIGNMENT_META_KEY]: assignmentMeta,
     },
   });
