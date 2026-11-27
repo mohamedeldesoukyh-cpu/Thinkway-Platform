@@ -35,15 +35,15 @@
     ]
   },
   {
-    "selector": ".discovery-suite .tw-band b,.discovery-suite .tw-mini b,.discovery-suite .tw-ms2 b,.discovery-suite .tw-cdh__m b,.discovery-suite .tw-cm__st b,.discovery-suite .tw-cw__g b,.discovery-suite .tw-calcp__f b,\n  .discovery-suite .tw-dr__s b,.discovery-suite .tw-cin .tw-in",
+    "selector": ".discovery-suite .tw-ms2 b,.discovery-suite .tw-cm__st b,.discovery-suite .tw-calcp__f b,.discovery-suite .tw-cin .tw-in",
     "rules": [
-      ".discovery-suite .tw-band b,.discovery-suite .tw-mini b,.discovery-suite .tw-ms2 b,.discovery-suite .tw-cdh__m b,.discovery-suite .tw-cm__st b,.discovery-suite .tw-cw__g b,.discovery-suite .tw-calcp__f b,\n  .discovery-suite .tw-dr__s b,.discovery-suite .tw-cin .tw-in{font-size:14px;letter-spacing:-.35px}"
+      ".discovery-suite .tw-ms2 b,.discovery-suite .tw-cm__st b,.discovery-suite .tw-calcp__f b,.discovery-suite .tw-cin .tw-in{font-size:14px;letter-spacing:-.35px}"
     ]
   },
   {
-    "selector": ".discovery-suite .tw-v,.discovery-suite .tw-kv b,.discovery-suite .tw-dc2__r b,.discovery-suite .tw-oc__r b,.discovery-suite .tw-po b,.discovery-suite .tw-str b,.discovery-suite .tw-cw__hl b,.discovery-suite .tw-dl b,\n  .discovery-suite .tw-calc b,.discovery-suite .tw-selbar .sum b,.discovery-suite .tw-cwin,.discovery-suite .tw-in,.discovery-suite .tw-ed,.discovery-suite .tw-adf > *,.discovery-suite .tw-ft > *,.discovery-suite .tw-agtot b",
+    "selector": ".discovery-suite .tw-v,.discovery-suite .tw-po b,.discovery-suite .tw-dl b,.discovery-suite .tw-selbar .sum b,.discovery-suite .tw-cwin,.discovery-suite .tw-in,.discovery-suite .tw-ed,.discovery-suite .tw-adf > *,.discovery-suite .tw-ft > *",
     "rules": [
-      ".discovery-suite .tw-v,.discovery-suite .tw-kv b,.discovery-suite .tw-dc2__r b,.discovery-suite .tw-oc__r b,.discovery-suite .tw-po b,.discovery-suite .tw-str b,.discovery-suite .tw-cw__hl b,.discovery-suite .tw-dl b,\n  .discovery-suite .tw-calc b,.discovery-suite .tw-selbar .sum b,.discovery-suite .tw-cwin,.discovery-suite .tw-in,.discovery-suite .tw-ed,.discovery-suite .tw-adf > *,.discovery-suite .tw-ft > *,.discovery-suite .tw-agtot b{font-size:12.5px}"
+      ".discovery-suite .tw-v,.discovery-suite .tw-po b,.discovery-suite .tw-dl b,.discovery-suite .tw-selbar .sum b,.discovery-suite .tw-cwin,.discovery-suite .tw-in,.discovery-suite .tw-ed,.discovery-suite .tw-adf > *,.discovery-suite .tw-ft > *{font-size:12.5px}"
     ]
   },
   {
@@ -54,9 +54,9 @@
     ]
   },
   {
-    "selector": ".discovery-suite .tw-d,.discovery-suite .tw-delta,.discovery-suite .tw-id,.discovery-suite .tw-fe b,.discovery-suite .tw-kid,.discovery-suite .tw-cc,.discovery-suite .tw-sub2,.discovery-suite .tw-s",
+    "selector": ".discovery-suite .tw-d,.discovery-suite .tw-delta,.discovery-suite .tw-id,.discovery-suite .tw-cc,.discovery-suite .tw-s",
     "rules": [
-      ".discovery-suite .tw-d,.discovery-suite .tw-delta,.discovery-suite .tw-id,.discovery-suite .tw-fe b,.discovery-suite .tw-kid,.discovery-suite .tw-cc,.discovery-suite .tw-sub2,.discovery-suite .tw-s{font-size:11.5px}"
+      ".discovery-suite .tw-d,.discovery-suite .tw-delta,.discovery-suite .tw-id,.discovery-suite .tw-cc,.discovery-suite .tw-s{font-size:11.5px}"
     ]
   },
   {
