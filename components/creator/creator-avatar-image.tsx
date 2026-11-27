@@ -84,7 +84,9 @@ function CreatorAvatarImageInstance({
       setUseRawCdnFallback(true);
       return;
     }
-    if (!useProfileFallback && profileOnlySrc && profileOnlySrc !== primarySrc) {
+    // The proxy already warms this src/profile pair in the background. Switching
+    // to a profile-only URL abandons that cache entry and starts duplicate work.
+    if (!useProfileFallback && profileOnlySrc && profileOnlySrc !== primarySrc && !primarySrc?.startsWith("/api/creators/avatar?")) {
       setUseProfileFallback(true);
       return;
     }
@@ -112,6 +114,7 @@ function CreatorAvatarImageInstance({
         src={src}
         alt=""
         aria-hidden
+        decoding="async"
         referrerPolicy="no-referrer"
         className="absolute inset-0 size-full object-cover object-center"
         style={{ opacity: loaded ? 1 : 0 }}

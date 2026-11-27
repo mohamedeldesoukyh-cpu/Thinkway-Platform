@@ -1,4 +1,4 @@
-import { filterExactCreatorMatches } from "@/features/discovery/components/creator-search/creator-search-exact-match";
+import { filterCreatorLookupMatches } from "@/features/discovery/components/creator-search/creator-search-exact-match";
 import { scoreCreatorSearchIntent } from "@/features/discovery/components/creator-search/creator-search-intent-engine";
 import { buildDiscoverySearchTaxonomyIndex } from "@/features/discovery/components/creator-search/creator-search-taxonomy";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
@@ -54,7 +54,7 @@ export function resolveCreatorPickerSearchDisplay(
     };
   }
 
-  const exactMatches = filterExactCreatorMatches(creators, trimmed);
+  const exactMatches = filterCreatorLookupMatches(creators, trimmed);
   const exactCreatorZeroMatch = !options?.loading && exactMatches.length === 0;
 
   return {

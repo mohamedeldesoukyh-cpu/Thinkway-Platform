@@ -132,16 +132,30 @@ export function withDeliverableCommercialPatch(
   fxRateToEgp: number
 ): QuotationDeliverable {
   const merged: QuotationDeliverable = { ...deliverable, ...patch };
+  if (patch.free_for_client === true && !deliverable.free_for_client && merged.commercial_input_mode === "cost_revenue") {
+    merged.revenue_before_free = Number(deliverable.revenue) || 0;
+  } else if (patch.free_for_client === false && deliverable.free_for_client && deliverable.revenue_before_free != null) {
+    if (patch.revenue === undefined) merged.revenue = deliverable.revenue_before_free;
+    merged.revenue_before_free = null;
+  }
+  // A derived markup/margin price is not a manually entered client price.
+  // Start the independent input empty when switching to explicit client cost.
+  if (patch.commercial_input_mode === "cost_revenue" && deliverable.commercial_input_mode !== "cost_revenue" && patch.revenue === undefined) {
+    merged.revenue = 0;
+  }
   // Fixed-price revenue is stored as a row total; preserve its unit price when repeating.
   if (patch.quantity != null && patch.revenue === undefined && merged.commercial_input_mode === "cost_revenue") {
     merged.revenue = (Number(deliverable.revenue) || 0) / deliverableQuantity(deliverable) * deliverableQuantity(merged);
+    if (merged.free_for_client && merged.revenue_before_free != null) {
+      merged.revenue_before_free = merged.revenue_before_free / deliverableQuantity(deliverable) * deliverableQuantity(merged);
+    }
   }
   const freeForClient = isDeliverableFreeForClient(merged);
   const revenue = computeDeliverableClientPrice(merged, fxRateToEgp);
   return {
     ...merged,
     free_for_client: freeForClient ? true : false,
-    revenue: freeForClient ? 0 : revenue > 0 ? revenue : null,
+    revenue: freeForClient || merged.commercial_input_mode === "cost_revenue" ? revenue : revenue > 0 ? revenue : null,
   };
 }
 

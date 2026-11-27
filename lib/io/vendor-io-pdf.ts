@@ -31,6 +31,7 @@ export const PERFORMANCE_REPORT_PDF_OPTIONS = {
   format: "A4" as const,
   printBackground: true,
   preferCSSPageSize: true,
+  waitForDocumentAttribute: { name: "data-performance-ready", value: "true" },
   margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
 };
 

@@ -123,7 +123,7 @@ import {
   resolveCreatorSearchQueryFromCreator,
   upsertCreatorInResults,
 } from "@/lib/discovery/creator-search-query";
-import { filterExactCreatorMatches } from "./creator-search-exact-match";
+import { filterCreatorLookupMatches } from "./creator-search-exact-match";
 import {
   buildCreatorSearchHybridListItems,
   countCreatorSearchHybridResults,
@@ -534,7 +534,7 @@ export function CreatorSearchWorkspace({
   const exactMatches = useMemo(() => {
     if (!debouncedSearch.trim()) return [];
     if (searchIntent.mode === "discovery") return [];
-    return filterExactCreatorMatches(sortedCreators, debouncedSearch);
+    return filterCreatorLookupMatches(sortedCreators, debouncedSearch);
   }, [debouncedSearch, searchIntent.mode, sortedCreators]);
 
   const displayCreators = useMemo(() => {
@@ -1285,7 +1285,7 @@ export function CreatorSearchWorkspace({
       if (!append && queryAtFetch.trim()) {
         const exactOnly =
           intentAtFetch.mode === "exact"
-            ? filterExactCreatorMatches(filtered, queryAtFetch)
+            ? filterCreatorLookupMatches(filtered, queryAtFetch)
             : [];
         const resultsCount =
           intentAtFetch.mode === "exact"

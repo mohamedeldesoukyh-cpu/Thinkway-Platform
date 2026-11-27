@@ -13,6 +13,7 @@ import {
 } from "./quotation-deliverable-commercial";
 import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
 import type { QuotationItemRow } from "@/features/quotations/types";
+import { fromDeliverableDrafts } from "./quotation-deliverable-drafts";
 
 const baseItem = {
   id: "item-1",
@@ -91,4 +92,26 @@ test("opening unpriced detail uses the displayed master price and preserves mode
  const typed = withDeliverableCommercialPatch(focused,{revenue:100000},1);
  assert.equal(computeDeliverableTotalClientCost(typed,1),115000);
  assert.equal(withDeliverableCommercialPatch(typed,{cost:70000},1).revenue,100000);
+});
+
+test("manual client cost starts empty and never follows internal cost", () => {
+  const derived = withDeliverableCommercialPatch({ platform: "instagram", type: "ig_post", quantity: 1, commercial_input_mode: "cost_markup_pct", gp_pct: 0 }, { cost: 10000 }, 1);
+  const manual = withDeliverableCommercialPatch(derived, { commercial_input_mode: "cost_revenue" }, 1);
+  assert.equal(manual.revenue, 0);
+  assert.equal(withDeliverableCommercialPatch(manual, { cost: 20000 }, 1).revenue, 0);
+  const priced = withDeliverableCommercialPatch(manual, { revenue: 25000 }, 1);
+  assert.equal(withDeliverableCommercialPatch(priced, { cost: 18000 }, 1).revenue, 25000);
+  assert.equal(withDeliverableCommercialPatch(priced, { revenue: 0 }, 1).revenue, 0);
+});
+
+test("free toggle preserves the manual price through save/reopen and restores fees", () => {
+  const priced: QuotationDeliverable = { platform: "instagram", type: "ig_post", quantity: 1, cost: 65000, revenue: 91000, af_pct: 15, commercial_input_mode: "cost_revenue" };
+  const free = withDeliverableCommercialPatch(priced, { free_for_client: true }, 1);
+  assert.equal(computeDeliverableTotalClientCost(free), 0);
+  assert.equal(free.revenue, 0);
+  const [saved] = fromDeliverableDrafts([{ ...JSON.parse(JSON.stringify(free)), key: "line" }]);
+  const restored = withDeliverableCommercialPatch(saved, { free_for_client: false }, 1);
+  assert.equal(restored.revenue, 91000);
+  assert.equal(computeDeliverableTotalClientCost(restored), 104650);
+  assert.equal(restored.cost, 65000);
 });

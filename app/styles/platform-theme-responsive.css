@@ -28,10 +28,6 @@
   color:var(--tw-ink);
 }
 .dark :is(.discovery-suite,.finance-suite,.twcd,.campaigns-list-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.collections-suite,.dv)
- :is(.tw-c,.tw-k,.tw-idbar,.tw-toolbar,.tw-tools,.tw-dr,.tw-cp__w,.tw-cp__m,.tw-cp__r,.tw-pub,.tw-calcp,.tw-mast,.tw-mr,.tw-ms2,.tw-step2,.tw-mode) {
-  background:var(--tw-surface);color:var(--tw-ink);border-color:var(--tw-line);
-}
-.dark :is(.discovery-suite,.finance-suite,.twcd,.campaigns-list-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.collections-suite,.dv)
  :is(.tw-b:not(.pri),.tw-in,.tw-select,.tw-search,.tw-dr__x) {
   background:var(--tw-surface);color:var(--tw-ink2);border-color:var(--tw-line);
 }
@@ -76,7 +72,6 @@
   --bq-bg:#101620;--bq-soft:#202d40;--bq-lav:#123b30;--bq-line:#3a4a60;--bq-hair:#2c3a4e;
   --bq-ok:#6ee7b7;--bq-okb:#123b30;--bq-wrn:#fcd34d;--bq-wrnb:#3c301b;--bq-bad:#fca5a5;--bq-badb:#43252c;
 }
-.dark .tw-billing-v3 :is(.bq-c,.bq-k,.bq-b,.bq-in,.bq-toolbar) {background:#182231;color:var(--bq-ink);border-color:var(--bq-line);}
 
 .dark .discovery-suite :is(.tw-jump a,.tw-mx > div,.tw-cm__w,.tw-cdt button[aria-pressed=true],.tw-seg button[aria-pressed=true]) {background:var(--tw-surface);color:var(--tw-ink2);border-color:var(--tw-line);}
 .dark .home-dashboard-suite .tw-jn.cur {background:var(--tw-surface);color:var(--tw-ink);}
@@ -120,7 +115,6 @@
   .tq-redesign .q-redesign-body :is(.q-cell-service,.q-cell-creator,.q-cell-option,.q-cell-price) {min-width:0;}
   .tq-redesign .q-redesign-body .q-lines__h input[type=search] {width:100%;max-width:100%;min-height:44px;font-size:16px;}
   :is(.home-dashboard-suite,.finance-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.campaigns-list-suite,.collections-suite) .tw-main {padding-inline:12px;min-width:0;}
-  :is(.discovery-suite,.finance-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.campaigns-list-suite,.twcd,.collections-suite) :is(.tw-ch,.tw-toolbar,.tw-tools) {flex-wrap:wrap;min-width:0;}
   :is(.discovery-suite,.finance-suite,.client-detail-suite,.vendor-detail-suite,.vendors-list-suite,.campaigns-list-suite,.twcd,.collections-suite) .tw-sc {max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;}
   .discovery-suite.tw-cp-root .tw-cp__l {overflow-x:hidden;}
   .discovery-suite.tw-cp-root .tw-cp__l :is(input,select) {max-width:100%;min-width:0;min-height:44px;font-size:16px;}

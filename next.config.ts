@@ -77,6 +77,7 @@ const nextConfig: NextConfig = {
   turbopack: { root: __dirname },
   outputFileTracingIncludes: {
     "/api/review/performance": ["./public/report-assets/performance-fonts/*"],
+    "/api/campaigns/*/performance/document": ["./public/report-assets/performance-fonts/*"],
     '/api/accounting/assistant/**/*': ['./public/report-assets/statement-*'],
     '/api/cron/finance-mail': ['./public/report-assets/statement-*'],
     '/api/webhooks/finance-mail': ['./public/report-assets/statement-*'],
@@ -109,7 +110,7 @@ const nextConfig: NextConfig = {
   // Tree-shake barrel imports on critical client paths (sidebar, discovery, sheets).
   experimental: {
     // Merge small production fragments while retaining on-demand feature chunks.
-    turbopackChunking: { minChunkSize: 47000, firstPageLoadPriority: 0 },
+    turbopackChunking: { minChunkSize: 45000, firstPageLoadPriority: 0 },
     // Share styles across routes without repeating whole stylesheet groups.
     cssChunking: "graph",
     optimizePackageImports: [

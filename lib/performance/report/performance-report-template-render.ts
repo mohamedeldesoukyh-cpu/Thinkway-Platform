@@ -1,4 +1,5 @@
 import { uniqueCollabPublications } from "@/lib/campaigns/publication-content-url";
+import { PERFORMANCE_REPORT_PAGINATION } from "./performance-report-pagination";
 import { videoMetricTotals, reportedTotal, metricCoverage } from './reported-metrics';
 import { creatorHighlightPages, renderCreatorHighlights } from './creator-highlights';
 import {
@@ -403,6 +404,7 @@ export function renderPerformanceReportHtml(data: PerformanceReportDocumentData)
 </head>
 <body>
 ${sheets.join("")}
+${PERFORMANCE_REPORT_PAGINATION}
 </body>
 </html>`;
 }

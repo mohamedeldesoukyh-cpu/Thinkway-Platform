@@ -147,7 +147,7 @@ export function EditCreatorProfileUrlDialog({
 
   return (
     <Dialog open={open} onOpenChange={next => { if (!mergeBusy) onOpenChange(next); }}>
-      <DialogContent className={cn(DISCOVERY_DIALOG_CONTENT_CLASS, "max-h-[90dvh] overflow-y-auto")}>
+      <DialogContent className={cn(DISCOVERY_DIALOG_CONTENT_CLASS, "max-h-[90dvh] sm:max-w-2xl")}>
         <DialogHeader className={DISCOVERY_DIALOG_HEADER_WRAP_CLASS}>
           <div className={DISCOVERY_DIALOG_HEADER_BAR_CLASS}>
             <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-[#64748b] dark:text-muted-foreground">
@@ -211,9 +211,8 @@ export function EditCreatorProfileUrlDialog({
               Link this creator to a vendor profile before editing profile URLs.
             </p>
           ) : null}
+          {conflict && <PlatformOwnerConflict owner={conflict} currentUnifiedId={creator.unified_id} onIgnore={() => { setConflict(null); setError(null); setProfileUrl(""); }} onBusyChange={setMergeBusy} onMerged={next => { onSaved?.(next); onOpenChange(false); }} />}
         </div>
-
-        {conflict && <div className="px-6"><PlatformOwnerConflict owner={conflict} currentUnifiedId={creator.unified_id} onBusyChange={setMergeBusy} onMerged={next => { onSaved?.(next); onOpenChange(false); }} /></div>}
         <DialogFooter className={DISCOVERY_DIALOG_FOOTER_CLASS}>
           <Button
             type="button"
