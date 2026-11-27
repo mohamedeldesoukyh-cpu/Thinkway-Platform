@@ -684,6 +684,7 @@ export function CampaignPerformanceCenterTab({
           />
         </div>
 
+        <p className="text-xs text-muted-foreground">Likes and comments are per platform; Facebook includes reactions. Instagram may display combined Facebook engagement. Shared posts count once in totals.</p>
         <div className="thinkway-campaign-color-legend">
           <span className="font-semibold">Reach / Impr.:</span>
           <span className="thinkway-campaign-cl-item">

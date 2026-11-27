@@ -115,6 +115,7 @@ function buildRecommendations(
   benchmarks: PlatformBenchmark[]
 ): string[] {
   const recs: string[] = collabAnalysis(bundle.publications);
+  recs.push("Likes and comments are per platform; Facebook includes reactions. Instagram may display combined Facebook engagement. Facebook results are reported separately, under Added value when outside the assignment. Shared posts count once in campaign totals.");
   if (bundle.publications.some(pub => notesHaveCollabMarker(pub.notes))) recs.push("Collaboration posts credit the named creators jointly. Shared-post metrics count once in campaign totals; creator-level results overlap and must not be added together.");
   const { summary, publications } = bundle;
 

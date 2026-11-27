@@ -102,6 +102,9 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit -p tsconfig.json
 
+      - name: Shared publication metrics and platform totals
+        run: npx tsx --test lib/performance/shared-publication-metrics.test.ts lib/performance/campaign-performance-aggregates.test.ts lib/performance/report/reported-metrics.test.ts lib/performance/report/performance-report-v2-parts.test.ts
+
       - name: Build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
