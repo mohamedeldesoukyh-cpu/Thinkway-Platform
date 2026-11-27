@@ -4333,6 +4333,7 @@
 .thinkway-campaign-workspace .thinkway-campaign-perf-grid-row {
   min-height: 0 !important;
   height: auto !important;
+  padding-block: 0 !important;
   border-bottom: 1px solid var(--camp-border) !important;
   background: var(--camp-white) !important;
   font-size: 12px !important;
@@ -4354,7 +4355,19 @@
 
 .thinkway-campaign-workspace .thinkway-campaign-perf-grid-row > div,
 .thinkway-campaign-workspace .thinkway-campaign-perf-grid-row > button {
-  padding: 9px 12px !important;
+  padding: 6px 10px !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-perf-grid-row :is(.thinkway-campaign-cr-thumb-wrap--perf, .thinkway-campaign-cr-thumb--perf) {
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-perf-grid-row .performance-collab-label {
+  margin-top: 2px;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 16px;
 }
 
 .thinkway-campaign-workspace .thinkway-campaign-section-card .thinkway-campaign-perf-grid-shell {
