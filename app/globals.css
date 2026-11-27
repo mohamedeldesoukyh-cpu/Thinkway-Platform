@@ -329,9 +329,9 @@
     color: #a1a1aa;
   }
 
-  /* Platform shell — flush edges, soft top-left curve */
+  /* Platform shell — flush, square edges */
   .thinkway-platform-shell {
-    border-top-left-radius: 48px;
+    border-top-left-radius: 0;
     background: #ffffff;
     box-shadow:
       0 0 0 1px rgba(0, 87, 255, 0.04),
