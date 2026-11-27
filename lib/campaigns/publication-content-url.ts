@@ -22,7 +22,7 @@ export function publicationCollabLabel(name: string | null | undefined, notes: s
   return `${name || 'Creator'}${notesHaveCollabMarker(notes) ? ' · Collab' + (partner ? ` with ${partner.name}` : '') : ''}`;
 }
 
-type CollabRow = { id: string; campaign_line_id: string | null; content_url: string | null; notes: string | null; influencer_name: string | null };
+type CollabRow = { collab_color_hue?: number; last_synced_at?: string | null; updated_at?: string | null; id: string; campaign_line_id: string | null; content_url: string | null; notes: string | null; influencer_name: string | null };
 /** Keep the clicked creator as the editor context, even for reciprocal attribution. */
 export function publicationCollabEditor<T extends CollabRow>(row: T, rows: T[], creators: PublicationCollabCreator[]) {
   const publication = attributeCollabPublications(rows).find(item => item.id === row.id) ?? row;
@@ -44,11 +44,36 @@ export function collabCellStyle(row: CollabRow, rows: CollabRow[]) {
     normalizePublicationContentUrl(item.content_url) === key &&
     (item.id === row.id || publicationCollabCreator(item.notes)?.id === row.campaign_line_id));
   if (!shared) return undefined;
-  let hash = 2166136261;
-  for (const char of key) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619) >>> 0;
-  const hue = hash % 360;
+  const keys = [...new Set(rows.filter(item => notesHaveCollabMarker(item.notes)).map(item => normalizePublicationContentUrl(item.content_url)).filter((url): url is string => Boolean(url)))].sort();
+  const hue = row.collab_color_hue ?? collabHue(Math.max(0, keys.indexOf(key)));
   const rgb = (n: number) => { const k=(n+hue/30)%12; return Math.round(255*(0.96-0.026*Math.max(-1,Math.min(k-3,9-k,1)))).toString(16).padStart(2,'0'); };
   return { backgroundColor: `#${rgb(0)}${rgb(8)}${rgb(4)}`, borderLeft: `3px solid hsl(${hue} 55% 48%)` };
+}
+
+// Spaced hues prevent unrelated posts from receiving nearly identical hash colours.
+const COLLAB_HUES = [215, 145, 285, 35, 185, 335, 75, 255];
+function collabHue(index: number): number {
+  return (COLLAB_HUES[index % COLLAB_HUES.length] + Math.floor(index / COLLAB_HUES.length) * 17) % 360;
+}
+/** Assign once from the full campaign, before filtering or splitting report pages. */
+export function withPublicationCollabColors<T extends CollabRow>(rows: T[]): T[] {
+  const attributed = attributeCollabPublications(rows);
+  const keys = [...new Set(attributed.filter(row => notesHaveCollabMarker(row.notes)).map(row => normalizePublicationContentUrl(row.content_url)).filter((url): url is string => Boolean(url)))].sort();
+  return attributed.map(row => ({ ...row, collab_color_hue: notesHaveCollabMarker(row.notes) && normalizePublicationContentUrl(row.content_url) ? collabHue(keys.indexOf(normalizePublicationContentUrl(row.content_url)!)) : undefined }));
+}
+
+/** Keep shared-post rows adjacent within the caller's already selected section. */
+export function groupCollabPublications<T extends CollabRow>(rows: T[]): T[] {
+  const shared = new Set(rows.filter(row => notesHaveCollabMarker(row.notes)).map(row => normalizePublicationContentUrl(row.content_url)).filter(Boolean));
+  const groups = new Map<string, T[]>();
+  rows.forEach((row, index) => {
+    const url = normalizePublicationContentUrl(row.content_url);
+    const key = url && shared.has(url) ? url : 'row:' + index;
+    const group = groups.get(key) ?? [];
+    group.push(row);
+    groups.set(key, group);
+  });
+  return [...groups.values()].flat();
 }
 
 /** Credit both creator rows while counting a shared publication only once. */
@@ -56,8 +81,9 @@ export function uniqueCollabPublications<T extends CollabRow>(rows: T[]): T[] {
   const sharedUrls = new Set(rows.filter(row => notesHaveCollabMarker(row.notes)).map(row => normalizePublicationContentUrl(row.content_url)).filter(Boolean));
   if (sharedUrls.size === 0) return rows;
   const seen = new Set<string>();
-  const score = (row: T) => ['views','reach','impressions','likes','comments','shares','saves'].filter(key => typeof (row as Record<string, unknown>)[key] === 'number').length;
-  const ranked = [...rows].sort((a,b) => score(b)-score(a) || a.id.localeCompare(b.id));
+  const score = (row: T) => ['views','video_play_count','reach','impressions','likes','comments','shares','saves'].filter(key => typeof (row as Record<string, unknown>)[key] === 'number').length;
+  const timestamp = (row: T) => Date.parse(row.last_synced_at ?? row.updated_at ?? '') || 0;
+  const ranked = [...rows].sort((a,b) => score(b)-score(a) || timestamp(b)-timestamp(a) || a.id.localeCompare(b.id));
   const chosen = new Set(ranked.filter(row => {
     const url = normalizePublicationContentUrl(row.content_url);
     if (!url || !sharedUrls.has(url)) return true;

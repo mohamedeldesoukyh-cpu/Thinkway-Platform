@@ -1,6 +1,6 @@
 import { revealClientReviewShareLink } from '@/features/client-workspace/persist-client-review';
 import { collabAnalysis } from './collab-analysis';
-import { attributeCollabPublications, publicationCollabLabel, notesHaveCollabMarker, uniqueCollabPublications } from "@/lib/campaigns/publication-content-url";
+import { groupCollabPublications, withPublicationCollabColors, publicationCollabLabel, notesHaveCollabMarker, uniqueCollabPublications } from "@/lib/campaigns/publication-content-url";
 import { loadIdentityLogoForClientId } from "@/features/client-workspace/identity-logo";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -329,7 +329,8 @@ async function buildInfluencerSections(
   }
 
   const sections = await Promise.all(
-    [...byInfluencer.entries()].map(async ([influencerId, publications]) => {
+    [...byInfluencer.entries()].map(async ([influencerId, creatorRows]) => {
+      const publications = uniqueCollabPublications(creatorRows);
       const name = publications[0]?.influencer_name ?? "Unknown creator";
       const profile = profiles.get(influencerId);
       const firstPub = publications[0];
@@ -462,7 +463,7 @@ export async function loadPerformanceReportDocumentData(
     ).clients
   );
 
-  let bundle = await signPublicationMedia(supabase, { ...bundleRaw, publications: attributeCollabPublications(bundleRaw.publications) });
+  let bundle = await signPublicationMedia(supabase, { ...bundleRaw, publications: groupCollabPublications(withPublicationCollabColors(bundleRaw.publications)) });
 
   if (options?.publicationIds?.length) {
     const allowed = new Set(options.publicationIds);

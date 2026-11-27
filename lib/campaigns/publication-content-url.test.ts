@@ -1,3 +1,4 @@
+import { groupCollabPublications, withPublicationCollabColors } from './publication-content-url';
 import assert from "node:assert/strict";
 
 import {
@@ -98,15 +99,25 @@ const wagdiEditor = publicationCollabEditor(instagramShared[1], instagramShared,
 assert.equal(wagdiEditor.publication.campaign_line_id, 'b');
 assert.deepEqual(wagdiEditor.options, [{value:'a',label:'Adham'}]);
 
-// Colours identify the shared post, not the creator pair, across UI/report consumers.
-const igColour = collabCellStyle(instagramShared[0], instagramShared);
-assert.deepEqual(igColour, collabCellStyle(instagramShared[1], [...instagramShared].reverse()));
+// Full-campaign palette remains identical after filtering and report splitting.
 const ttShared = instagramShared.map(row => ({...row, content_url:'https://www.tiktok.com/@creator/video/123'}));
 const ytShared = instagramShared.map(row => ({...row, content_url:'https://www.youtube.com/shorts/QkAbwNDH_OM'}));
 const nextIgShared = instagramShared.map(row => ({...row, content_url:'https://instagram.com/reel/AnotherPost'}));
-assert.notDeepEqual(igColour, collabCellStyle(ttShared[0], ttShared));
-assert.notDeepEqual(igColour, collabCellStyle(ytShared[0], ytShared));
-assert.notDeepEqual(collabCellStyle(ttShared[0], ttShared), collabCellStyle(ytShared[0], ytShared));
-assert.notDeepEqual(igColour, collabCellStyle(nextIgShared[0], nextIgShared));
-assert.deepEqual(collabCellStyle(ytShared[0], ytShared), collabCellStyle(ytShared[1], ytShared));
-assert.equal(collabCellStyle({...instagramShared[0],content_url:null}, instagramShared),undefined);
+const paletteRows = [...instagramShared,...ttShared,...ytShared,...nextIgShared].map((row,i)=>({...row,id:String(i)}));
+const coloured = withPublicationCollabColors(paletteRows);
+const colours = coloured.map(row => collabCellStyle(row,coloured));
+assert.equal(new Set(colours.map(style=>style?.borderLeft)).size,4);
+for(let i=0;i<coloured.length;i+=2){
+  assert.deepEqual(colours[i],colours[i+1]);
+  assert.deepEqual(colours[i],collabCellStyle(coloured[i],[coloured[i]]));
+}
+assert.deepEqual(withPublicationCollabColors([...paletteRows].reverse()).reverse(),coloured);
+assert.equal(collabCellStyle({...coloured[0],content_url:null},coloured),undefined);
+const older = {...coloured[0],id:'older',views:100,last_synced_at:'2026-11-25T00:00:00Z'};
+const newer = {...coloured[1],id:'newer',views:110,last_synced_at:'2026-11-27T00:00:00Z'};
+assert.equal(uniqueCollabPublications([older,newer])[0].id,'newer');
+
+const interleaved = [coloured[0],coloured[2],coloured[1],coloured[3]];
+assert.deepEqual(groupCollabPublications(interleaved).map(row=>row.id),[coloured[0].id,coloured[1].id,coloured[2].id,coloured[3].id]);
+// The caller partitions first: a partner in Added value is never pulled into Agreed.
+assert.deepEqual(groupCollabPublications([coloured[0],coloured[2]]).map(row=>row.id),[coloured[0].id,coloured[2].id]);

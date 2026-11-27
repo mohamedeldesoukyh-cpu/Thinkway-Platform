@@ -9,7 +9,7 @@ import { chunk, esc } from './performance-report-v2-parts';
 function platformMetricSources(c: InfluencerReportSection, label: string): string {
  const key = label === 'Views' ? 'views' : 'plays';
  const groups = new Map<string, number>();
- for (const publication of c.publications) {
+ for (const publication of uniqueCollabPublications(c.publications)) {
   const value = videoCounters(publication)[key];
   if (value == null || !Number.isFinite(value) || value < 0) continue;
   const platform = getReportPlatformIconTitle(publication.platform || publication.platform_label || 'Unknown platform');
