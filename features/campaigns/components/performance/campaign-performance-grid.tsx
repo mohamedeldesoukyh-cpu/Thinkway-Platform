@@ -334,7 +334,7 @@ export function CampaignPerformanceGrid({
               influencerId={row.influencer_id}
               onOpenCreator={() => onOpenCreator(row)}
             />
-            {notesHaveCollabMarker(attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes) && <span className="mt-1 inline-flex rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{publicationCollabLabel("", attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes).replace("Creator · ", "")}</span>}
+            {notesHaveCollabMarker(attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes) && <span className="performance-collab-label mt-1 inline-flex rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{publicationCollabLabel("", attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes).replace("Creator · ", "")}</span>}
           </div>
         );
       case "platform":

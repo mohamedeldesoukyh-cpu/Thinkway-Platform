@@ -282,3 +282,29 @@ body:has(.twwr) .wr-operational-drawer .wr-detail-tabs [data-state="active"] { b
 /* Keep record navigation usable in the existing compact campaign summary. */
 .twwr .wr-minibar-navigation { margin-left:auto; flex-shrink:0; pointer-events:auto; }
 .twwr .wr-campaign-minibar-title > b { min-width:0; }
+
+/* Keep the full and scrolled campaign headers square at the viewport edge. */
+body:has(.thinkway-campaign-workspace) .thinkway-platform-shell,
+.twwr .twcd :is(.tw-mast, .wr-campaign-minibar, .wr-campaign-minibar-inner) {
+  border-radius: 0 !important;
+}
+
+/* Performance controls share a compact rhythm without affecting other tabs. */
+.twwr .twcd .performance-workspace .thinkway-aurora-ws-details {
+  margin: 6px 0;
+  border-top: 0;
+}
+.twwr .twcd .performance-workspace button.thinkway-aurora-disclose {
+  margin: 0;
+  padding: 7px 14px;
+  min-height: 32px;
+}
+.twwr .twcd .performance-workspace .thinkway-aurora-ws-tools { gap: 6px; }
+.twwr .twcd .performance-workspace .performance-refresh {
+  color: #fff !important;
+  background: #07845e !important;
+  border-color: #07845e !important;
+}
+.twwr .twcd .performance-workspace .performance-refresh:hover:not(:disabled) {
+  background: #066b4d !important;
+}

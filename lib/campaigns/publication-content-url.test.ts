@@ -97,3 +97,16 @@ assert.deepEqual(adhamEditor.options, [{value:'b',label:'Wagdi'}]);
 const wagdiEditor = publicationCollabEditor(instagramShared[1], instagramShared, choices);
 assert.equal(wagdiEditor.publication.campaign_line_id, 'b');
 assert.deepEqual(wagdiEditor.options, [{value:'a',label:'Adham'}]);
+
+// Colours identify the shared post, not the creator pair, across UI/report consumers.
+const igColour = collabCellStyle(instagramShared[0], instagramShared);
+assert.deepEqual(igColour, collabCellStyle(instagramShared[1], [...instagramShared].reverse()));
+const ttShared = instagramShared.map(row => ({...row, content_url:'https://www.tiktok.com/@creator/video/123'}));
+const ytShared = instagramShared.map(row => ({...row, content_url:'https://www.youtube.com/shorts/QkAbwNDH_OM'}));
+const nextIgShared = instagramShared.map(row => ({...row, content_url:'https://instagram.com/reel/AnotherPost'}));
+assert.notDeepEqual(igColour, collabCellStyle(ttShared[0], ttShared));
+assert.notDeepEqual(igColour, collabCellStyle(ytShared[0], ytShared));
+assert.notDeepEqual(collabCellStyle(ttShared[0], ttShared), collabCellStyle(ytShared[0], ytShared));
+assert.notDeepEqual(igColour, collabCellStyle(nextIgShared[0], nextIgShared));
+assert.deepEqual(collabCellStyle(ytShared[0], ytShared), collabCellStyle(ytShared[1], ytShared));
+assert.equal(collabCellStyle({...instagramShared[0],content_url:null}, instagramShared),undefined);

@@ -36,12 +36,16 @@ export function attributeCollabPublications<T extends CollabRow>(rows: T[]): T[]
   });
 }
 export function collabCellStyle(row: CollabRow, rows: CollabRow[]) {
+  // The URL includes the platform host and identifies the shared post. Creator
+  // pairs can collaborate on many separate posts, which need separate colours.
+  const key = normalizePublicationContentUrl(row.content_url);
+  if (!key) return undefined;
   const shared = rows.find(item => notesHaveCollabMarker(item.notes) &&
-    normalizePublicationContentUrl(item.content_url) === normalizePublicationContentUrl(row.content_url) &&
+    normalizePublicationContentUrl(item.content_url) === key &&
     (item.id === row.id || publicationCollabCreator(item.notes)?.id === row.campaign_line_id));
   if (!shared) return undefined;
-  const key = [shared.campaign_line_id, publicationCollabCreator(shared.notes)?.id].sort().join(':');
-  let hash = 0; for (const char of key) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  let hash = 2166136261;
+  for (const char of key) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619) >>> 0;
   const hue = hash % 360;
   const rgb = (n: number) => { const k=(n+hue/30)%12; return Math.round(255*(0.96-0.026*Math.max(-1,Math.min(k-3,9-k,1)))).toString(16).padStart(2,'0'); };
   return { backgroundColor: `#${rgb(0)}${rgb(8)}${rgb(4)}`, borderLeft: `3px solid hsl(${hue} 55% 48%)` };

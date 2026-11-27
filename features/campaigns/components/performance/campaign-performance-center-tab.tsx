@@ -9,6 +9,7 @@ import { buildPerformanceSummary, buildPerformanceCharts } from "@/lib/performan
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { csvEscapeRow } from "@/lib/security/csv-formula";
 import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
 import {
@@ -456,6 +457,7 @@ export function CampaignPerformanceCenterTab({
       )}
     >
       <CampaignWorkspaceFrame
+        className="performance-workspace"
         title="Performance"
         subtitle="Agreed assignment posts vs added-value posts beyond the contracted mix"
         status={
@@ -476,24 +478,20 @@ export function CampaignPerformanceCenterTab({
                 Preview report
               </a>
             </Button>
-            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[33px] text-[12px]">
-              <a href={`${reportBase}?format=pdf&download=1`}>↓ Combined PDF</a>
-            </Button>
-            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[33px] text-[12px]">
-              <a href={`${reportBase}?format=pdf&variant=influencers&download=1`}>
-                Influencer PDF
-              </a>
-            </Button>
-            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[33px] text-[12px]">
-              <a href={`${reportBase}?format=xlsx&download=1`}>Excel</a>
-            </Button>
-            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[33px] text-[12px]">
-              <a href={`${reportBase}?format=pptx&download=1`}>PPT</a>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><Button size="sm" variant="outline" className="thinkway-campaign-btn">↓ Download</Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild><a href={`${reportBase}?format=pdf&download=1`}>Combined PDF</a></DropdownMenuItem>
+                <DropdownMenuItem asChild><a href={`${reportBase}?format=pdf&variant=influencers&download=1`}>Influencer PDF</a></DropdownMenuItem>
+                <DropdownMenuItem asChild><a href={`${reportBase}?format=xlsx&download=1`}>Excel</a></DropdownMenuItem>
+                <DropdownMenuItem asChild><a href={`${reportBase}?format=pptx&download=1`}>PowerPoint</a></DropdownMenuItem>
+                <DropdownMenuItem onSelect={exportCsv} disabled={filtered.length === 0}>CSV · filtered publications</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               size="sm"
               variant="outline"
-              className="thinkway-campaign-btn h-[33px] text-[12px]"
+              className="thinkway-campaign-btn performance-refresh h-[33px] text-[12px]"
               onClick={refreshAllCampaignMetrics}
               disabled={isPending || publications.length === 0}
             >
@@ -653,33 +651,13 @@ export function CampaignPerformanceCenterTab({
             </SelectContent>
           </Select>
           <div className="thinkway-campaign-grid-actions">
-            <Button
-              size="sm"
-              variant="outline"
-              className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none"
-              onClick={exportCsv}
-              disabled={filtered.length === 0}
-            >
-              ↓ Export CSV
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none"
-              onClick={() => importRef.current?.click()}
-              disabled={isPending}
-            >
-              ↑ Import publications
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none"
-              onClick={() => metricsImportRef.current?.click()}
-              disabled={isPending}
-            >
-              ↑ Import metrics
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><Button size="sm" variant="outline" className="thinkway-campaign-btn" disabled={isPending}>↑ Import</Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => importRef.current?.click()}>Publications</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => metricsImportRef.current?.click()}>Metrics</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <OperationalTableSettingsButton contextLabel="Publications grid" />
           </div>
           <input
