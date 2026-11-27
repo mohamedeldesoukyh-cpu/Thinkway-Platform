@@ -42,6 +42,7 @@ import {
   notesHaveDuplicateMarker,
   notesHaveCollabMarker,
   publicationCollabCreator,
+  publicationCollabEditor,
   collabCellStyle,
   attributeCollabPublications,
   publicationCollabLabel,
@@ -224,9 +225,10 @@ export function CampaignPerformanceGrid({
   const refreshCollab = useRefreshCampaignAfterPublicationMutation();
   const [collabRow, setCollabRow] = useState<CampaignPublicationRow | null>(null);
   const [collabChoice, setCollabChoice] = useState('');
-  const creatorOptions = (row: CampaignPublicationRow) => collabChoices.filter(creator => creator.id !== row.campaign_line_id).map(creator => ({value:creator.id,label:creator.name}));
+  const creatorOptions = (row: CampaignPublicationRow) => publicationCollabEditor(row, allRows ?? rows, collabChoices).options;
   function openCollab(row: CampaignPublicationRow) {
-    setCollabRow(row); setCollabChoice(publicationCollabCreator(row.notes)?.id ?? '');
+    const attributed = publicationCollabEditor(row, allRows ?? rows, collabChoices).publication;
+    setCollabRow(attributed); setCollabChoice(publicationCollabCreator(attributed.notes)?.id ?? '');
   }
   async function saveCollab(row: CampaignPublicationRow, collab: boolean, creatorLineId = collabChoice) {
     if (collabBusy) return; setCollabBusy(row.id);
@@ -361,13 +363,13 @@ export function CampaignPerformanceGrid({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
                     <DropdownMenuItem disabled={!showCollab} onSelect={() => void saveCollab(collabOwner, false)}>Duplicate</DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => openCollab(collabOwner)}>Collab</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => openCollab(row)}>Edit collab</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             ) : (
-              <button type="button" disabled={Boolean(collabBusy)} className="thinkway-campaign-badge inline-flex items-center gap-0.5 bg-blue-50 text-blue-700 cursor-pointer" onClick={event => { event.stopPropagation(); openCollab(row); }} onPointerDown={event => event.stopPropagation()}>
-                Collab<ChevronDownIcon className="size-2.5" />
+              <button type="button" disabled={Boolean(collabBusy)} className="inline-flex items-center gap-0.5 text-[11px] text-[var(--camp-text-3)] hover:text-blue-700 cursor-pointer" onClick={event => { event.stopPropagation(); openCollab(row); }} onPointerDown={event => event.stopPropagation()}>
+                + Add collab
               </button>
             )}
           </div>
@@ -547,7 +549,7 @@ export function CampaignPerformanceGrid({
   return (
     <TooltipProvider delayDuration={200}>
       <Dialog open={Boolean(collabRow)} onOpenChange={open => { if (!open && !collabBusy) setCollabRow(null); }}>
-        <DialogContent><DialogHeader><DialogTitle>Collaborating creator</DialogTitle><DialogDescription>Choose the other creator in this campaign who shares this publication.</DialogDescription></DialogHeader>
+        <DialogContent><DialogHeader><DialogTitle>Collab for {collabRow?.influencer_name ?? "creator"}</DialogTitle><DialogDescription>{collabRow?.publication_type_label} · Choose the other creator in this campaign who shares this publication.</DialogDescription></DialogHeader>
           <SearchableSelect options={!collabRow ? [] : creatorOptions(collabRow)} value={collabChoice} onValueChange={setCollabChoice} placeholder="Choose campaign creator…" searchPlaceholder="Search campaign creators…" emptyMessage="No other campaign creators found." disabled={Boolean(collabBusy)} />
           <div className="flex justify-end gap-2">
             {collabRow && notesHaveCollabMarker(collabRow.notes) && <Button variant="outline" disabled={Boolean(collabBusy)} onClick={() => void saveCollab(collabRow, false)}>Remove Collab</Button>}

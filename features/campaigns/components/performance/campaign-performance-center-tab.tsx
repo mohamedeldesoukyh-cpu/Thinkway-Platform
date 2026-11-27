@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { AssignmentInfluencerDetailSheet } from "@/features/campaigns/components/assignment-hierarchy/assignment-influencer-detail-sheet";
 import { tryBuildAssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
 import { SearchIcon } from "lucide-react";
+import { uniqueCollabPublications } from "@/lib/campaigns/publication-content-url";
+import { buildPerformanceSummary, buildPerformanceCharts } from "@/lib/performance/campaign-performance-aggregates";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -88,8 +90,6 @@ export function CampaignPerformanceCenterTab({
   workspace,
   publications,
   assignmentHierarchy = null,
-  summary,
-  charts,
   syncHealth,
   loadError,
   schemaWarnings = [],
@@ -155,7 +155,7 @@ export function CampaignPerformanceCenterTab({
   // Reuse the campaign snapshot rather than loading again when Collab opens.
   const collabChoices = useMemo(() => (workspace.lines ?? []).flatMap((line) => {
     const name = line.influencer_name || line.assignment?.influencer_name;
-    return name ? [{ id: line.id, name }] : [];
+    return name && (line.influencer_id || line.assignment?.influencer_id) ? [{ id: line.id, name }] : [];
   }), [workspace.lines]);
 
   const classifiedPublications = useMemo(() => {
@@ -168,6 +168,8 @@ export function CampaignPerformanceCenterTab({
     }
     return applyPublicationValueScopes(publications, index);
   }, [assignmentHierarchy?.groups, publications, workspace.lines]);
+  const summary = useMemo(() => buildPerformanceSummary(classifiedPublications), [classifiedPublications]);
+  const charts = useMemo(() => buildPerformanceCharts(classifiedPublications), [classifiedPublications]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -190,16 +192,12 @@ export function CampaignPerformanceCenterTab({
     () => partitionPublicationsByValueScope(filtered),
     [filtered]
   );
-  const classifiedSplit = useMemo(
-    () => partitionPublicationsByValueScope(classifiedPublications),
-    [classifiedPublications]
-  );
   const agreedSummary = useMemo(
-    () => summarizePublicationValueGroup(agreedFiltered),
+    () => summarizePublicationValueGroup(uniqueCollabPublications(agreedFiltered)),
     [agreedFiltered]
   );
   const addedValueSummary = useMemo(
-    () => summarizePublicationValueGroup(addedValueFiltered),
+    () => summarizePublicationValueGroup(uniqueCollabPublications(addedValueFiltered)),
     [addedValueFiltered]
   );
 
@@ -524,12 +522,12 @@ export function CampaignPerformanceCenterTab({
           {
             key: "pubs",
             label: "Publications",
-            value: String(classifiedSplit.agreed.length),
+            value: String(summary.agreed_publications),
           },
           {
             key: "added-value",
             label: "Added value",
-            value: String(classifiedSplit.addedValue.length),
+            value: String(summary.added_value_publications),
             tone: "amber",
           },
           {
