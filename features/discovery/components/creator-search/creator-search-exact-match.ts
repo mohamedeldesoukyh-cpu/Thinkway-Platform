@@ -1,12 +1,13 @@
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
-import { normalizeDiscoverySearchQuery } from "@/lib/discovery/creator-search-query";
+import { isExactCreatorLookupSearch, normalizeDiscoverySearchQuery } from "@/lib/discovery/creator-search-query";
+import { normalizeDiscoverySearchText } from "@/lib/discovery/discovery-search-normalize";
 
 function normalizeExactToken(value: string): string {
   return value.trim().toLowerCase().replace(/^@+/, "");
 }
 
 function normalizeDisplayName(value: string): string {
-  return normalizeExactToken(value).replace(/\s+/g, "");
+  return normalizeDiscoverySearchText(normalizeExactToken(value)).replace(/[^\p{L}\p{N}]/gu, "");
 }
 
 function collectCreatorHandles(creator: UnifiedCreatorResult): string[] {
@@ -49,4 +50,14 @@ export function filterExactCreatorMatches(
   rawQuery: string
 ): UnifiedCreatorResult[] {
   return creators.filter((creator) => creatorMatchesExactSearch(creator, rawQuery));
+}
+
+/** Bare names/handles can be incomplete while typing; explicit @handles/URLs stay exact. */
+export function filterCreatorLookupMatches(creators: UnifiedCreatorResult[], rawQuery: string): UnifiedCreatorResult[] {
+  if (isExactCreatorLookupSearch(rawQuery)) return filterExactCreatorMatches(creators, rawQuery);
+  const query = normalizeDisplayName(rawQuery);
+  if (query.length < 2) return filterExactCreatorMatches(creators, rawQuery);
+  return creators.filter(creator => creatorMatchesExactSearch(creator, rawQuery)
+    || normalizeDisplayName(creator.display_name).startsWith(query)
+    || collectCreatorHandles(creator).some(handle => normalizeDisplayName(handle).startsWith(query)));
 }

@@ -25,8 +25,8 @@ export function QuotationDecimalInput({
   onCommit,
   precision,
   isValid,
-  blankWhenZero = false,
-  placeholder = "0",
+  blankWhenZero = true,
+  placeholder = "0.00",
   ...props
 }: {
   value: number;

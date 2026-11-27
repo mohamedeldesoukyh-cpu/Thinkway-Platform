@@ -65,6 +65,7 @@ export function AddCreatorPlatformDialog({
   onCreatorUpdated,
 }: Props) {
   const [profileUrl, setProfileUrl] = useState("");
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<UnifiedCreatorResult | null>(null);
   const [mergeBusy, setMergeBusy] = useState(false);
@@ -191,7 +192,7 @@ export function AddCreatorPlatformDialog({
 
   return (
     <Dialog open={open} onOpenChange={next => { if (!mergeBusy) handleOpenChange(next); }}>
-      <DialogContent className={cn(DISCOVERY_DIALOG_CONTENT_CLASS, "max-h-[90dvh] overflow-y-auto")}>
+      <DialogContent className={cn(DISCOVERY_DIALOG_CONTENT_CLASS, "max-h-[90dvh] sm:max-w-2xl")}>
         <DialogHeader className={DISCOVERY_DIALOG_HEADER_WRAP_CLASS}>
           <div className={DISCOVERY_DIALOG_HEADER_BAR_CLASS}>
             <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-[#64748b] dark:text-muted-foreground">
@@ -214,6 +215,7 @@ export function AddCreatorPlatformDialog({
 
         <div className={cn("space-y-2", DISCOVERY_DIALOG_BODY_CLASS)}>
           <Textarea
+            ref={inputRef}
             value={profileUrl}
             onChange={(event) => {
               setProfileUrl(event.target.value);
@@ -248,9 +250,8 @@ export function AddCreatorPlatformDialog({
               Enter a supported social profile URL.
             </p>
           ) : null}
+        {conflict && <PlatformOwnerConflict owner={conflict} currentUnifiedId={influencerId ? `inf:${influencerId}` : unifiedId} onIgnore={() => { setConflict(null); setError(null); setProfileUrl(""); inputRef.current?.focus(); }} onBusyChange={setMergeBusy} onMerged={next => { onCreatorUpdated?.(next); onOpenChange(false); }} />}
         </div>
-
-        {conflict && <div className="px-6"><PlatformOwnerConflict owner={conflict} currentUnifiedId={influencerId ? `inf:${influencerId}` : unifiedId} onBusyChange={setMergeBusy} onMerged={next => { onCreatorUpdated?.(next); onOpenChange(false); }} /></div>}
         <DialogFooter className={DISCOVERY_DIALOG_FOOTER_CLASS}>
           <Button
             type="button"

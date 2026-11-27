@@ -212,18 +212,24 @@ async function signPublicationMedia(
   supabase: SupabaseClient,
   bundle: CampaignPerformanceBundle
 ): Promise<CampaignPerformanceBundle> {
+  const previews = new Map<string, Promise<string | null>>();
+  const avatars = new Map<string, Promise<string | null>>();
+  const once = (cache: Map<string, Promise<string | null>>, key: string, load: () => Promise<string | null>) => {
+    if (!cache.has(key)) cache.set(key, load());
+    return cache.get(key)!;
+  };
   const publications = await Promise.all(
     bundle.publications.map(async (row) => {
       const [creator_avatar_url, preview] = await Promise.all([
         row.creator_avatar_url?.startsWith("http")
           ? Promise.resolve(row.creator_avatar_url)
           : createPublicationMediaSignedUrl(supabase, row.creator_avatar_url, 60 * 60 * 24),
-        Promise.all([
+        once(previews, JSON.stringify([row.screenshot_url,row.thumbnail_url,row.content_url]), () => Promise.all([
           createPublicationMediaSignedUrl(supabase, row.screenshot_url),
           createPublicationMediaSignedUrl(supabase, row.thumbnail_url),
         ]).then(([screenshot_url, thumbnail_url]) => embedCampaignPublicationPreview({
           ...row, screenshot_url, thumbnail_url,
-        })),
+        }))),
       ]);
 
       const resolvedAvatar =
@@ -237,11 +243,11 @@ async function signPublicationMedia(
           apify_author_avatar_url: row.apify_author_avatar_url,
         }) ?? creator_avatar_url;
 
-      const embeddedAvatar = await embedReportCreatorAvatar({
+      const embeddedAvatar = await once(avatars, JSON.stringify([resolvedAvatar,row.influencer_profile_url ?? row.content_url]), () => embedReportCreatorAvatar({
         src: resolvedAvatar,
         profileUrl: row.influencer_profile_url ?? row.content_url,
         supabase,
-      });
+      }));
 
       return {
         ...row,
@@ -463,7 +469,7 @@ export async function loadPerformanceReportDocumentData(
     ).clients
   );
 
-  let bundle = await signPublicationMedia(supabase, { ...bundleRaw, publications: groupCollabPublications(withPublicationCollabColors(bundleRaw.publications)) });
+  let bundle = { ...bundleRaw, publications: groupCollabPublications(withPublicationCollabColors(bundleRaw.publications)) };
 
   if (options?.publicationIds?.length) {
     const allowed = new Set(options.publicationIds);
@@ -476,6 +482,8 @@ export async function loadPerformanceReportDocumentData(
     }
   }
 
+
+  bundle = await signPublicationMedia(supabase, bundle);
 
   // Selected-publication reports must not retain the full campaign's totals/charts.
   bundle = { ...bundle, summary: buildPerformanceSummary(bundle.publications), charts: buildPerformanceCharts(bundle.publications) };

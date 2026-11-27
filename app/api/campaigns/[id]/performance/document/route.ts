@@ -1,3 +1,6 @@
+import { prepareClientReportHtml, setClientReportActualSize } from "@/lib/performance/report/client-report-pdf";
+import { createPdfDocumentResponse } from "@/lib/documents/pdf-response";
+import { renderHtmlToPdf, pdfUnavailableMessage } from "@/lib/io/vendor-io-pdf";
 import { NextResponse } from "next/server";
 
 import {
@@ -10,7 +13,6 @@ import {
 } from "@/lib/performance/report";
 import {
   createHtmlDocumentResponse,
-  createPdfFromHtmlResponse,
   createPptxDocumentResponse,
   createXlsxDocumentResponse,
   parseReportDocumentFormat,
@@ -94,5 +96,7 @@ export async function GET(
   }
 
   const html = renderPerformanceReportHtml(reportData);
-  return createPdfFromHtmlResponse(html, baseName, download, PERFORMANCE_REPORT_PDF_OPTIONS);
+  const pdf = await renderHtmlToPdf(await prepareClientReportHtml(html), PERFORMANCE_REPORT_PDF_OPTIONS);
+  if (!pdf.ok) return NextResponse.json({error:pdfUnavailableMessage(pdf.error)},{status:503});
+  return createPdfDocumentResponse(Buffer.from(await setClientReportActualSize(pdf.buffer)), baseName, download);
 }

@@ -150,3 +150,16 @@ test("category discovery query keeps fuzzy browse results", () => {
   assert.equal(display.isExactCreatorSearch, false);
   assert.equal(display.creators.length, 1);
 });
+
+test("compact names and partial handles remain visible while typing", () => {
+  const creators = [makeCreator({ unified_id: "inf:chef", display_name: "Chef Manar Hesham" })];
+  assert.equal(resolveCreatorPickerSearchDisplay("chefmanar", creators).creators.length, 1);
+  assert.equal(resolveCreatorPickerSearchDisplay("ChefManarHesham", creators).creators.length, 1);
+  assert.equal(resolveCreatorPickerSearchDisplay("@chefmanar", creators).creators.length, 0);
+  assert.equal(resolveCreatorPickerSearchDisplay("someoneelse", creators).creators.length, 0);
+});
+
+test("compact names ignore apostrophes and separators", () => {
+  const creators = [makeCreator({ unified_id: "inf:omar", display_name: "Omar's Cooking" })];
+  assert.equal(resolveCreatorPickerSearchDisplay("omarscooking", creators).creators.length, 1);
+});

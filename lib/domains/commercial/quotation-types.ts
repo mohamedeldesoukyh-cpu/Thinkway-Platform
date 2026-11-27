@@ -37,6 +37,8 @@ export type QuotationDeliverable = {
   revenue?: number | null;
   /** When true, client price is intentionally zero (complimentary for the client). */
   free_for_client?: boolean | null;
+  /** Retained manual price while free_for_client is enabled; never billed. */
+  revenue_before_free?: number | null;
   service_description?: string | null;
   commercial_input_mode?: CommercialInputMode;
   cost?: number | null;

@@ -28,6 +28,7 @@ export function normalizeDeliverablesForCompare(
     quantity: Math.max(1, Math.floor(Number(d.quantity) || 1)),
     revenue: numOrNull(d.revenue),
     free_for_client: d.free_for_client === true,
+    revenue_before_free: numOrNull(d.revenue_before_free),
     service_description: strOrNull(d.service_description),
     commercial_input_mode: d.commercial_input_mode ?? null,
     cost: numOrNull(d.cost),

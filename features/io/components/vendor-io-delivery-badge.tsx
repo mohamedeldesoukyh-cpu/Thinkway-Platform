@@ -1,5 +1,3 @@
-"use client";
-
 import {
   formatVendorIoDeliveryLabel,
 } from "@/lib/io/vendor-io-delivery";

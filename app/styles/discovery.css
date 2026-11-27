@@ -19,10 +19,6 @@
  --tw-ez:cubic-bezier(.23,1,.32,1)}
 .discovery-suite{background:var(--tw-bg);color:var(--tw-ink);font:400 15px/1.5 'Geist','Inter','Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 /* ---------- nav ---------- */
-.discovery-suite .tw-brand{display:flex;align-items:center;gap:9px;padding:4px 8px 14px}
-.discovery-suite .tw-brand span{width:26px;height:26px;border-radius:8px;background:var(--tw-grad)}
-.discovery-suite .tw-brand b{font-size:14px;font-weight:700;letter-spacing:-.3px}
-.discovery-suite .tw-brand b i{font-style:normal;color:var(--tw-blue)}
 .discovery-suite .tw-main{min-width:0;padding:18px 22px 40px}
 /* ---------- head ---------- */
 .discovery-suite .tw-hd{display:flex;align-items:center;gap:13px;flex-wrap:wrap;margin-bottom:14px}
@@ -176,8 +172,6 @@
 /* conflict callout */
 /* ===== work-friendly shell ===== */
 /* two-column working layout */
-.discovery-suite .tw-rail{position:sticky;top:104px;display:flex;flex-direction:column;gap:12px}
-@media(max-width:1180px){.discovery-suite .tw-rail{position:static}}
 /* next-action panel */
 /* compact stat strip */
 /* activity feed */
@@ -503,15 +497,15 @@
 /* step 1 — headline */
 .discovery-suite .tw-k b, .discovery-suite .tw-mx b, .discovery-suite .tw-st b, .discovery-suite .tw-soc b{font-size:20px;letter-spacing:-.6px}
 /* step 2 — panel stat */
-.discovery-suite .tw-band b, .discovery-suite .tw-mini b, .discovery-suite .tw-ms2 b, .discovery-suite .tw-cdh__m b, .discovery-suite .tw-cm__st b, .discovery-suite .tw-cw__g b, .discovery-suite .tw-calcp__f b, .discovery-suite .tw-dr__s b, .discovery-suite .tw-cin .tw-in{font-size:14px;letter-spacing:-.35px}
+ .discovery-suite .tw-ms2 b, .discovery-suite .tw-cm__st b, .discovery-suite .tw-calcp__f b, .discovery-suite .tw-cin .tw-in{font-size:14px;letter-spacing:-.35px}
 /* step 3 — row value */
-.discovery-suite .tw-v, .discovery-suite .tw-kv b, .discovery-suite .tw-dc2__r b, .discovery-suite .tw-oc__r b, .discovery-suite .tw-po b, .discovery-suite .tw-str b, .discovery-suite .tw-cw__hl b, .discovery-suite .tw-dl b, .discovery-suite .tw-calc b, .discovery-suite .tw-selbar .sum b, .discovery-suite .tw-cwin, .discovery-suite .tw-in, .discovery-suite .tw-ed, .discovery-suite .tw-adf > *, .discovery-suite .tw-ft > *, .discovery-suite .tw-agtot b{font-size:12.5px}
+.discovery-suite .tw-v, .discovery-suite .tw-po b, .discovery-suite .tw-dl b, .discovery-suite .tw-selbar .sum b, .discovery-suite .tw-cwin, .discovery-suite .tw-in, .discovery-suite .tw-ed, .discovery-suite .tw-adf > *, .discovery-suite .tw-ft > *{font-size:12.5px}
 .discovery-suite .tw-ms2 b.s{font-size:12.5px}
 /* step 4 — micro */
-.discovery-suite .tw-d, .discovery-suite .tw-delta, .discovery-suite .tw-id, .discovery-suite .tw-fe b, .discovery-suite .tw-kid, .discovery-suite .tw-cc, .discovery-suite .tw-sub2, .discovery-suite .tw-s{font-size:11.5px}
+.discovery-suite .tw-d, .discovery-suite .tw-delta, .discovery-suite .tw-id, .discovery-suite .tw-cc, .discovery-suite .tw-s{font-size:11.5px}
 .discovery-suite .tw-cc{font-size:9.5px}
 /* mono everywhere a number lives, so digits align column to column */
-.discovery-suite .tw-v, .discovery-suite .tw-kv b.m, .discovery-suite .tw-dl b.m, .discovery-suite .tw-ms2 b, .discovery-suite .tw-mini b, .discovery-suite .tw-cdh__m b, .discovery-suite .tw-cm__st b, .discovery-suite .tw-cw__g b, .discovery-suite .tw-calcp__f b, .discovery-suite .tw-dr__s b, .discovery-suite .tw-selbar .sum b, .discovery-suite .tw-cwin, .discovery-suite .tw-ed, .discovery-suite .tw-po b, .discovery-suite .tw-cw__hl b, .discovery-suite .tw-oc__r b, .discovery-suite .tw-dc2__r b, .discovery-suite .tw-st b, .discovery-suite .tw-soc b, .discovery-suite .tw-k b, .discovery-suite .tw-mx b, .discovery-suite .tw-band b, .discovery-suite .tw-agtot b{
+.discovery-suite .tw-v, .discovery-suite .tw-dl b.m, .discovery-suite .tw-ms2 b, .discovery-suite .tw-cm__st b, .discovery-suite .tw-calcp__f b, .discovery-suite .tw-selbar .sum b, .discovery-suite .tw-cwin, .discovery-suite .tw-ed, .discovery-suite .tw-po b, .discovery-suite .tw-st b, .discovery-suite .tw-soc b, .discovery-suite .tw-k b, .discovery-suite .tw-mx b{
  font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 /* dates are never mono-bold — they are metadata, not figures */
 .discovery-suite .tw-d{font-family:'Geist Mono',ui-monospace,monospace;font-weight:500;color:var(--tw-ink2);
@@ -522,7 +516,7 @@
  padding:5px 9px;border-radius:8px;background:var(--tw-navy);color:#fff;
  font:600 11.5px 'Geist',sans-serif;white-space:nowrap;opacity:0;pointer-events:none;
  box-shadow:0 8px 20px -8px rgba(11,15,26,.5);transition:opacity .14s var(--tw-ez),transform .14s var(--tw-ez)}
-@media(prefers-reduced-motion:reduce){.discovery-suite .tw-sb2, .discovery-suite .tw-li .lb, .discovery-suite .tip, .discovery-suite .tw-grp .ch{transition:none}}
+@media(prefers-reduced-motion:reduce){ .discovery-suite .tip{transition:none}}
 
 /* ---- Thinkway logo — exact values from the live platform ---- */
 /* ===== discovery: compact header ===== */
@@ -729,15 +723,6 @@
 .discovery-suite .tw-thumb{width:44px;height:44px;flex:0 0 44px}
 
 /* quotation filter chips */
-.discovery-suite .tw-fchip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;
- border:1px solid var(--tw-hair);background:#fff;cursor:pointer;font:500 12px 'Geist',sans-serif;
- color:var(--tw-ink2)}
-.discovery-suite .tw-fchip:hover{border-color:rgba(0,87,255,.34);color:var(--tw-bi)}
-.discovery-suite .tw-fchip.on{background:var(--tw-lav);border-color:#CDDCFF;color:var(--tw-bi);font-weight:600}
-.discovery-suite .tw-fchip.z{opacity:.45}
-.discovery-suite .tw-fchip em{font-style:normal;font:600 10.5px 'Geist Mono',monospace;padding:1px 6px;border-radius:999px;
- background:var(--tw-soft);color:var(--tw-mut)}
-.discovery-suite .tw-fchip.on em{background:#fff;color:var(--tw-bi)}
 
 /* import drop zone */
 .discovery-suite .tw-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;

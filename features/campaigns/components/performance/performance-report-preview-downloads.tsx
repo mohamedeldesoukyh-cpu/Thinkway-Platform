@@ -1,10 +1,4 @@
-import {
-  DownloadIcon,
-  FileSpreadsheetIcon,
-  FileTextIcon,
-} from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { PreviewDownloadMenu } from "@/features/discovery/document-preview/preview-download-menu";
 import type { PerformanceReportVariant } from "@/lib/performance/report";
 
 type PerformanceReportPreviewDownloadsProps = {
@@ -42,43 +36,11 @@ export function PerformanceReportPreviewDownloads({
 
   const reportOptions = { publicationIds };
 
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button size="sm" variant="outline" asChild>
-        <a href={buildReportHref(reportBase, "html", variant, reportOptions)}>
-          <FileTextIcon data-icon="inline-start" className="size-3.5" />
-          Download HTML
-        </a>
-      </Button>
-      <Button size="sm" variant="outline" asChild>
-        <a href={buildReportHref(reportBase, "pdf", "combined", reportOptions)}>
-          <DownloadIcon data-icon="inline-start" className="size-3.5" />
-          Combined PDF
-        </a>
-      </Button>
-      <Button size="sm" variant="outline" asChild>
-        <a
-          href={buildReportHref(reportBase, "pdf", "influencers", {
-            influencerPdf: true,
-            ...reportOptions,
-          })}
-        >
-          <DownloadIcon data-icon="inline-start" className="size-3.5" />
-          Influencer PDF
-        </a>
-      </Button>
-      <Button size="sm" variant="outline" asChild>
-        <a href={buildReportHref(reportBase, "xlsx", variant, reportOptions)}>
-          <FileSpreadsheetIcon data-icon="inline-start" className="size-3.5" />
-          Excel
-        </a>
-      </Button>
-      <Button size="sm" variant="outline" asChild>
-        <a href={buildReportHref(reportBase, "pptx", variant, reportOptions)}>
-          <FileTextIcon data-icon="inline-start" className="size-3.5" />
-          PPT
-        </a>
-      </Button>
-    </div>
-  );
+  return <PreviewDownloadMenu formats={[
+    {format:"html",label:"HTML",href:buildReportHref(reportBase,"html",variant,reportOptions)},
+    {format:"pdf",label:"Combined PDF",href:buildReportHref(reportBase,"pdf","combined",reportOptions)},
+    {format:"pdf",label:"Influencer PDF",href:buildReportHref(reportBase,"pdf","influencers",reportOptions)},
+    {format:"xlsx",label:"Excel",href:buildReportHref(reportBase,"xlsx",variant,reportOptions)},
+    {format:"pptx",label:"PowerPoint",href:buildReportHref(reportBase,"pptx",variant,reportOptions)},
+  ]} />;
 }

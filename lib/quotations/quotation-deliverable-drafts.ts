@@ -138,6 +138,7 @@ export function fromDeliverableDrafts(drafts: DeliverableDraft[]): QuotationDeli
         quantity: Math.max(1, Number(rest.quantity) || 1),
         revenue: rest.revenue != null ? Number(rest.revenue) : null,
         free_for_client: rest.free_for_client === true,
+        ...(rest.revenue_before_free != null ? { revenue_before_free: Number(rest.revenue_before_free) } : {}),
         service_description: rest.service_description?.trim() || null,
         commercial_input_mode: rest.commercial_input_mode,
         cost: rest.cost != null ? Number(rest.cost) : null,
