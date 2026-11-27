@@ -1,4 +1,6 @@
+import { readFreeClientPrice, toggleFreeClientPrice, type FreeClientPrice } from "@/lib/commercial/free-client-price";
 
+import { QuotationDecimalInput } from "@/features/quotations/components/quotation-decimal-input";
 import { useUndoableState } from "@/lib/productivity/workspace-undo";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
@@ -47,7 +49,7 @@ const CS = {
   critical: "#DC2626",
 } as const;
 
-type CommercialDraft = {
+type CommercialDraft = FreeClientPrice & {
   lineId: string;
   revenue_before_vat: number;
   cost_before_vat: number;
@@ -79,6 +81,7 @@ function fmtStat(amount: number, currency: string): string {
 function draftFromLine(line: CampaignLineWorkspace): CommercialDraft {
   return {
     lineId: line.id,
+    ...readFreeClientPrice(line),
     revenue_before_vat: Number(line.revenue_before_vat ?? line.revenue ?? 0),
     cost_before_vat: Number(line.cost_before_vat ?? line.cost ?? 0),
     usage_rights_amount: Number(line.usage_rights_amount ?? 0),
@@ -89,6 +92,8 @@ function draftFromLine(line: CampaignLineWorkspace): CommercialDraft {
 
 function draftsEqual(a: CommercialDraft, b: CommercialDraft): boolean {
   return (
+    a.free_for_client === b.free_for_client &&
+    JSON.stringify(a.client_price_before_free) === JSON.stringify(b.client_price_before_free) &&
     a.revenue_before_vat === b.revenue_before_vat &&
     a.cost_before_vat === b.cost_before_vat &&
     a.usage_rights_amount === b.usage_rights_amount &&
@@ -295,6 +300,8 @@ export function AssignmentCommercialWorkspaceDialog({
             const draft = drafts[line.id]!;
             return {
               lineId: line.id,
+              free_for_client: draft.free_for_client,
+              client_price_before_free: draft.client_price_before_free,
               revenue_before_vat: draft.revenue_before_vat,
               cost_before_vat: draft.cost_before_vat,
               usage_rights_amount: draft.usage_rights_amount,
@@ -620,93 +627,52 @@ export function AssignmentCommercialWorkspaceDialog({
                       <div className="cw-card-fields">
                         <div className="cw-field">
                           <span className="cw-field-label">Cost</span>
-                          <Input
-                            type="number"
-                            min={0}
-                            step="0.01"
+                          <QuotationDecimalInput
                             className="h-8 w-[120px] text-right text-xs tabular-nums"
                             value={draft.cost_before_vat}
                             disabled={!canManage || costLocked || pending}
-                            onChange={(e) => {
-                              const next = Number(e.target.value);
-                              patchDraft(line.id, {
-                                cost_before_vat:
-                                  Number.isFinite(next) && next >= 0 ? next : 0,
-                              });
-                            }}
+                            isValid={value => value >= 0}
+                            onCommit={value => patchDraft(line.id, { cost_before_vat: value })}
                           />
                         </div>
                         <div className="cw-field">
                           <span className="cw-field-label">Revenue</span>
-                          <Input
-                            type="number"
-                            min={0}
-                            step="0.01"
+                          <QuotationDecimalInput
                             className="h-8 w-[120px] text-right text-xs tabular-nums"
                             value={draft.revenue_before_vat}
-                            disabled={!canManage || clientLocked || pending}
-                            onChange={(e) => {
-                              const next = Number(e.target.value);
-                              patchDraft(line.id, {
-                                revenue_before_vat:
-                                  Number.isFinite(next) && next >= 0 ? next : 0,
-                              });
-                            }}
+                            disabled={!canManage || clientLocked || pending || draft.free_for_client}
+                            isValid={value => value >= 0}
+                            onCommit={value => patchDraft(line.id, { revenue_before_vat: value })}
                           />
                         </div>
                         <div className="cw-field">
                           <span className="cw-field-label">AF %</span>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            step="0.01"
+                          <QuotationDecimalInput
                             className="h-8 w-[72px] text-right text-xs"
                             value={draft.agency_fee_percent}
-                            disabled={!canManage || clientLocked || pending}
-                            onChange={(e) => {
-                              const next = Number(e.target.value);
-                              patchDraft(line.id, {
-                                agency_fee_percent:
-                                  Number.isFinite(next) && next >= 0 ? next : 0,
-                              });
-                            }}
+                            disabled={!canManage || clientLocked || pending || draft.free_for_client}
+                            isValid={value => value >= 0 && value <= 100}
+                            onCommit={value => patchDraft(line.id, { agency_fee_percent: value })}
                           />
                         </div>
                         <div className="cw-field">
                           <span className="cw-field-label">UR Rev</span>
-                          <Input
-                            type="number"
-                            min={0}
-                            step="0.01"
+                          <QuotationDecimalInput
                             className="h-8 w-[100px] text-right text-xs tabular-nums"
                             value={draft.usage_rights_amount}
-                            disabled={!canManage || clientLocked || pending}
-                            onChange={(e) => {
-                              const next = Number(e.target.value);
-                              patchDraft(line.id, {
-                                usage_rights_amount:
-                                  Number.isFinite(next) && next >= 0 ? next : 0,
-                              });
-                            }}
+                            disabled={!canManage || clientLocked || pending || draft.free_for_client}
+                            isValid={value => value >= 0}
+                            onCommit={value => patchDraft(line.id, { usage_rights_amount: value })}
                           />
                         </div>
                         <div className="cw-field">
                           <span className="cw-field-label">UR Cost</span>
-                          <Input
-                            type="number"
-                            min={0}
-                            step="0.01"
+                          <QuotationDecimalInput
                             className="h-8 w-[100px] text-right text-xs tabular-nums"
                             value={draft.usage_rights_cost}
                             disabled={!canManage || costLocked || pending}
-                            onChange={(e) => {
-                              const next = Number(e.target.value);
-                              patchDraft(line.id, {
-                                usage_rights_cost:
-                                  Number.isFinite(next) && next >= 0 ? next : 0,
-                              });
-                            }}
+                            isValid={value => value >= 0}
+                            onCommit={value => patchDraft(line.id, { usage_rights_cost: value })}
                           />
                         </div>
                         <div className="cw-field">
@@ -718,6 +684,7 @@ export function AssignmentCommercialWorkspaceDialog({
                           <span className="cw-field-value">{gpPct.toFixed(1)}%</span>
                         </div>
                       </div>
+                          <label style={{ display: "flex", gap: 8, paddingTop: 20, paddingBottom: 12 }}><input type="checkbox" checked={draft.free_for_client} disabled={!canManage || clientLocked || pending} onChange={event => { const next = toggleFreeClientPrice(draft, draft.revenue_before_vat, draft.usage_rights_amount, event.target.checked); patchDraft(line.id, { free_for_client: next.free_for_client, client_price_before_free: next.client_price_before_free, revenue_before_vat: next.revenue, usage_rights_amount: next.usage }); }} />Free for the client</label>
                     </div>
                   </div>
                 );

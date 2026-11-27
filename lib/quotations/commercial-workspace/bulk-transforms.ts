@@ -167,3 +167,10 @@ export function applyCommercialWorkspaceBulkOpToDrafts(
   }
   return next;
 }
+
+/** Manual client pricing never inherits a previously calculated markup price. */
+export function patchCommercialWorkspaceDraft(draft: QuotationRowDraft, changes: Partial<QuotationRowDraft>): QuotationRowDraft {
+  const next = { ...draft, ...changes };
+  if (changes.mode === "cost_revenue" && draft.mode !== "cost_revenue" && changes.revenue === undefined) next.revenue = 0;
+  return next.mode === "cost_markup_pct" ? withMarkup(next, next.gpPct) : recomputeFromMode(next);
+}

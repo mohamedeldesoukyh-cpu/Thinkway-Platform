@@ -1,3 +1,4 @@
+import { readFreeClientPrice, toggleFreeClientPrice, type FreeClientPrice } from "@/lib/commercial/free-client-price";
 
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
@@ -23,7 +24,7 @@ import { useAssignmentGridEditSession } from "./assignment-grid-edit-session";
 import "@/app/styles/assignment-commercial-pane.css";
 
 type Target = { lineId: string; deliverableId?: string; postId?: string };
-type Draft = { currency: string; qty: number; cost: number; urCost: number; costVat: number; revenue: number; urRevenue: number; af: number; revVat: number };
+type Draft = FreeClientPrice & { currency: string; qty: number; cost: number; urCost: number; costVat: number; revenue: number; urRevenue: number; af: number; revVat: number };
 const PaneContext = createContext<{ open: (target: Target) => void; selected: Target | null }>({ open: () => {}, selected: null });
 export const useAssignmentCommercialPane = () => useContext(PaneContext);
 const keyOf = (target: Target) => `${target.lineId}:${target.deliverableId ?? "parent"}`;
@@ -32,9 +33,9 @@ function FormattedNumber({ value, onChange, disabled, integer = false, max, perc
   value: number; onChange: (value: number) => void; disabled?: boolean; integer?: boolean; max?: number; percentage?: boolean; precision?: number;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
-  const formatted = value.toLocaleString("en-US", { minimumFractionDigits: integer ? 0 : 2, maximumFractionDigits: integer ? 0 : precision });
+  const formatted = !integer && value === 0 ? "" : value.toLocaleString("en-US", { minimumFractionDigits: integer ? 0 : 2, maximumFractionDigits: integer ? 0 : precision });
   return <span className={percentage ? "acp-number acp-percentage" : "acp-number"}><input type="text" inputMode={integer ? "numeric" : "decimal"} autoComplete="off" disabled={disabled}
-    value={editing ?? formatted} onFocus={() => setEditing(formatted)}
+    placeholder={integer ? undefined : "0.00"} value={editing ?? formatted} onFocus={() => setEditing(value === 0 && !integer ? "" : String(value))}
     onChange={event => {
       const next = event.target.value.replace(/,/g, "").trim();
       if (!(integer ? /^\d*$/ : new RegExp(`^\\d*(?:\\.\\d{0,${precision}})?$`)).test(next)) return;
@@ -103,6 +104,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
   const units = packageShare?.qty ?? child?.quantity ?? group?.deliverables.reduce((sum, entry) => sum + entry.quantity, 0) ?? 1;
   const cost = Number(packageShare?.cost ?? child?.cost_before_vat ?? line?.cost_before_vat ?? 0);
   const initial: Draft = {
+    ...readFreeClientPrice(child ? null : line),
     currency: vendorCorrection ? line?.cost_received_currency || line?.currency_code || hierarchy.currency_code : line ? resolveAssignmentLineCurrency(line) : hierarchy.currency_code,
     qty: Math.max(1, units), cost: vendorCorrection ? Number(line?.cost_received ?? cost) : cost, urCost: Number(packageShare?.usageRightsCost ?? child?.usage_rights_cost ?? line?.usage_rights_cost ?? 0),
     costVat: child && !isPackageChild ? (child.cost_before_vat > 0 ? roundMoney(child.cost_vat_amount / child.cost_before_vat * 100) : Number(line?.cost_vat_exempt ? 0 : line?.cost_vat_percent ?? 0)) : Number(line?.cost_vat_exempt ? 0 : line?.cost_vat_percent ?? 0),
@@ -178,7 +180,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
         cost_vat_percent: draft.costVat, revenue_vat_percent: draft.revVat,
         live_date: child.live_date, notes: child.notes, commercial_only: true,
       }) : await updateAssignmentLineCommercialsAction({ campaignId, lines: [{
-        lineId: line.id, revenue_before_vat: draft.revenue, cost_before_vat: draft.cost,
+        lineId: line.id, free_for_client: draft.free_for_client, client_price_before_free: draft.client_price_before_free, revenue_before_vat: draft.revenue, cost_before_vat: draft.cost,
         usage_rights_amount: draft.urRevenue, usage_rights_cost: draft.urCost, agency_fee_percent: draft.af,
         revenue_vat_percent: draft.revVat, cost_vat_percent: draft.costVat, currency_code: draft.currency,
       }] });
@@ -200,7 +202,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
     } catch { setMessage({ ok: false, text: "Unable to save. Your edits have been kept; please try again." }); }
     finally { setPending(false); }
   }
-  const number = (label: string, field: keyof Omit<Draft, "currency">, options?: { disabled?: boolean; max?: number; integer?: boolean }) => <label className="acp-field">{label}<FormattedNumber key={selectedKey + field} value={draft[field]} disabled={readOnly || (!vendorCorrection && fx.dirty) || options?.disabled || ((vendorCorrection || clientLocked) && ["revenue", "urRevenue", "af", "revVat"].includes(field)) || (costLocked && ["cost", "urCost", "costVat"].includes(field)) || (field === "qty" && (costLocked || clientLocked))} integer={options?.integer} precision={field === "af" ? 6 : 2} max={options?.max} percentage={field === "costVat" || field === "revVat" || field === "af"} onChange={value => change(field, value)} />{!["qty", "costVat", "revVat", "af"].includes(field) && fx.equivalent(draft[field], field === "cost" || field === "urCost" ? "cost" : "revenue", vendorCorrection && (field === "cost" || field === "urCost") ? draft.currency : revenueCurrency)}</label>;
+  const number = (label: string, field: keyof Omit<Draft, "currency" | "free_for_client" | "client_price_before_free">, options?: { disabled?: boolean; max?: number; integer?: boolean }) => <label className="acp-field">{label}<FormattedNumber key={selectedKey + field} value={draft[field]} disabled={readOnly || (draft.free_for_client && ["revenue", "urRevenue", "af"].includes(field)) || (!vendorCorrection && fx.dirty) || options?.disabled || ((vendorCorrection || clientLocked) && ["revenue", "urRevenue", "af", "revVat"].includes(field)) || (costLocked && ["cost", "urCost", "costVat"].includes(field)) || (field === "qty" && (costLocked || clientLocked))} integer={options?.integer} precision={field === "af" ? 6 : 2} max={options?.max} percentage={field === "costVat" || field === "revVat" || field === "af"} onChange={value => change(field, value)} />{!["qty", "costVat", "revVat", "af"].includes(field) && fx.equivalent(draft[field], field === "cost" || field === "urCost" ? "cost" : "revenue", vendorCorrection && (field === "cost" || field === "urCost") ? draft.currency : revenueCurrency)}</label>;
   const total = (label: string, value: number, side: "cost" | "revenue" = "revenue") => <div className="acp-total"><span>{label}</span><output>{value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</output>{fx.equivalent(value, side, vendorCorrection && side === "cost" ? draft.currency : revenueCurrency)}</div>;
   const editor = enabled && line && selected ? <section ref={pane} data-shortcut-pane className="assignment-commercial-pane" aria-label="Assignment cost and revenue editor" style={{ height }}>
     <div className="acp-resizer" role="separator" aria-label="Resize assignment editor" aria-orientation="horizontal" aria-valuemin={260} aria-valuemax={Math.max(260, Math.floor((host?.clientHeight ?? 700) * .65))} aria-valuenow={Math.round(height)} tabIndex={0} title="Drag to resize; double-click to reset"
@@ -234,7 +236,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
           </div></section>
           <section className="acp-section acp-revenue" aria-label="Revenue"><h3>Revenue {clientLocked && <span className="acp-lock" tabIndex={0} title="Linked invoice protects revenue, currency, fees, VAT and FX. Use the finance revision workflow to change them.">Locked</span>} {vendorCorrection && <small>{revenueCurrency} · Invoice unchanged</small>} {fx.controls("revenue")}</h3><div className="acp-fields">
             {number("Revenue", "revenue")}{number("UR Rev", "urRevenue")}{number("AF %", "af", { max: 100 })}{total("AF", afAmount)}{total("Rev before VAT", revenueTax.beforeVat)}{number("Rev VAT %", "revVat", { max: 100 })}{total("Rev VAT", revenueTax.vatAmount)}{total("Total Billing", revenueTax.afterVat)}
-          </div></section>
+          </div>{!child && <label style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 20, paddingBottom: 12 }}><input type="checkbox" checked={draft.free_for_client} disabled={readOnly || vendorCorrection || clientLocked || fx.dirty} onChange={event => { const next = toggleFreeClientPrice(draft, draft.revenue, draft.urRevenue, event.target.checked); setDrafts(previous => ({ ...previous, [selectedKey]: { ...previous[selectedKey], free_for_client: next.free_for_client, client_price_before_free: next.client_price_before_free, revenue: next.revenue, urRevenue: next.usage } })); }} />Free for the client</label>}</section>
         </div>
       </div>
       <div className="acp-footer"><div><div className="acp-pinned-totals"><span>Total cost <strong>{vendorCorrection ? draft.currency : revenueCurrency} {roundMoney(costTax.afterVat + draft.urCost).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span><span>Total billing <strong>{revenueCurrency} {revenueTax.afterVat.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span></div>{fx.dirty && !vendorCorrection && <span>Custom FX is pinned. Save or reset FX before changing native amounts.</span>}{Object.keys(drafts).length > 0 && <span>Unsaved edits are kept while switching rows in this tab.</span>}{message && <p role={message.ok ? "status" : "alert"} className={message.ok ? "acp-success" : "acp-error"}>{message.text}</p>}</div>{fx.dirty && !vendorCorrection && <><button type="button" className="acp-button" disabled={pending} onClick={fx.reset}>Reset FX edits</button><button type="button" className="acp-button acp-primary" disabled={pending || !fx.valid || Boolean(drafts[selectedKey])} onClick={() => void saveFx()}>Save FX rates</button></>}<button className="acp-button" type="button" disabled={pending || (!drafts[selectedKey] && !fx.dirty)} onClick={() => { if (vendorCorrection) fx.reset(); setDrafts(previous => { const next = { ...previous }; delete next[selectedKey]; return next; }); }}>Reset edits</button><button className="acp-button acp-primary" type="submit" disabled={readOnly || !fx.valid || (!vendorCorrection && fx.dirty) || (!drafts[selectedKey] && !fx.dirty)}>{pending ? "Saving…" : vendorCorrection ? "Save cost side" : "Save line"}</button></div>
