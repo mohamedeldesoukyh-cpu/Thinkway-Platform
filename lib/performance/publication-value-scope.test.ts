@@ -343,3 +343,30 @@ function indexWithInstagram() {
 }
 
 console.log("publication-value-scope tests passed");
+
+{
+  // A visit tagged YouTube must not make an uncontracted YouTube Short agreed.
+  for (const attendanceType of ["visit", "event_attendance"]) {
+    const lines = [{ id: lineId, influencer_id: influencerId, assignment: { platforms: [
+      { platform: "instagram", deliverables: ["instagram_reel"] },
+      { platform: "youtube", deliverables: [attendanceType] },
+    ] } }];
+    for (const index of [
+      buildAssignmentAgreedPlatformIndexFromAssignments({ lines }),
+      buildAssignmentAgreedPlatformIndexFromAssignments({ lines, hierarchyGroups: [{
+        line: { id: lineId, influencer_id: influencerId },
+        deliverables: [
+          { platform: "instagram", deliverable_type: "instagram_reel" },
+          { platform: "youtube", deliverable_type: attendanceType, posts: [{ platform: "youtube" }] },
+        ],
+      }] }),
+    ]) {
+      assert.equal(classifyPublicationValueScope({ campaign_line_id: lineId, platform: "youtube" }, index), "added_value");
+      assert.equal(classifyPublicationValueScope({ campaign_line_id: lineId, platform: "instagram" }, index), "agreed");
+    }
+  }
+  const contracted = buildAssignmentAgreedPlatformIndexFromAssignments({ hierarchyGroups: [{
+    line: { id: lineId }, deliverables: [{ platform: "youtube", deliverable_type: "youtube_short" }],
+  }] });
+  assert.equal(classifyPublicationValueScope({ campaign_line_id: lineId, platform: "youtube" }, contracted), "agreed");
+}

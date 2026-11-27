@@ -3,6 +3,11 @@ import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 /** Agreed = matches assignment platforms; added_value = extra platforms beyond the assignment. */
 export type PublicationValueScope = "agreed" | "added_value";
 
+/** Attendance is contracted work, but does not contract a social publication. */
+export function countsTowardPublicationPlatform(deliverableType?: string | null): boolean {
+  return !["visit", "event_attendance"].includes((deliverableType ?? "").trim().toLowerCase());
+}
+
 export type AssignmentAgreedPlatformIndex = {
   byLineId: Map<string, Set<string>>;
   byInfluencerId: Map<string, Set<string>>;
@@ -63,6 +68,7 @@ type AssignmentPlatformSourceGroup = {
   line: { id: string; influencer_id?: string | null };
   deliverables: readonly {
     platform: string;
+    deliverable_type?: string | null;
     is_synthetic?: boolean;
     posts?: readonly { platform: string }[] | null;
   }[];
@@ -99,7 +105,7 @@ export function buildAssignmentAgreedPlatformIndexFromAssignments(input: {
     if (influencerId) influencerByLineId.set(line.id, influencerId);
     for (const platform of line.assignment?.platforms ?? []) {
       // Connected social accounts without contracted deliverables are not agreed.
-      if ((platform.deliverables?.length ?? 0) === 0) continue;
+      if (!platform.deliverables?.some(countsTowardPublicationPlatform)) continue;
       addPlatformToLineMap(metadataPlatformsByLine, line.id, platform.platform);
     }
     // commercial_rows are pricing only — never treat them as agreed scope.
@@ -112,7 +118,7 @@ export function buildAssignmentAgreedPlatformIndexFromAssignments(input: {
       group.line.influencer_id ?? influencerByLineId.get(group.line.id) ?? null;
     if (influencerId) influencerByLineId.set(group.line.id, influencerId);
     for (const deliverable of group.deliverables) {
-      if (deliverable.is_synthetic) continue;
+      if (deliverable.is_synthetic || !countsTowardPublicationPlatform(deliverable.deliverable_type)) continue;
       addPlatformToLineMap(deliverablePlatformsByLine, group.line.id, deliverable.platform);
       for (const post of deliverable.posts ?? []) {
         addPlatformToLineMap(deliverablePlatformsByLine, group.line.id, post.platform);
