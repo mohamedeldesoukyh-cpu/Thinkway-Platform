@@ -1,6 +1,7 @@
 import { tryCreateServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { buildPerformanceSummary, buildPerformanceCharts } from "@/lib/performance/campaign-performance-aggregates";
 import { attachReportVideoCounters } from "@/lib/performance/report/report-video-counters";
+import { alignSharedPublicationMetrics } from "@/lib/performance/shared-publication-metrics";
 import { resolvePublicationShareLinks } from "@/lib/campaigns/resolve-publication-share-links";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -440,7 +441,7 @@ export async function getCampaignPerformanceBundle(
     agreedPlatformIndex
   );
 
-  const publications = await attachReportVideoCounters(supabase, scopedPublications);
+  const publications = alignSharedPublicationMetrics(await attachReportVideoCounters(supabase, scopedPublications));
   traceCampaignRoute("performance:bundle:ok", {
     campaignHeaderId,
     publicationCount: publications.length,
