@@ -69,7 +69,6 @@
 /* conflict callout */
 /* ===== work-friendly shell ===== */
 /* two-column working layout */
-@media(max-width:1180px){.tw-rail{position:static}}
 /* next-action panel */
 /* compact stat strip */
 /* activity feed */
@@ -198,19 +197,16 @@
 /* step 1 â€” headline */
   .discovery-suite .tw-k b,.discovery-suite .tw-mx b,.discovery-suite .tw-st b,.discovery-suite .tw-soc b{font-size:20px;letter-spacing:-.6px}
 /* step 2 â€” panel stat */
-  .discovery-suite .tw-band b,.discovery-suite .tw-mini b,.discovery-suite .tw-ms2 b,.discovery-suite .tw-cdh__m b,.discovery-suite .tw-cm__st b,.discovery-suite .tw-cw__g b,.discovery-suite .tw-calcp__f b,
-  .discovery-suite .tw-dr__s b,.discovery-suite .tw-cin .tw-in{font-size:14px;letter-spacing:-.35px}
+  .discovery-suite .tw-ms2 b,.discovery-suite .tw-cm__st b,.discovery-suite .tw-calcp__f b,.discovery-suite .tw-cin .tw-in{font-size:14px;letter-spacing:-.35px}
 /* step 3 â€” row value */
-  .discovery-suite .tw-v,.discovery-suite .tw-kv b,.discovery-suite .tw-dc2__r b,.discovery-suite .tw-oc__r b,.discovery-suite .tw-po b,.discovery-suite .tw-str b,.discovery-suite .tw-cw__hl b,.discovery-suite .tw-dl b,
-  .discovery-suite .tw-calc b,.discovery-suite .tw-selbar .sum b,.discovery-suite .tw-cwin,.discovery-suite .tw-in,.discovery-suite .tw-ed,.discovery-suite .tw-adf > *,.discovery-suite .tw-ft > *,.discovery-suite .tw-agtot b{font-size:12.5px}
+  .discovery-suite .tw-v,.discovery-suite .tw-po b,.discovery-suite .tw-dl b,.discovery-suite .tw-selbar .sum b,.discovery-suite .tw-cwin,.discovery-suite .tw-in,.discovery-suite .tw-ed,.discovery-suite .tw-adf > *,.discovery-suite .tw-ft > *{font-size:12.5px}
   .discovery-suite .tw-ms2 b.s{font-size:12.5px}
 /* step 4 â€” micro */
-  .discovery-suite .tw-d,.discovery-suite .tw-delta,.discovery-suite .tw-id,.discovery-suite .tw-fe b,.discovery-suite .tw-kid,.discovery-suite .tw-cc,.discovery-suite .tw-sub2,.discovery-suite .tw-s{font-size:11.5px}
+  .discovery-suite .tw-d,.discovery-suite .tw-delta,.discovery-suite .tw-id,.discovery-suite .tw-cc,.discovery-suite .tw-s{font-size:11.5px}
   .discovery-suite .tw-cc{font-size:9.5px}
 /* mono everywhere a number lives, so digits align column to column */
-  .discovery-suite .tw-v,.discovery-suite .tw-kv b.m,.discovery-suite .tw-dl b.m,.discovery-suite .tw-ms2 b,.discovery-suite .tw-mini b,.discovery-suite .tw-cdh__m b,.discovery-suite .tw-cm__st b,.discovery-suite .tw-cw__g b,
-  .discovery-suite .tw-calcp__f b,.discovery-suite .tw-dr__s b,.discovery-suite .tw-selbar .sum b,.discovery-suite .tw-cwin,.discovery-suite .tw-ed,.discovery-suite .tw-po b,.discovery-suite .tw-cw__hl b,
-  .discovery-suite .tw-oc__r b,.discovery-suite .tw-dc2__r b,.discovery-suite .tw-st b,.discovery-suite .tw-soc b,.discovery-suite .tw-k b,.discovery-suite .tw-mx b,.discovery-suite .tw-band b,.discovery-suite .tw-agtot b{
+  .discovery-suite .tw-v,.discovery-suite .tw-dl b.m,.discovery-suite .tw-ms2 b,.discovery-suite .tw-cm__st b,
+  .discovery-suite .tw-calcp__f b,.discovery-suite .tw-selbar .sum b,.discovery-suite .tw-cwin,.discovery-suite .tw-ed,.discovery-suite .tw-po b,.discovery-suite .tw-st b,.discovery-suite .tw-soc b,.discovery-suite .tw-k b,.discovery-suite .tw-mx b{
  font-family:var(--font-geist-mono), 'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 /* dates are never mono-bold â€” they are metadata, not figures */
   .discovery-suite .tw-d{font-family:var(--font-geist-mono), 'Geist Mono',ui-monospace,monospace;font-weight:500;color:var(--tw-ink2);font-variant-numeric:tabular-nums}
@@ -219,7 +215,7 @@
  padding:5px 9px;border-radius:8px;background:var(--tw-navy);color:#fff;
  font:600 11.5px var(--font-sans), Geist, sans-serif;white-space:nowrap;opacity:0;pointer-events:none;
  box-shadow:0 8px 20px -8px rgba(11,15,26,.5);transition:opacity .14s var(--tw-ez),transform .14s var(--tw-ez)}
-@media(prefers-reduced-motion:reduce){.tw-sb2,.discovery-suite .tw-li .lb,.tip,.discovery-suite .tw-grp .ch{transition:none}}
+@media(prefers-reduced-motion:reduce){.tip{transition:none}}
 
 /* ---- Thinkway logo â€” exact values from the live platform ---- */
 /* ===== discovery: compact header ===== */
@@ -310,11 +306,6 @@
 /* feed thumbs must not spill into the next column */
 
 /* quotation filter chips */
-  .discovery-suite .tw-fchip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;
- border:1px solid var(--tw-hair);background:#fff;cursor:pointer;font:500 12px var(--font-sans), Geist, sans-serif;
- color:var(--tw-ink2)}
-  .discovery-suite .tw-fchip em{font-style:normal;font:600 10.5px var(--font-geist-mono), 'Geist Mono',monospace;padding:1px 6px;border-radius:999px;
- background:var(--tw-soft);color:var(--tw-mut)}
 
 /* import drop zone */
 

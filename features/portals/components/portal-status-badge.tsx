@@ -1,5 +1,3 @@
-"use client";
-
 import { StatusBadge } from "@/components/shared/status/status-badge";
 import {
   formatPortalStatusLabel,
