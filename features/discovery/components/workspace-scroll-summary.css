@@ -14,3 +14,5 @@
   .discovery-workspace-minibar-inner { height: 40px; }
   .discovery-workspace-minibar-metrics { display: none; }
 }
+.workspace-minibar-navigation { margin-left:auto; flex-shrink:0; pointer-events:auto; }
+.discovery-workspace-minibar-title > b { min-width:0; }

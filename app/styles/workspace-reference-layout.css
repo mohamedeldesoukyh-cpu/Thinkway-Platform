@@ -279,3 +279,6 @@ body:has(.twwr) .wr-operational-drawer .wr-detail-tabs [data-state="active"] { b
  .twwr .twcd .thinkway-campaign-asgn-parent > [data-assignment-col="gp"] :is(span,b,strong) { color:#008568 !important; }
  .twwr .twcd .thinkway-campaign-asgn-parent > [data-assignment-col="actions"] { justify-content:flex-end !important; }
 }
+/* Keep record navigation usable in the existing compact campaign summary. */
+.twwr .wr-minibar-navigation { margin-left:auto; flex-shrink:0; pointer-events:auto; }
+.twwr .wr-campaign-minibar-title > b { min-width:0; }

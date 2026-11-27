@@ -11,7 +11,6 @@ import { PageBackButton } from "@/components/navigation/page-back-button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { EnvironmentBadgeSlot } from "@/components/environment/environment-badge-slot";
 import { CommercialCurrencySelect } from "@/features/commercial/components/commercial-currency-select";
-import { CampaignWorkspaceJumpSelect } from "@/features/campaigns/components/campaign-workspace-jump-select";
 import { updateCampaignDisplayCurrencyAction } from "@/features/campaigns/actions";
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import { workspaceLabelForTab } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
@@ -169,9 +168,9 @@ export function CampaignDetailChrome({
 
   return (
     <div className={cn("tw-frozen", mini && "is-mini")}>
-      <div className={cn("wr-campaign-minibar", mini && "is-visible")} aria-hidden="true">
+      <div className={cn("wr-campaign-minibar", mini && "is-visible")} aria-hidden={!mini}>
         <div className="wr-campaign-minibar-inner">
-          <div className="wr-campaign-minibar-title"><span><DocumentNumber value={workspace.document_number} /></span><b>{workspace.name}</b><span>{lifecycle.businessStateLabel}</span></div>
+          <div className="wr-campaign-minibar-title"><span><DocumentNumber value={workspace.document_number} /></span><b>{workspace.name}</b><span>{lifecycle.businessStateLabel}</span><div className="wr-minibar-navigation">{mini && <CampaignSerialNavigation currentId={workspace.id} activeTab={activeTab}/>}</div></div>
           <div className="wr-campaign-minibar-figures">
             <span className="wr-mini-internal"><i>Internal</i><span>Base cost <b><CampaignSummaryMoney amount={cost} currency={displayCurrency} metric="cost" /></b></span><span>GP <b><CampaignSummaryMoney amount={gp} currency={displayCurrency} metric="gp" /></b></span><span>GP % <b>{formatPercent(marginPercent)}</b></span></span>
             <span><i>Client-facing</i><span>Total investment <b><CampaignSummaryMoney amount={revenue} currency={displayCurrency} metric="revenue" /></b></span><span>Assignments <b>{String(workspace.lines.length)}</b></span></span>
@@ -192,11 +191,6 @@ export function CampaignDetailChrome({
         <CampaignSerialNavigation
           currentId={workspace.id}
           activeTab={activeTab}
-        />
-        <CampaignWorkspaceJumpSelect
-          currentId={workspace.id}
-          currentDocumentNumber={workspace.document_number}
-          currentName={workspace.name}
         />
         <span className="tw-crumb">
           <Link href="/campaigns">Campaigns</Link>

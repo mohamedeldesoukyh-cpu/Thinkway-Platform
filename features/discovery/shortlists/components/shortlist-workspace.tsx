@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
+import { MediaRecordNavigator } from "@/components/navigation/media-record-navigator";
 import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
 import {
   DropdownMenu,
@@ -846,7 +846,7 @@ function ShortlistWorkspaceBody({
         description="Refresh all linked platforms, including avatars and metrics. Use cached data for free; platforms without a usable snapshot will be reported. Refresh Live fetches new data and uses Apify credits."
         onChoose={(source) => { void executeSelectedRefresh(source); }}
       />
-      <WorkspaceScrollSummary serial={detail.serial_number} name={detail.name} status={SHORTLIST_STATUS_LABELS[detail.status]}
+      <WorkspaceScrollSummary navigation={<MediaRecordNavigator kind="shortlists" currentId={detail.id}/>} serial={detail.serial_number} name={detail.name} status={SHORTLIST_STATUS_LABELS[detail.status]}
         metrics={[
           { label: "Creators", value: detail.creators.length },
           { label: "Quoted", value: quotedCount },
@@ -857,7 +857,7 @@ function ShortlistWorkspaceBody({
           <Link className="q-b q-b--sm q-b--ghost" href="/discovery/shortlists">← Back to shortlists</Link>
           <span className="sl-crumb"><Link href="/discovery">Discovery</Link><span>/</span><Link href="/discovery/shortlists">Shortlists</Link><span>/</span><b>{formatDocumentNumberForDisplay(detail.serial_number)}</b></span>
           <span className="q-sp" />
-          <div className="sl-nav"><EntityPrevNext entity="shortlists" currentId={detail.id} hrefForId={(id) => shortlistDetailPath(id)} /></div>
+          <div className="media-nav"><MediaRecordNavigator kind="shortlists" currentId={detail.id} /></div>
         </div>
         <div className="sl-head__t">
           <span className="sl-ref">{formatDocumentNumberForDisplay(detail.serial_number)}</span><h1>{detail.name}</h1>
