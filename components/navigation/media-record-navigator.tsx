@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { loadMediaRecords } from './load-media-records';
-import { filterMediaRecords, type MediaRecord, type MediaRecordKind } from '@/lib/navigation/media-records';
+import { filterMediaRecords, mediaRecordHref, type MediaRecord, type MediaRecordKind } from '@/lib/navigation/media-records';
 import { formatDocumentNumberForDisplay } from '@/lib/documents/format-document-number';
-import { campaignDetailPath, quotationDetailPath, shortlistDetailPath } from '@/lib/routing/entity-paths';
 import styles from './media-record-navigator.module.css';
 
 export function MediaRecordNavigator({kind, currentId, activeTab}: {kind: MediaRecordKind; currentId?: string; activeTab?: string}) {
@@ -34,8 +34,8 @@ export function MediaRecordNavigator({kind, currentId, activeTab}: {kind: MediaR
   function choose(id: string) {
     setOpen(false);
     if (id === currentId) return;
-    const path = kind === 'campaigns' ? campaignDetailPath(id) : kind === 'quotations' ? quotationDetailPath(id) : shortlistDetailPath(id);
-    router.push(activeTab && kind === 'campaigns' ? `${path}?tab=${encodeURIComponent(activeTab)}` : path);
+    const row = records.find(record => record.id === id);
+    if (row) router.push(mediaRecordHref(kind, row, activeTab));
   }
   function focusRow(next: number) {
     const bounded = Math.max(0, Math.min(matches.length - 1, next));
@@ -48,7 +48,9 @@ export function MediaRecordNavigator({kind, currentId, activeTab}: {kind: MediaR
     {name:'Last', icon:ChevronsRight, target:records.length-1, disabled:!records.length || index === records.length-1},
   ];
   return <div className={styles.bar} aria-label={`${kind} navigation`}>
-    {buttons.map(({name,icon:Icon,target,disabled}) => <button key={name} type="button" className={styles.button} disabled={loading || disabled} onClick={() => choose(records[target].id)}><Icon size={14} aria-hidden="true"/>{name}</button>)}
+    {buttons.map(({name,icon:Icon,target,disabled}) => loading || disabled
+      ? <button key={name} type="button" className={styles.button} disabled><Icon size={14} aria-hidden="true"/>{name}</button>
+      : <Link key={name} className={styles.button} href={mediaRecordHref(kind, records[target], activeTab)} prefetch={kind === 'campaigns' && (name === 'Previous' || name === 'Next')} onNavigate={() => setOpen(false)}><Icon size={14} aria-hidden="true"/>{name}</Link>)}
     <input className={styles.quickSearch} aria-label={`Search ${kind} by number`} placeholder={kind === 'campaigns' ? 'Camp number' : kind === 'quotations' ? 'Quote number' : 'List number'} value={query} onChange={event => {setQuery(event.target.value);setActive(0);}} onKeyDown={event => {
       if (event.key === 'Enter') {
         event.preventDefault();

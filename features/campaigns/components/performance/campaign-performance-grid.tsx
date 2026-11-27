@@ -365,7 +365,11 @@ export function CampaignPerformanceGrid({
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-            ) : null}
+            ) : (
+              <button type="button" disabled={Boolean(collabBusy)} className="thinkway-campaign-badge inline-flex items-center gap-0.5 bg-blue-50 text-blue-700 cursor-pointer" onClick={event => { event.stopPropagation(); openCollab(row); }} onPointerDown={event => event.stopPropagation()}>
+                Collab<ChevronDownIcon className="size-2.5" />
+              </button>
+            )}
           </div>
         );
       }
