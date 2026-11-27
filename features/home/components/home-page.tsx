@@ -1,3 +1,4 @@
+import { CampaignSerialNavigation } from "@/features/campaigns/components/campaign-serial-navigation";
 
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import Link from "next/link";
@@ -116,6 +117,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
 
   return (
     <HomeDashboardSuite className="home-overview">
+      <div className="sticky top-0 z-[75] bg-[#0055ff] px-5 py-2"><CampaignSerialNavigation /></div>
       <HomeDashboardMasthead
         page="home"
         id="HOME"
