@@ -1,11 +1,12 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import "./workspace-scroll-summary.css";
 
 /** Like campaign chrome: preserve the full header's height while a compact summary pins. */
-export function WorkspaceScrollSummary({ serial, name, status, metrics }: {
+export function WorkspaceScrollSummary({ serial, name, status, metrics, navigation }: {
+  navigation?: ReactNode;
   serial: string | null; name: string; status: string;
   metrics: Array<{ label: string; value: string | number }>;
 }) {
@@ -42,7 +43,7 @@ export function WorkspaceScrollSummary({ serial, name, status, metrics }: {
     <div ref={anchor} className="discovery-workspace-minibar" data-compact={compact} aria-hidden={!compact}>
       <div className="discovery-workspace-minibar-inner">
         <div className="discovery-workspace-minibar-title">
-          <span>{formatDocumentNumberForDisplay(serial)}</span><b>{name}</b><span>{status}</span>
+          <span>{formatDocumentNumberForDisplay(serial)}</span><b>{name}</b><span>{status}</span>{compact && navigation && <div className="workspace-minibar-navigation">{navigation}</div>}
         </div>
         <div className="discovery-workspace-minibar-metrics">
           {metrics.map((metric) => <span key={metric.label}>{metric.label} <b>{metric.value}</b></span>)}

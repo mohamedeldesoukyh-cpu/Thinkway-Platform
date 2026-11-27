@@ -40,7 +40,6 @@ import {
 } from "@/features/client-workspace/client-review-selection";
 import { CLIENT_REVIEW_LINK_MISSING_MESSAGE } from "@/features/client-workspace/constants";
 import { ClientWorkspaceDisplayToggles } from "@/features/commercial/components/show-original-currency-toggle";
-import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -265,7 +264,7 @@ export function QuotationWorkspaceHeader({
           <Link href={QUOTATIONS_LIST_PATH} className="q-b q-b--sm q-b--ghost"><QuotationText>← Back to quotations</QuotationText></Link>
           <span className="q-crumb"><Link href="/discovery/search"><QuotationText>Discovery</QuotationText></Link> / <Link href={QUOTATIONS_LIST_PATH}><QuotationText>Client quotations</QuotationText></Link> / <b>{formatDocumentNumberForDisplay(detail.serial_number)}</b></span>
           <span className="q-sp" />
-          <div className="q-nav"><EntityPrevNext entity="quotations" currentId={detail.id} hrefForId={(id) => quotationDetailPath(id)} /></div>
+
           <QuotationLanguageSwitcher />
         </div>
         <div className="q-head__t">

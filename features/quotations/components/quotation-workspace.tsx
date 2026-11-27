@@ -1,4 +1,5 @@
 "use client";
+import { MediaRecordNavigator } from "@/components/navigation/media-record-navigator";
 import { openDocumentPreview } from "@/lib/navigation/preview-navigation";
 import { ThinkwayRouteLoading } from "@/components/layout/thinkway-page-loader";
 import { WorkspaceUndoProvider } from "@/lib/productivity/workspace-undo";
@@ -797,6 +798,7 @@ function QuotationWorkspaceContent({
   return (
     <QuotationDirectRatesContext.Provider value={directRates}><div ref={stickyHeadersRef} data-discovery-workspace-scroll data-shortcut-save-scope="quotation" dir={language === "ar" ? "rtl" : "ltr"} lang={language} className="tq-redesign quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)] pb-16">
       <QuotationSetupWizard detail={detail} options={formOptions} />
+      <div className="media-quotation-navigation"><MediaRecordNavigator kind="quotations" currentId={detail.id}/></div>
       <div className="q-frozen-summary">
       <QuotationWorkspaceHeader
         displayCurrency={displayCurrency}
