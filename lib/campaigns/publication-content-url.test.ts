@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   PUBLICATION_DUPLICATE_NOTE_MARKER,
+  publicationCollabEditor,
   appendDuplicateNoteMarker,
   duplicateNormalizedUrlSet,
   findDuplicatePublicationUrls,
@@ -82,3 +83,17 @@ assert.equal(unique.length,2);
 assert.equal(unique.reduce((sum,row)=>sum+(row.views??0),0),150);
 assert.equal(sharedRows[1].notes,null);
 assert.equal(uniqueCollabPublications(sharedRows.map(row=>({...row,notes:null}))).length,3);
+
+const instagramShared = sharedRows.slice(0, 2).map((row, i) => ({...row, content_url: i ? 'https://www.instagram.com/reel/DgKum7sx6DR/?igsh=test' : 'https://www.instagram.com/p/DgKum7sx6DR/'}));
+assert.equal(normalizePublicationContentUrl(instagramShared[0].content_url), normalizePublicationContentUrl(instagramShared[1].content_url));
+assert.equal(uniqueCollabPublications(instagramShared).length, 1);
+assert.equal(publicationCollabCreator(attributeCollabPublications(instagramShared)[1].notes)?.id, 'a');
+assert.notEqual(normalizePublicationContentUrl('https://instagram.com/p/AbC'), normalizePublicationContentUrl('https://instagram.com/p/abc'));
+
+const choices = [{id:'a',name:'Adham'}, {id:'b',name:'Wagdi'}];
+const adhamEditor = publicationCollabEditor(instagramShared[0], instagramShared, choices);
+assert.equal(adhamEditor.publication.campaign_line_id, 'a');
+assert.deepEqual(adhamEditor.options, [{value:'b',label:'Wagdi'}]);
+const wagdiEditor = publicationCollabEditor(instagramShared[1], instagramShared, choices);
+assert.equal(wagdiEditor.publication.campaign_line_id, 'b');
+assert.deepEqual(wagdiEditor.options, [{value:'a',label:'Adham'}]);
