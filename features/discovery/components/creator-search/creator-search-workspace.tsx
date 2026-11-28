@@ -320,6 +320,7 @@ export function CreatorSearchWorkspace({
   const filtersRef = useRef(filters);
   const reqIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
+  const searchDispatchRef = useRef<number | null>(null);
   const pagesLoadedRef = useRef(0);
   const loadMoreInFlightRef = useRef(false);
   const hasMoreRef = useRef(true);
@@ -483,6 +484,15 @@ export function CreatorSearchWorkspace({
 
   const handleDebouncedSearchChange = useCallback((value: string) => {
     abortRef.current?.abort();
+    reqIdRef.current += 1;
+    normalContinuationRef.current = undefined;
+    setCreators([]);
+    setTotal(0);
+    setCompleteness(undefined);
+    setHasMore(false);
+    setLoadingMore(false);
+    setLoading(Boolean(value.trim()));
+    setError(null);
     searchRef.current = value;
     if (value.trim()) setSort({ field: "relevance", direction: "desc" });
     setDebouncedSearch((prev) => (prev === value ? prev : value));
@@ -652,6 +662,7 @@ export function CreatorSearchWorkspace({
   }, [stopAcquisitionPolling]);
 
   const handleClearSearch = useCallback(() => {
+    handleDebouncedSearchChange("");
     pendingUrlClearRef.current = "search";
     searchRef.current = "";
     skipSearchUrlWriteRef.current = true;
@@ -671,7 +682,7 @@ export function CreatorSearchWorkspace({
     const nextQuery = params.toString();
     const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
     replaceCreatorSearchUrlShallow(nextUrl);
-  }, [cancelActiveAcquisitionSession, pathname, searchParams]);
+  }, [cancelActiveAcquisitionSession, handleDebouncedSearchChange, pathname, searchParams]);
 
   const startAcquisitionPolling = useCallback(
     (jobIds: string[], requestId: number, filtersSnapshot: CreatorSearchFilters) => {
@@ -872,6 +883,14 @@ export function CreatorSearchWorkspace({
       acquiredOnly?: boolean;
     }
   ) => {
+    if (!aiModeRef.current && !briefRequestRef.current &&
+        !hasActiveCreatorSearchFilters(filterOverride ?? filtersRef.current, searchRef.current)) {
+      abortRef.current?.abort();
+      reqIdRef.current += 1;
+      setCreators([]); setTotal(0); setHasMore(false);
+      setLoading(false); setLoadingMore(false); setCompleteness(undefined);
+      return;
+    }
     if (!aiModeRef.current && !options?.acquiredOnly) {
       abortRef.current?.abort();
       const controller = new AbortController();
@@ -1390,6 +1409,7 @@ export function CreatorSearchWorkspace({
 
   const runSearch = useCallback(
     (immediateQuery?: string) => {
+      if (searchDispatchRef.current) clearTimeout(searchDispatchRef.current);
       if (typeof immediateQuery === "string") {
         const normalizedQuery = immediateQuery.trim();
         const changed = normalizedQuery !== searchRef.current;
@@ -1397,7 +1417,7 @@ export function CreatorSearchWorkspace({
         const sortChanged = !!normalizedQuery && (sortRef.current.field !== "relevance" || sortRef.current.direction !== "desc");
         if (sortChanged) { sortRef.current = { field: "relevance", direction: "desc" }; setSort(sortRef.current); }
         setDebouncedSearch(normalizedQuery);
-        if (changed || sortChanged) return;
+        if (changed || sortChanged) skipNextFilterFetchRef.current = true;
       }
       normalContinuationRef.current = undefined;
       setPage(1);
@@ -1414,9 +1434,21 @@ export function CreatorSearchWorkspace({
       return;
     }
     normalContinuationRef.current = undefined;
+    abortRef.current?.abort();
+    reqIdRef.current += 1;
+    setCreators([]);
+    setTotal(0);
+    setLoadingMore(false);
+    setCompleteness(undefined);
     setPage(1);
-    setHasMore(true);
-    void fetchPageRef.current(1, false, undefined, { caller: "filter_sync" });
+    setHasMore(false);
+    // Debounce requests, not the input or clearing of stale results.
+    const timer = window.setTimeout(() => {
+      searchDispatchRef.current = null;
+      void fetchPageRef.current(1, false, undefined, { caller: "filter_sync" });
+    }, 220);
+    searchDispatchRef.current = timer;
+    return () => window.clearTimeout(timer);
   }, [filters, debouncedSearch, sort, briefEnabled, briefWorkspaceState, disabledSoftIds]);
 
   useEffect(() => {
@@ -2424,9 +2456,9 @@ export function CreatorSearchWorkspace({
         {aiExtracting ? (
           <CreatorSearchAiExtractingState className="absolute inset-0 z-10 bg-card" />
         ) : null}
-        {(loading || isPending) && !loadingMore && !aiExtracting ? (
+        {((aiModeActive && loading) || isPending) && !loadingMore && !aiExtracting ? (
           <div
-            className="thinkway-navigation-loading-overlay absolute inset-0 z-10 rounded-[inherit]"
+            className="thinkway-navigation-loading-overlay pointer-events-none absolute inset-0 z-10 rounded-[inherit]"
             role="status"
             aria-live="polite"
             aria-label="Loading filtered creators"

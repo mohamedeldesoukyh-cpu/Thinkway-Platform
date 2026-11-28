@@ -160,19 +160,23 @@ export function useCreatorBrowse({
   const pinnedCreatorsRef = useRef<Map<string, UnifiedCreatorResult>>(new Map());
   const filtersKey = JSON.stringify(filters);
   const debouncedFiltersKey = useDebouncedValue(filtersKey, debounceMs);
+  const [resolvedFiltersKey, setResolvedFiltersKey] = useState<string | null>(null);
 
   useEffect(() => {
     // Cancel immediately while the next query is still debouncing, and on close.
     reqId.current += 1;
     activeRequest.current?.abort();
+    setResolvedFiltersKey(null);
+    setState({ ...INITIAL_BROWSE_STATE, pageSize });
     return () => {
       reqId.current += 1;
       activeRequest.current?.abort();
     };
-  }, [filtersKey, enabled]);
+  }, [filtersKey, enabled, pageSize]);
 
   const fetchPage = useCallback(
     async (page: number, append: boolean) => {
+      if (!enabled || filtersKey !== debouncedFiltersKey) return;
       const id = ++reqId.current;
       activeRequest.current?.abort();
       const controller = new AbortController();
@@ -198,6 +202,7 @@ export function useCreatorBrowse({
         if (!response.ok || result.error) {
           throw new Error(result.error || "Could not search creators. Please retry.");
         }
+        setResolvedFiltersKey(debouncedFiltersKey);
 
         setState((prev) => {
           for (const creator of result.creators) {
@@ -237,14 +242,14 @@ export function useCreatorBrowse({
         }));
       }
     },
-    [debouncedFiltersKey, pageSize]
+    [enabled, filtersKey, debouncedFiltersKey, pageSize]
   );
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || filtersKey !== debouncedFiltersKey) return;
     setState((prev) => ({ ...prev, page: 1 }));
     void fetchPage(1, false);
-  }, [enabled, debouncedFiltersKey, fetchPage]);
+  }, [enabled, filtersKey, debouncedFiltersKey, fetchPage]);
 
   const loadMore = useCallback(() => {
     if (!enabled || state.loading || state.loadingMore || !state.hasMore) return;
@@ -298,6 +303,10 @@ export function useCreatorBrowse({
 
   return {
     ...state,
+    ...(!enabled || resolvedFiltersKey !== filtersKey ? {
+      creators: [], total: 0, page: 1, hasMore: false,
+      loading: enabled && !state.error, loadingMore: false,
+    } : {}),
     totalPages,
     loadMore,
     goToPage,
