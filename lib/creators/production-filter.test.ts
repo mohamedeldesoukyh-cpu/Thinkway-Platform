@@ -42,10 +42,10 @@ test("basic and partial enrichment remain visible", () => {
   assert.equal(hasCreatorEnrichment({ ...neverEnriched(), status: "basic_enriched" }), true);
   assert.equal(hasCreatorEnrichment({ ...neverEnriched(), enrichment_status: "partial" }), true);
 });
-test("account history and legacy collected metrics preserve enriched creators", () => {
+test("account history preserves enrichment but imported numbers do not", () => {
   const c = neverEnriched();
   assert.equal(hasCreatorEnrichment({ ...c, platforms: [{ ...c.platforms[0], metrics_last_synced_at: "2026-09-18T00:00:00Z" }] }), true);
-  assert.equal(hasCreatorEnrichment({ ...c, platforms: [{ ...c.platforms[0], follower_count: 1000 }] }), true);
+  assert.equal(hasCreatorEnrichment({ ...c, platforms: [{ ...c.platforms[0], follower_count: 1000, enrichment_status: "never", sync_status: "manual", sync_source: "discovery_import" }] }), false);
 });
 
 test("activity selector partitions enriched and never-enriched creators without deleting either", () => {
