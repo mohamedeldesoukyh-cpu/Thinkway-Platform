@@ -1,5 +1,5 @@
 "use client";
-import { CreatorCardStatsHeader } from "@/features/discovery/components/cc-identity";
+import { CreatorCardStatsHeader } from "@/features/discovery/components/creator-card-identity";
 
 import { CheckIcon, Loader2Icon, RotateCwIcon, SearchIcon, SearchXIcon } from "lucide-react";
 
