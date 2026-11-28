@@ -35,7 +35,7 @@ test("hard failure cannot be rescued by exact text",()=>{const r=evaluate({searc
 test("missing metrics do not qualify a hard requirement",()=>{const c=creator();c.platforms[0].avg_views=null;const r=evaluate({minViews:"1"},c);assert.equal(r.eligible,false);assert.equal(r.relevance.reasons[0].outcome,"Not available")});
 test("same account must satisfy platform and all metrics",()=>{const c=creator();c.platforms.push({...c.platforms[0],id:"tt",platform:"tiktok",follower_count:500,engagement_rate:30});assert.equal(evaluate({platforms:["tiktok"],minFollowers:"500000",minEngagement:"4"},c).eligible,false)});
 test("secondary account handle works",()=>{const c=creator();c.platforms.push({...c.platforms[0],handle:"second"});assert.equal(evaluate({handle:"second"},c).eligible,true)});
-test("creator country inference remains",()=>{const r=evaluate({countries:["EG"]},creator("a",{country_code:null,platforms:[],bio:"Cairo Egypt"}));assert.equal(r.eligible,true)});
+test("creator country inference remains",()=>{const r=evaluate({countries:["EG"],enrichmentFilter:"all"},creator("a",{country_code:null,platforms:[],bio:"Cairo Egypt"}));assert.equal(r.eligible,true)});
 test("audience geography never uses creator or account location",()=>{const c=creator();assert.equal(creatorMatchesDiscoveryBrowseFilters(c,{audienceCountries:["EG"]}),false)});
 const demographics = { source:"manual" as const, topCountries:[{code:"AE",percent:80}], topCities:null,gender:{male:20,female:80,unknown:null},age:{"13_17":null,"18_24":15,"25_34":85,"35_44":null,"45_54":null,"55_plus":null} };
 test("future genuine audience OR geography contract remains",()=>assert.equal(creatorMatchesDiscoveryBrowseFilters(creator("a",{audience_demographics:demographics}),{audienceCountries:["SA","AE"]}),true));
@@ -61,7 +61,7 @@ test("direct names stay above previously used bio-only matches", async () => {
   const result = await search([
     creator("bio", { display_name: "Different Creator", platforms: [], bio: "Knows Amina", search_rank: 1700 }),
     creator("name", { display_name: "Amina New", search_rank: 9800 }),
-  ], { search: "amina" });
+  ], { search: "amina", enrichmentFilter: "all" });
   assert.deepEqual(result.creators.map(c => c.unified_id), ["inf:name", "inf:bio"]);
 });
 test("prior usage does not override an explicit name sort", async () => {
@@ -229,9 +229,10 @@ test("unsupported audience country does not change supported filter results or r
 test("activity filter is applied before count and pagination", async () => {
   const active = creator("active");
   const inactive = creator("inactive", { last_enriched_at: null, platforms: [], enrichment_status: "never" });
-  for (const [enrichmentFilter, expected] of [["active", ["inf:active"]], ["inactive", ["inf:inactive"]], ["all", ["inf:active", "inf:inactive"]]] as const) {
-    const result = await search([active, inactive], { search: "amina", enrichmentFilter });
-    assert.deepEqual(result.creators.map(c => c.unified_id), expected);
+  const empty = creator("empty", { platforms: [], enrichment_status: "enriched" });
+  for (const [enrichmentFilter, expected] of [["active", ["inf:active"]], ["inactive", ["inf:inactive", "inf:empty"]], ["all", ["inf:active", "inf:inactive", "inf:empty"]]] as const) {
+    const result = await search([active, inactive, empty], { search: "amina", enrichmentFilter });
+    assert.deepEqual(result.creators.map(c => c.unified_id).sort(), [...expected].sort());
     assert.equal(result.total, expected.length);
   }
 });
