@@ -1,7 +1,7 @@
 "use client";
 import { CreatorCardStatsHeader } from "@/features/discovery/components/creator-card-identity";
 
-import { CheckIcon, Loader2Icon, RotateCwIcon, SearchIcon, SearchXIcon } from "lucide-react";
+import { CheckIcon, Loader2Icon, RotateCwIcon, SearchXIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -237,11 +237,8 @@ export function CreatorSelectionTable({
           )
         ) : creators.length === 0 ? (
           isPanel ? (
-            <div className="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center">
-              <div className="mb-3.5 flex size-12 items-center justify-center rounded-xl border border-border bg-muted">
-                <SearchIcon className="size-[22px] text-muted-foreground" strokeWidth={1.5} />
-              </div>
-              <p className="text-sm font-semibold text-foreground">{emptyMessage}</p>
+            <div className="flex flex-col items-center gap-2 px-6 py-14 text-center">
+              <p className="text-[13px] font-semibold text-foreground">{emptyMessage}</p>
               <p className="mt-1 max-w-[260px] text-xs leading-relaxed text-muted-foreground">
                 Search by creator name, handle, or profile link.
               </p>

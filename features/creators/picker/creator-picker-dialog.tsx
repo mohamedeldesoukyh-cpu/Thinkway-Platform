@@ -551,11 +551,15 @@ export function CreatorPickerDialog({
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
-          {headerExtra}
         </DialogHeader>
+        {headerExtra}
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{body}</div>
         {actionFooter ? (
-          <DialogFooter className="border-t px-6 py-4">{actionFooter}</DialogFooter>
+          <DialogFooter className="cc-foot border-t px-6 py-4">
+            {panelLayout && showSelectionChrome ? <span className="cc-foot-count">{selectedCount ? `${selectedCount} creator${selectedCount === 1 ? "" : "s"} selected` : "Select at least one creator"}</span> : null}
+            {panelLayout ? <Button variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button> : null}
+            {actionFooter}
+          </DialogFooter>
         ) : null}
       </DialogContent>
     </Dialog>
