@@ -131,7 +131,7 @@ function resolveShowFeed(variant: Props["variant"]): boolean {
 
 function PanelSelectionSkeleton({ count }: { count: number }) {
   return (
-    <div className="creator-picker-panel-list space-y-2 px-3 py-2">
+    <div className="cc-list space-y-2 px-3 py-2">
       {Array.from({ length: count }, (_, index) => (
         <div
           key={index}
@@ -262,7 +262,7 @@ export function CreatorSelectionTable({
             </div>
           )
         ) : isPanel ? (
-          <div className="creator-picker-panel-list space-y-2 px-3 py-2">
+          <div className="cc-list space-y-2 px-3 py-2">
             <div className="cc-columns"><span>Creator</span><CreatorCardStatsHeader /></div>
             {creators.map((creator) => {
               const row = toRowMeta(creator, existingKeys, isRowDisabled, disabledBadge);

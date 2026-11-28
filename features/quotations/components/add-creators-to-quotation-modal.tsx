@@ -183,7 +183,7 @@ export function AddCreatorsToQuotationModal({
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!pending && !linkPending) onOpenChange(next); }}>
-      <DialogContent dir={language === "ar" ? "rtl" : "ltr"} className="q-creator-import creator-picker-compact-dialog flex max-h-[90dvh] flex-col gap-0 overflow-hidden rounded-2xl bg-white p-0 sm:max-w-2xl">
+      <DialogContent dir={language === "ar" ? "rtl" : "ltr"} className="q-creator-import cc-dialog flex max-h-[90dvh] flex-col gap-0 overflow-hidden rounded-2xl bg-white p-0 sm:max-w-2xl">
         <DialogHeader className="shrink-0 border-b border-slate-200 px-6 py-5 pe-14">
           <DialogTitle className="text-base font-bold tracking-tight text-slate-900"><QuotationText>Add creators</QuotationText></DialogTitle>
           <DialogDescription>
