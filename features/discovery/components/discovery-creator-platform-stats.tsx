@@ -122,7 +122,7 @@ export function DiscoveryCreatorPlatformStatsBox({
         ];
 
   return (
-    <div className={cn("tw-stx", compact && "creator-card-stats")}>
+    <div className={compact ? "cc-stats" : "tw-stx"}>
       <span className="hh" aria-hidden>
         <i />
         <i>Followers</i>
@@ -135,7 +135,7 @@ export function DiscoveryCreatorPlatformStatsBox({
 
         return (
           <span key={row.key} className="rr">
-            <span className="tw-pf">
+            <span className={compact ? "cc-platform" : "tw-pf"}>
               {brandIcons && row.platform ? <PlatformIcon platform={row.platform} size="xs" variant="logo" className="!size-[15px]" /> : <span className={mark.cls}>{mark.label}</span>}
               {compact && row.platform ? <span className="creator-card-platform-name">{row.platform}</span> : null}
             </span>
