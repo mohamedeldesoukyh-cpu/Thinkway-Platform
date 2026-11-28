@@ -6,14 +6,14 @@ export function CreatorCardIdentity({ vm, onOpen }: {
   vm: ReturnType<typeof buildDiscoveryCreatorViewModel>;
   onOpen?: () => void;
 }) {
-  return <div className="creator-card-identity">
+  return <div className="cc-identity">
     <CreatorAvatarImage avatarUrl={vm.avatarUrl} profileUrl={vm.profileUrl} alt={vm.displayName} sizeClassName="size-12" className="border-0" />
     <div className="min-w-0">
-      <div className="creator-card-identity__name">
+      <div className="cc-name">
         {onOpen ? <button type="button" title={vm.displayName} onClick={event => { event.stopPropagation(); onOpen(); }}>{vm.displayName}</button> : <span title={vm.displayName}>{vm.displayName}</span>}
         <small title="Thinkway score">★ {vm.thinkwayStarLabel}</small>
       </div>
-      <div className="creator-card-identity__meta">
+      <div className="cc-meta">
         {vm.handleLabel ? <span title={vm.handleLabel}>{vm.handleLabel}</span> : null}
         {vm.countryFlagCodes.length ? <CountryFlagsStack countryCodes={vm.countryFlagCodes} size="sm" overlay={false} /> : null}
         {vm.countryLabel !== "—" ? <span title={vm.countryLabel}>{vm.countryLabel}</span> : null}
@@ -23,5 +23,5 @@ export function CreatorCardIdentity({ vm, onOpen }: {
 }
 
 export function CreatorCardStatsHeader() {
-  return <div className="creator-card-stats-heading" aria-hidden="true"><span /><span>Followers</span><span>Engagement</span><span>Avg views</span></div>;
+  return <div className="cc-stat-head" aria-hidden="true"><span /><span>Followers</span><span>Engagement</span><span>Avg views</span></div>;
 }

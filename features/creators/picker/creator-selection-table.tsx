@@ -1,5 +1,5 @@
 "use client";
-import { CreatorCardStatsHeader } from "@/features/discovery/components/creator-card-identity";
+import { CreatorCardStatsHeader } from "@/features/discovery/components/cc-identity";
 
 import { CheckIcon, Loader2Icon, RotateCwIcon, SearchIcon, SearchXIcon } from "lucide-react";
 
@@ -266,7 +266,7 @@ export function CreatorSelectionTable({
           )
         ) : isPanel ? (
           <div className="creator-picker-panel-list space-y-2 px-3 py-2">
-            <div className="creator-picker-column-heading"><span>Creator</span><CreatorCardStatsHeader /></div>
+            <div className="cc-columns"><span>Creator</span><CreatorCardStatsHeader /></div>
             {creators.map((creator) => {
               const row = toRowMeta(creator, existingKeys, isRowDisabled, disabledBadge);
               const checked = selectedIds.has(creator.unified_id);
