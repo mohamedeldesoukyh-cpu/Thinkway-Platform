@@ -70,9 +70,9 @@
 .sl-bulk-menu small { font-size:10px;max-width:125px;color:var(--muted-foreground); }
 /* Existing portalled forms retain their field logic and modal focus management. */
 body:has(.shortlist-detail-workspace.sl-redesign) [data-slot="dialog-content"]:not(.sl-dialog):not(.creator-picker-compact-dialog) { border-radius:17px;max-height:calc(100dvh - 36px);overflow-y:auto; }
-body:has(.shortlist-detail-workspace.sl-redesign) [data-slot="dialog-header"] { border-radius:0; }
-body:has(.shortlist-detail-workspace.sl-redesign) [data-slot="dialog-title"] { font-size:14.5px;font-weight:700; }
-body:has(.shortlist-detail-workspace.sl-redesign) [data-slot="dialog-description"] { font-size:11.5px;line-height:1.5; }
+body:has(.shortlist-detail-workspace.sl-redesign) [data-slot="dialog-content"]:not(.creator-picker-compact-dialog) [data-slot="dialog-header"] { border-radius:0; }
+body:has(.shortlist-detail-workspace.sl-redesign) [data-slot="dialog-content"]:not(.creator-picker-compact-dialog) [data-slot="dialog-title"] { font-size:14.5px;font-weight:700; }
+body:has(.shortlist-detail-workspace.sl-redesign) [data-slot="dialog-content"]:not(.creator-picker-compact-dialog) [data-slot="dialog-description"] { font-size:11.5px;line-height:1.5; }
 @media (max-width:900px) {
   .sl-redesign .sl-table .tw-sc > div { min-width:0!important; }
   .sl-redesign .sl-table .tw-hr { display:none; }
