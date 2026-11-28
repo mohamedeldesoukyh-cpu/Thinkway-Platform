@@ -951,12 +951,12 @@ async function browseFtsFillPage(
           influencerRankMap,
           browseHydrationOptionsForFilters(filters, tracePath)
         ),
-        fetchDiscoveryCreators(
+        scopedDiscoveryIds?.length ? fetchDiscoveryCreators(
           supabase,
           { ...filters, search: undefined, page: undefined, pageSize: undefined },
           scopedDiscoveryIds,
           tracePath
-        ),
+        ) : Promise.resolve([]),
       ]);
 
       const creators = mergeCreatorsInSearchOrder(hits, internal, discovery);
