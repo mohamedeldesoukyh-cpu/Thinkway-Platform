@@ -13,7 +13,7 @@ const request = (): NormalSearchRequest => ({ filters: cloneCreatorSearchFilters
 function rows(count: number, sparse = false): Candidate[] {
   return Array.from({ length: count }, (_, i) => candidateFromProjection({
     unified_id: `inf:${String(i).padStart(4,"0")}`, influencer_id: String(i), display_name: i === 3 ? "beauty" : `Beauty ${i}`,
-    country_code: sparse && i % 9 !== 0 ? "AE" : "EG", categories: ["Beauty"], search_rank: 20,
+    last_enriched_at: "2026-09-18T00:00:00Z", country_code: sparse && i % 9 !== 0 ? "AE" : "EG", categories: ["Beauty"], search_rank: 20,
     platforms: [{ id: String(i), platform: "instagram", handle: `beauty${i}`, profile_url: null, follower_count: i * 100, engagement_rate: 5, audience_country: null }],
   }));
 }
