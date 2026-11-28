@@ -346,7 +346,7 @@ export function CreatorPickerDialog({
           onSelectAllVisible={
             selectionMode === "multi" ? handleSelectAllVisible : undefined
           }
-          selectAllLabel={allVisibleSelected ? "Deselect all" : "Select all"}
+          selectAllLabel={allVisibleSelected ? "Clear all" : `Select all ${visibleIds.length}`}
           className="min-h-0 flex-1"
           showAddMissingCreator={showAddMissingCreator && search.trim().length > 0}
           onMissingCreatorAdded={handleMissingCreatorAdded}

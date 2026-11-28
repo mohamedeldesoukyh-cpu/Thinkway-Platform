@@ -92,12 +92,14 @@ export function DiscoveryCreatorPlatformStatsBox({
   isApifyAcquired,
   platformStats: platformStatsProp,
   brandIcons = false,
+  compact = false,
 }: {
   creator?: UnifiedCreatorResult;
   platformFilter?: string[];
   isApifyAcquired?: boolean;
   platformStats?: ReturnType<typeof buildDiscoveryCreatorViewModel>["platformStats"];
   brandIcons?: boolean;
+  compact?: boolean;
 }) {
   const platformStats =
     platformStatsProp ??
@@ -120,7 +122,7 @@ export function DiscoveryCreatorPlatformStatsBox({
         ];
 
   return (
-    <div className="tw-stx">
+    <div className={cn("tw-stx", compact && "creator-card-stats")}>
       <span className="hh" aria-hidden>
         <i />
         <i>Followers</i>
@@ -142,13 +144,13 @@ export function DiscoveryCreatorPlatformStatsBox({
               </b>
             ) : (
               <>
-                <b className={cn(row.followers == null && "z")}>
+                <b aria-label={`Followers: ${AB(row.followers)}`} className={cn(row.followers == null && "z")}>
                   {AB(row.followers)}
                 </b>
-                <b className={cn(row.engagement == null && "z")}>
+                <b aria-label={`Engagement: ${formatEngagementRate(row.engagement)}`} className={cn(row.engagement == null && "z")}>
                   {formatEngagementRate(row.engagement)}
                 </b>
-                <b className={cn(row.avgViews == null && "z")}>
+                <b aria-label={`Average views: ${AB(row.avgViews)}`} className={cn(row.avgViews == null && "z")}>
                   {AB(row.avgViews)}
                 </b>
               </>

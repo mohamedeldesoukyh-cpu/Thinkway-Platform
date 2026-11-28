@@ -156,7 +156,7 @@ export function ShortlistCreatorPicker({
   }
 
   const sourceTabs = (
-    <div className="mt-3 grid grid-cols-3 gap-1 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-0.5">
+    <div className="creator-picker-source-tabs">
       {(
         [
           { id: "search", label: "Search" },
