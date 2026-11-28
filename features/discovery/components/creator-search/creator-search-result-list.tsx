@@ -316,8 +316,8 @@ export function CreatorSearchResultList({
             {visibleCreatorIds.length} loaded · click a name for the full profile
           </span>
           <span className="tw-sp" />
-          {headerToolbar}
         </div>
+        {headerToolbar ? <div className="cc-search-tools">{headerToolbar}</div> : null}
         {inFlightCount > 0 && onStopAllRefresh ? (
           <div className="flex justify-end pb-2">
             <Button

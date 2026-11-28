@@ -1806,7 +1806,7 @@
   background: #f8fafc;
 }
 
-.creator-picker-panel-list {
+.cc-list {
   flex: 1;
   min-height: 0;
 }
@@ -1816,13 +1816,8 @@
 .cc-metrics .hh { display:grid; grid-template-columns:28px repeat(3,minmax(0,1fr)); gap:6px; }
 .cc-metrics .hh i { text-align:right; font-size:9px; font-style:normal; color:var(--muted-foreground); }
 
-.creator-picker-add-btn::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent);
-  pointer-events: none;
-}
+.cc-add { min-height:36px; height:36px; flex:1; border:0; border-radius:6px; background:#0057ff; color:white; font-size:13px; font-weight:600; }
+.cc-add:disabled { background:var(--muted); color:var(--muted-foreground); }
 
 .creator-detail-sheet-command-bar {
   overflow: hidden;
@@ -3635,12 +3630,41 @@
 }
 @media (max-width:759px) {
   .cc-metrics { margin-top:10px; margin-left:28px; }
-  .creator-picker-search-bar { flex-wrap:wrap; }
-  .creator-picker-search-bar > :first-child { flex-basis:100%; }
+  .cc-search { flex-wrap:wrap; }
+  .cc-search > :first-child { flex-basis:100%; }
 }
 .cc-tabs { display:flex; gap:20px; margin-top:12px; border-bottom:1px solid var(--border); }
 .cc-tabs > button { min-height:36px; border-radius:0; border-bottom:2px solid transparent; padding:0 2px; box-shadow:none; background:transparent; color:var(--muted-foreground); }
 .cc-tabs > button[aria-pressed="true"] { border-bottom-color:#0057ff; color:#0057ff; }
+
+/* Complete handoff shell: independent of the host shortlist's modal rules. */
+.cc-dialog[data-slot="dialog-content"] { width:min(1100px,calc(100vw - 48px)); max-width:none; height:min(820px,calc(100dvh - 48px)); max-height:calc(100dvh - 48px); border-radius:12px; overflow:hidden; font-size:12.5px; }
+.cc-dialog [data-slot="dialog-header"] { padding:14px 56px 14px 16px; gap:3px; flex-shrink:0; }
+.cc-dialog [data-slot="dialog-title"] { font-size:17px; }
+.cc-dialog [data-slot="dialog-description"] { font-size:11.5px; }
+.cc-dialog .cc-tabs { margin:0; padding:0 12px; gap:2px; flex-shrink:0; }
+.cc-dialog .cc-tabs > button { padding:0 12px; font-size:13px; }
+.cc-dialog .cc-search { padding:10px 12px; background:var(--background); }
+.cc-dialog .cc-search input,
+.cc-dialog .cc-search [role="combobox"] { height:36px; min-height:36px; border-radius:6px; font-size:13px; }
+.cc-dialog .cc-list { padding:0; }
+.cc-dialog .cc-card { margin:0; border-width:0 0 1px; border-radius:0; min-height:72px; padding:8px 12px; }
+.cc-dialog .cc-foot { display:flex; flex-direction:row; align-items:center; gap:10px; padding:10px 14px; flex-shrink:0; }
+.cc-foot-count { margin-right:auto; font-size:11.5px; color:var(--muted-foreground); }
+.cc-dialog .cc-foot button { flex:none; min-height:36px; height:36px; border-radius:6px; font-size:13px; }
+.creator-search-workspace .tw-ch { padding:10px 12px; }
+.creator-search-workspace .tw-ch h2 { font-size:17px; }
+.cc-search-tools { padding:10px 12px; border-top:1px solid var(--border); }
+.cc-search-tools > div { width:100%; }
+.cc-search-tools input { min-height:36px; height:36px; }
+.creator-search-workspace .tw-ch input,
+.creator-search-workspace .tw-ch select { min-height:36px; height:36px; font-size:13px; }
+@media (max-width:600px) {
+  .cc-dialog[data-slot="dialog-content"] { width:100vw; height:100dvh; max-height:100dvh; border-radius:0; }
+  .cc-dialog .cc-foot { flex-wrap:wrap; }
+  .cc-foot-count { flex-basis:100%; }
+  .cc-dialog .cc-foot button { flex:1; }
+}
 @media (min-width:880px) {
   .cc-stat-head,
   .cc-stats .rr { grid-template-columns:72px repeat(3,minmax(0,1fr)); }
