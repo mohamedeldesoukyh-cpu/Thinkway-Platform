@@ -58,3 +58,16 @@ test("activity selector partitions enriched and never-enriched creators without 
   assert.equal(matchesCreatorActivity(active, "all"), true);
   assert.equal(matchesCreatorActivity(inactive, "all"), true);
 });
+
+test("successful empty enrichment belongs only in Not active and All", () => {
+  const empty = { ...neverEnriched(), enrichment_status: "enriched" as const,
+    last_enriched_at: "2026-07-07T03:51:25Z", metrics: {} as UnifiedCreatorResult["metrics"],
+    platforms: [{ ...neverEnriched().platforms[0], follower_count: 0, engagement_rate: null,
+      avg_views: null, enrichment_status: "enriched" as const }] };
+  assert.equal(matchesCreatorActivity(empty), false);
+  assert.equal(matchesCreatorActivity(empty, "inactive"), true);
+  assert.equal(matchesCreatorActivity(empty, "all"), true);
+  assert.equal(matchesCreatorActivity({ ...empty, platforms: [{ ...empty.platforms[0], follower_count: 100, engagement_rate: 0 }] }), true);
+  assert.equal(matchesCreatorActivity({ ...empty, platforms: [{ ...empty.platforms[0], avg_views: 25 }] }), true);
+  assert.equal(matchesCreatorActivity({ ...empty, platforms: [{ ...empty.platforms[0], follower_count: NaN, avg_views: Infinity }] }), false);
+});
