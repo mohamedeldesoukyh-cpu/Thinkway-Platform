@@ -240,7 +240,7 @@ export function CreatorSearchResultList({
     virtualizer.scrollToIndex(0);
     virtualizer.measure();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset layout when sort identity changes
-  }, [sort?.field, sort?.direction]);
+  }, [searchQuery, sort?.field, sort?.direction, platformFilter]);
 
   const allSelected = useMemo(
     () => resolveCreatorCheckboxState(visibleCreatorIds, selectedIds),

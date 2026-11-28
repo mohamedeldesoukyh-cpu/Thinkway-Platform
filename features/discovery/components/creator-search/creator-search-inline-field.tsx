@@ -68,9 +68,10 @@ export function CreatorSearchInlineField({
           const next = event.target.value;
           setDraft(next);
           writeDiscoverySearchDraft(next);
-          debouncer.schedule(() => {
-            onDebouncedSearchChange(normalizeSearchDraft(next));
-          });
+          // Publish edits immediately so stale results disappear before the
+          // workspace debounces the network request (including an empty query).
+          debouncer.cancel();
+          onDebouncedSearchChange(next);
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
