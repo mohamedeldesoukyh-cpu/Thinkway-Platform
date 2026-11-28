@@ -10,7 +10,7 @@ import {
   DiscoverySuiteCell,
   DiscoverySuiteRow,
 } from "@/features/discovery/components/design-system/discovery-suite-grid";
-import { DiscoverySuiteCreatorCell } from "@/features/discovery/components/design-system/discovery-suite-creator-cell";
+import { CreatorCardIdentity, CreatorCardStatsHeader } from "@/features/discovery/components/creator-card-identity";
 import {
   DISCOVERY_COLS,
   DISCOVERY_GRID_MIN_W,
@@ -61,7 +61,7 @@ export const CreatorSearchSuiteRow = memo(function CreatorSearchSuiteRow({
   showRelevance,
   relevanceLabel = "Relevance",
   selected,
-  index = 0,
+
   addedToShortlist = false,
   platformFilter,
   isApifyAcquired,
@@ -87,7 +87,7 @@ export const CreatorSearchSuiteRow = memo(function CreatorSearchSuiteRow({
   return (
     <DiscoverySuiteRow
       selected={selected}
-      className={cn(workerOfflineHint && "opacity-90")}
+      className={cn("cc-discovery", workerOfflineHint && "opacity-90")}
       onClick={onOpenCreator}
     >
       <DiscoverySuiteCell>
@@ -101,23 +101,13 @@ export const CreatorSearchSuiteRow = memo(function CreatorSearchSuiteRow({
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>
-        <DiscoverySuiteCreatorCell
-          name={vm.displayName}
-          handleLabel={vm.handleLabel}
-          index={index}
-          avatarUrl={vm.avatarUrl}
-          profileUrl={vm.profileUrl}
-          countryCodes={vm.countryFlagCodes}
-          locationLabel={vm.countryLabel !== "—" ? vm.countryLabel : null}
-          onOpen={onOpenCreator}
-          stopPropagation
-        >
+        <CreatorCardIdentity vm={vm} onOpen={onOpenCreator} />
           {refreshProgress ? (
             <span className="mt-1 inline-flex" onClick={stopBubble}>
               <RefreshMetricsProgressCircle progress={refreshProgress} />
             </span>
           ) : null}
-        </DiscoverySuiteCreatorCell>
+
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>
@@ -130,7 +120,7 @@ export const CreatorSearchSuiteRow = memo(function CreatorSearchSuiteRow({
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>
-        <DiscoveryCreatorPlatformStatsBox platformStats={vm.platformStats} />
+        <DiscoveryCreatorPlatformStatsBox platformStats={vm.platformStats} compact brandIcons />
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>
@@ -219,9 +209,7 @@ export function CreatorSearchSuiteHeader({
         </span>
       </DiscoverySuiteCell>
       <DiscoverySuiteCell>
-        <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--tw-mut)]">
-          Statistics
-        </span>
+        <CreatorCardStatsHeader />
       </DiscoverySuiteCell>
       <DiscoverySuiteCell>
         <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--tw-mut)]">
