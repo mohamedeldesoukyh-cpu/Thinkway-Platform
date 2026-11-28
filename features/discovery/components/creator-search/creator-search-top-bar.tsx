@@ -1,5 +1,6 @@
 "use client";
 
+import { CreatorActivitySelect } from "@/features/creators/picker/creator-activity-select";
 import { cn } from "@/lib/utils";
 
 import { CreatorSearchInlineField } from "./creator-search-inline-field";
@@ -35,6 +36,7 @@ export function CreatorSearchToolbarControls({
   onSearchSubmit,
   searchLoading,
   onOpenFilters,
+  onFiltersChange,
   filters,
   onAddMissingCreator,
   onRefreshMetrics,
@@ -53,6 +55,7 @@ export function CreatorSearchToolbarControls({
         onSearchSubmit={onSearchSubmit}
         loading={searchLoading}
       />
+      <CreatorActivitySelect value={filters.enrichmentFilter} onChange={enrichmentFilter => onFiltersChange({ ...filters, enrichmentFilter })} />
       <label className="inline-flex items-center gap-1 text-xs">
         Sort
         <select aria-label="Sort creators" className="tw-in" value={sort.field} onChange={e => onSortChange({ field: e.target.value as CreatorSearchSortState["field"], direction: e.target.value === "name" ? "asc" : "desc" })}>

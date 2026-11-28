@@ -179,7 +179,7 @@ export function CreatorSelectionTable({
   onMissingCreatorEnrichmentStatusChange,
   onMissingCreatorUpdated,
 }: Props) {
-  const resultCount = total ?? creators.length;
+  const resultCount = creators.length;
   const isPanel = variant === "panel";
   const showFeed = resolveShowFeed(variant);
 

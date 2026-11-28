@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
-import { passesProductionCreatorGate } from "./production-filter";
+import { passesProductionCreatorGate, hasCreatorEnrichment, matchesCreatorActivity } from "./production-filter";
 
 function discoveryCreator(stage: string, username: string): UnifiedCreatorResult {
   return {
@@ -29,4 +29,32 @@ test("passesProductionCreatorGate allows freshly discovered non-synthetic profil
 
 test("passesProductionCreatorGate blocks synthetic mock_seed handles", () => {
   assert.equal(passesProductionCreatorGate(discoveryCreator("discovered", "tw_eg_sports_01")), false);
+});
+
+const neverEnriched = () => ({ ...discoveryCreator("discovered", "real_handle"), influencer_id: "real-id", enrichment_status: "never" as const });
+test("search excludes a creator that has never been enriched", () => {
+  assert.equal(hasCreatorEnrichment(neverEnriched()), false);
+});
+test("latest failure does not remove previously enriched creator", () => {
+  assert.equal(hasCreatorEnrichment({ ...neverEnriched(), enrichment_status: "failed", last_enriched_at: "2026-09-18T00:00:00Z" }), true);
+});
+test("basic and partial enrichment remain visible", () => {
+  assert.equal(hasCreatorEnrichment({ ...neverEnriched(), status: "basic_enriched" }), true);
+  assert.equal(hasCreatorEnrichment({ ...neverEnriched(), enrichment_status: "partial" }), true);
+});
+test("account history and legacy collected metrics preserve enriched creators", () => {
+  const c = neverEnriched();
+  assert.equal(hasCreatorEnrichment({ ...c, platforms: [{ ...c.platforms[0], metrics_last_synced_at: "2026-09-18T00:00:00Z" }] }), true);
+  assert.equal(hasCreatorEnrichment({ ...c, platforms: [{ ...c.platforms[0], follower_count: 1000 }] }), true);
+});
+
+test("activity selector partitions enriched and never-enriched creators without deleting either", () => {
+  const inactive = neverEnriched();
+  const active = { ...inactive, last_enriched_at: "2026-09-18T00:00:00Z" };
+  assert.equal(matchesCreatorActivity(active), true);
+  assert.equal(matchesCreatorActivity(inactive), false);
+  assert.equal(matchesCreatorActivity(active, "inactive"), false);
+  assert.equal(matchesCreatorActivity(inactive, "inactive"), true);
+  assert.equal(matchesCreatorActivity(active, "all"), true);
+  assert.equal(matchesCreatorActivity(inactive, "all"), true);
 });

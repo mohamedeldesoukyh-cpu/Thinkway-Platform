@@ -45,7 +45,7 @@ test("bare q is not structured shrink; platform/country/metrics/lang/gender/cate
   assert.equal(creatorBrowseFtsStructuredShrinkActive({ categories: ["Beauty"] }), true);
 });
 
-test("FTS total: bare q may retain raw total_count; structured uses fill total", () => {
+test("FTS total excludes raw duplicates and ineligible candidates", () => {
   assert.equal(
     resolveCreatorBrowseFtsFillTotal({
       structuredShrink: false,
@@ -53,7 +53,7 @@ test("FTS total: bare q may retain raw total_count; structured uses fill total",
       rawFtsTotalCount: 480,
       pageCreatorsLength: 24,
     }),
-    480
+    25
   );
   assert.equal(
     resolveCreatorBrowseFtsFillTotal({

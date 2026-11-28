@@ -1,5 +1,7 @@
 "use client";
 
+import { CreatorActivitySelect } from "./creator-activity-select";
+import type { CreatorActivityFilter } from "@/lib/creators/production-filter";
 import { SearchIcon } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -15,6 +17,8 @@ import { cn } from "@/lib/utils";
 import { DEFAULT_PLATFORM_OPTIONS } from "./creator-selection-types";
 
 type Props = {
+  enrichmentFilter?: CreatorActivityFilter;
+  onEnrichmentFilterChange?: (value: CreatorActivityFilter) => void;
   search: string;
   onSearchChange: (value: string) => void;
   platform: string;
@@ -29,6 +33,8 @@ type Props = {
 };
 
 export function CreatorSearchPanel({
+  enrichmentFilter,
+  onEnrichmentFilterChange,
   search,
   onSearchChange,
   platform,
@@ -70,6 +76,7 @@ export function CreatorSearchPanel({
             ))}
           </SelectContent>
         </Select>
+        {onEnrichmentFilterChange ? <CreatorActivitySelect value={enrichmentFilter} onChange={onEnrichmentFilterChange} /> : null}
         {children}
       </div>
     );
@@ -99,7 +106,8 @@ export function CreatorSearchPanel({
           ))}
         </SelectContent>
       </Select>
-      {children}
+      {onEnrichmentFilterChange ? <CreatorActivitySelect value={enrichmentFilter} onChange={onEnrichmentFilterChange} /> : null}
+        {children}
     </div>
   );
 }
