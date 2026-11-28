@@ -87,7 +87,7 @@ export const CreatorSearchSuiteRow = memo(function CreatorSearchSuiteRow({
   return (
     <DiscoverySuiteRow
       selected={selected}
-      className={cn("creator-card-discovery-row", workerOfflineHint && "opacity-90")}
+      className={cn("cc-discovery", workerOfflineHint && "opacity-90")}
       onClick={onOpenCreator}
     >
       <DiscoverySuiteCell>

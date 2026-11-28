@@ -44,13 +44,13 @@ export function CreatorPickerPanelRow({
         }
       }}
       className={cn(
-        "creator-picker-card text-left transition-[border-color,box-shadow,background] duration-150",
+        "cc-card text-left transition-[border-color,box-shadow,background] duration-150",
         checked && "is-selected",
         !disabled && "cursor-pointer hover:border-[#d8dee9]",
         disabled && "is-disabled"
       )}
     >
-      <div className="creator-picker-card__head">
+      <div className="cc-card-head">
         <span className="shrink-0 pt-1" onClick={(event) => event.stopPropagation()}>
           <Checkbox
             checked={checked}
@@ -75,7 +75,7 @@ export function CreatorPickerPanelRow({
           </div>
 
           {vm.categories.length > 0 ? (
-            <div className="creator-picker-card__categories mt-1.5">
+            <div className="cc-categories mt-1.5">
               <InterestChips
                 interests={vm.categories}
                 variant="icat"
@@ -87,7 +87,7 @@ export function CreatorPickerPanelRow({
         </div>
       </div>
 
-      <div className="creator-picker-card__stats">
+      <div className="cc-metrics">
         <DiscoveryCreatorPlatformStatsBox platformStats={vm.platformStats} brandIcons compact />
       </div>
     </div>
