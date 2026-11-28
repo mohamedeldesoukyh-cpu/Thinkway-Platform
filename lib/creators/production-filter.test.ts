@@ -63,7 +63,7 @@ test("successful empty enrichment belongs only in Not active and All", () => {
   const empty = { ...neverEnriched(), enrichment_status: "enriched" as const,
     last_enriched_at: "2026-07-07T03:51:25Z", metrics: {} as UnifiedCreatorResult["metrics"],
     platforms: [{ ...neverEnriched().platforms[0], follower_count: 0, engagement_rate: null,
-      avg_views: null, enrichment_status: "enriched" as const }] };
+      avg_views: null, avg_likes: 19, avg_comments: 3, enrichment_status: "enriched" as const }] };
   assert.equal(matchesCreatorActivity(empty), false);
   assert.equal(matchesCreatorActivity(empty, "inactive"), true);
   assert.equal(matchesCreatorActivity(empty, "all"), true);
