@@ -302,9 +302,9 @@ export function CreatorSearchResultList({
       scrollTarget.removeEventListener("scroll", onScroll);
     };
   }, [error, hasCreators, hasMore, loading, loadingMore, onLoadMore, creators.length]);
-  const totalLabel = `${total.toLocaleString()}${completeness ? completeness.totalKind === "lower_bound" ? "+" : "" : hasMore ? "+" : ""}`;
+  const totalLabel = visibleCreatorIds.length.toLocaleString();
   const exactMatchesCountLabel = showExactMatchesZeroHeader
-    ? `Exact Matches — ${total.toLocaleString()} creator${total === 1 ? "" : "s"}`
+    ? `Exact Matches — ${visibleCreatorIds.length.toLocaleString()} creator${visibleCreatorIds.length === 1 ? "" : "s"}`
     : undefined;
 
   return (

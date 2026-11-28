@@ -107,6 +107,7 @@ export function CreatorPickerDialog({
   onSearchInput,
   children,
 }: ExtendedProps) {
+  const [enrichmentFilter, setEnrichmentFilter] = useState<"active" | "inactive" | "all">("active");
   const [search, setSearch] = useState("");
   const [platform, setPlatform] = useState("all");
 
@@ -123,11 +124,12 @@ export function CreatorPickerDialog({
   const mergedFilters = useMemo(
     () => ({
       ...browseFilters,
+      enrichmentFilter,
       search: search.trim() || undefined,
       platform: platform === "all" ? undefined : platform,
       productionOnly,
     }),
-    [browseFilters, search, platform, productionOnly]
+    [browseFilters, search, platform, productionOnly, enrichmentFilter]
   );
 
   const browse = useCreatorBrowse({
@@ -161,6 +163,7 @@ export function CreatorPickerDialog({
       selection.clearSelection();
       setSearch("");
       setPlatform("all");
+      setEnrichmentFilter("active");
       setSelectedCreatorMap(new Map());
       return;
     }
@@ -312,6 +315,8 @@ export function CreatorPickerDialog({
         onSearchChange={handleSearchChange}
         platform={platform}
         onPlatformChange={setPlatform}
+        enrichmentFilter={enrichmentFilter}
+        onEnrichmentFilterChange={setEnrichmentFilter}
         autoFocus
         variant="panel"
         searchPlaceholder="Search creators…"
@@ -321,7 +326,7 @@ export function CreatorPickerDialog({
 
       <div className="creator-picker-scroll flex min-h-0 flex-1 flex-col overflow-hidden bg-[#f8fafc]">
         <CreatorSelectionTable
-          key={`${search.trim()}:${platform}`}
+          key={`${search.trim()}:${platform}:${enrichmentFilter}`}
           emptyMessage={search.trim() ? undefined : "Type a creator name or handle to search."}
           creators={displayCreators}
           selectedIds={selection.selectedIds}
@@ -368,6 +373,8 @@ export function CreatorPickerDialog({
         onSearchChange={handleSearchChange}
         platform={platform}
         onPlatformChange={setPlatform}
+        enrichmentFilter={enrichmentFilter}
+        onEnrichmentFilterChange={setEnrichmentFilter}
         autoFocus={container === "sheet"}
         className="border-b border-border p-4"
       />

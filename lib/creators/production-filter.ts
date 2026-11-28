@@ -28,3 +28,22 @@ export function passesProductionCreatorGate(creator: UnifiedCreatorResult): bool
 
   return stage === "metrics_enriched" || stage === "ai_scored" || stage === "verified";
 }
+
+/** Search visibility only: keep past enrichment even if the latest refresh failed. */
+export function hasCreatorEnrichment(creator: UnifiedCreatorResult): boolean {
+  if (creator.last_enriched_at || ["enriched", "partial"].includes(creator.enrichment_status ?? "")) return true;
+  if (["basic_enriched", "metrics_enriched", "ai_scored", "verified"].includes(creator.status ?? "")) return true;
+  return creator.platforms.some(account => Boolean(
+    account.last_synced_at || account.metrics_last_synced_at ||
+    ["enriched", "partial"].includes(account.enrichment_status ?? "") ||
+    account.sync_status === "synced" || account.recent_publications?.length ||
+    // Legacy imports can contain enrichment without a recorded completion timestamp.
+    [account.follower_count, account.engagement_rate, account.avg_likes, account.avg_comments, account.avg_views]
+      .some(value => typeof value === "number" && value > 0)
+  ));
+}
+
+export type CreatorActivityFilter = "active" | "inactive" | "all";
+export function matchesCreatorActivity(creator: UnifiedCreatorResult, filter: CreatorActivityFilter = "active"): boolean {
+  return filter === "all" || hasCreatorEnrichment(creator) === (filter === "active");
+}

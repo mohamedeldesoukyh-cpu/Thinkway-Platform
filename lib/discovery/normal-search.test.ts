@@ -10,7 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const filters = (patch: Partial<CreatorSearchFilters> = {}) => ({ ...cloneCreatorSearchFilters(), ...patch });
 function creator(id = "a", patch: Partial<Candidate> = {}): Candidate {
-  return candidateFromProjection({ unified_id: `inf:${id}`, influencer_id: id, display_name: "Amina Beauty", country_code: "EG", categories: ["Beauty","Lifestyle"], bio: "Beauty makeup tips Cairo جمال مكياج", language_codes: ["ar","en"], ai_niche: "Beauty tutorials", stored_thinkway_score: 75, last_post_at: "2026-09-18T00:00:00Z", search_rank: 200,
+  return candidateFromProjection({ unified_id: `inf:${id}`, influencer_id: id, display_name: "Amina Beauty", last_enriched_at: "2026-09-18T00:00:00Z", country_code: "EG", categories: ["Beauty","Lifestyle"], bio: "Beauty makeup tips Cairo جمال مكياج", language_codes: ["ar","en"], ai_niche: "Beauty tutorials", stored_thinkway_score: 75, last_post_at: "2026-09-18T00:00:00Z", search_rank: 200,
     platforms: [{ id, platform: "instagram", handle: "amina", profile_url: "https://instagram.com/amina", follower_count: 600000, engagement_rate: 5, avg_views: 90000, audience_country: "EG" }], ...patch });
 }
 const now = Date.parse("2026-09-20T00:00:00Z");
@@ -224,4 +224,14 @@ test("unsupported audience country does not change supported filter results or r
   const candidates = [creator(), creator("other", { country_code: "AE", bio: "Dubai" })];
   assert.deepEqual(await search(candidates, { ...supported, audienceCountries: ["AE"] }), await search(candidates, supported));
   assert.deepEqual(sanitizeNormalFilters(filters()).audienceCountries, []);
+});
+
+test("activity filter is applied before count and pagination", async () => {
+  const active = creator("active");
+  const inactive = creator("inactive", { last_enriched_at: null, platforms: [], enrichment_status: "never" });
+  for (const [enrichmentFilter, expected] of [["active", ["inf:active"]], ["inactive", ["inf:inactive"]], ["all", ["inf:active", "inf:inactive"]]] as const) {
+    const result = await search([active, inactive], { search: "amina", enrichmentFilter });
+    assert.deepEqual(result.creators.map(c => c.unified_id), expected);
+    assert.equal(result.total, expected.length);
+  }
 });

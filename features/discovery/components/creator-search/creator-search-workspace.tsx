@@ -1378,7 +1378,7 @@ export function CreatorSearchWorkspace({
   }, []);
 
   const headerTotal = useMemo(() => {
-    if (!aiModeActive) return total;
+    if (!aiModeActive) return displayCreators.length;
     if (displayCreators.length === 0 && (acquisitionPolling || (!loading && !loadingMore))) {
       return 0;
     }
@@ -2311,10 +2311,7 @@ export function CreatorSearchWorkspace({
         .map((c) => c.country_code ?? c.estimated_country)
         .filter((value): value is string => Boolean(value?.trim()))
     ).size;
-    const showLowerBound =
-      headerTotal > 0 &&
-      !aiModeActive &&
-      (completeness ? completeness.totalKind === "lower_bound" : !isExactCreatorSearch && (hasMore || clientOnlyFiltersActive));
+    const showLowerBound = false; // Header counts the creators currently displayed.
     const creatorsValue = showLowerBound
       ? `${headerTotal.toLocaleString()}+`
       : headerTotal;
@@ -2339,10 +2336,7 @@ export function CreatorSearchWorkspace({
   ]);
 
   const headerTotalBadge = useMemo(() => {
-    const showLowerBound =
-      headerTotal > 0 &&
-      !aiModeActive &&
-      (completeness ? completeness.totalKind === "lower_bound" : !isExactCreatorSearch && (hasMore || clientOnlyFiltersActive));
+    const showLowerBound = false; // Header counts the creators currently displayed.
     const count = `${headerTotal.toLocaleString()}${showLowerBound ? "+" : ""}`;
     return `${count} creator${headerTotal === 1 && !showLowerBound ? "" : "s"}`;
   }, [aiModeActive, clientOnlyFiltersActive, completeness, hasMore, headerTotal, isExactCreatorSearch]);
