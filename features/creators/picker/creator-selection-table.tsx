@@ -240,9 +240,9 @@ export function CreatorSelectionTable({
               <div className="mb-3.5 flex size-12 items-center justify-center rounded-xl border border-border bg-muted">
                 <SearchIcon className="size-[22px] text-muted-foreground" strokeWidth={1.5} />
               </div>
-              <p className="text-sm font-semibold text-foreground">No creators found</p>
+              <p className="text-sm font-semibold text-foreground">{emptyMessage}</p>
               <p className="mt-1 max-w-[260px] text-xs leading-relaxed text-muted-foreground">
-                Try a different search term or platform filter.
+                Search by creator name, handle, or profile link.
               </p>
               <AddMissingCreatorEmptyState
                 visible={showAddMissingCreator}

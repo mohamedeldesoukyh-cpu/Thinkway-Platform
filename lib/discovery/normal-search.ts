@@ -192,7 +192,11 @@ export async function executeNormalSearch(request: NormalSearchRequest, readWind
   }
   const exact = (c: Candidate) => c.discovery_relevance?.reasons.some(r => r.dimension === "Search text" && r.detail === "Exact name or handle") ? 1 : 0;
   const seal = () => {
-    pool.sort((a,b) => exact(b)-exact(a) || compareNormalCandidates(a,b,request.sort));
+    // Shared SQL ranks reserve 20k for exact identities and 10k for previously
+    // used matches. Preserve those priorities within each sealed relevance page.
+    const priority = (c: Candidate) => request.sort.field === "relevance"
+      ? Math.floor((c.search_rank ?? 0) / 10000) : 0;
+    pool.sort((a,b) => exact(b)-exact(a) || priority(b)-priority(a) || compareNormalCandidates(a,b,request.sort));
     for (const c of pool) {
       if (sealedCount >= start && sealedCount < end) selected.push(c);
       else if (sealedCount >= end) remaining.push(c);

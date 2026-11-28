@@ -49,6 +49,21 @@ test("binary context does not manufacture 100 percent",()=>{const r=evaluate({co
 test("Relevance changes with request",()=>assert.notEqual(evaluate({search:"@amina"}).relevance.score,evaluate({search:"beauty tips"}).relevance.score));
 test("no context means no Relevance field",async()=>assert.equal((await search([creator()])).creators[0].discovery_relevance,undefined));
 test("exact name",()=>assert.equal(evaluate({search:"Amina Beauty"}).relevance.score,100));
+test("relevance keeps exact identities first, then previously used matching creators", async () => {
+  const result = await search([
+    creator("unused", { display_name: "Amina New", search_rank: 800 }),
+    creator("used", { display_name: "Amina Existing", search_rank: 10800 }),
+    creator("exact", { display_name: "Amina", search_rank: 20900 }),
+  ], { search: "amina" });
+  assert.deepEqual(result.creators.map(c => c.unified_id), ["inf:exact", "inf:used", "inf:unused"]);
+});
+test("prior usage does not override an explicit name sort", async () => {
+  const result = await search([
+    creator("used", { display_name: "Amina Z", search_rank: 10800 }),
+    creator("unused", { display_name: "Amina A", search_rank: 800 }),
+  ], { search: "amina" }, { field: "name", direction: "asc" });
+  assert.deepEqual(result.creators.map(c => c.unified_id), ["inf:unused", "inf:used"]);
+});
 test("partial handle",()=>assert.equal(evaluate({search:"amin"}).relevance.score,90));
 test("English keyword",()=>assert.equal(evaluate({search:"makeup"}).relevance.score,80));
 test("Arabic keyword",()=>assert.equal(evaluate({search:"مَكْيَاج"}).relevance.score,80));
