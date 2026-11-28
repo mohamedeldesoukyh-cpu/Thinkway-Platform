@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { ThinkwayPageLoader } from "@/components/layout/thinkway-page-loader";
 import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
 import { CREATOR_IMPORT_COMPLETED_EVENT } from "@/lib/discovery-import/constants";
+import { matchesCreatorActivity } from "@/lib/creators/production-filter";
+import { subscribeCreatorUpdates } from "@/features/discovery/enrichment/creator-updated-event";
 
 import { AddMissingCreatorDialog } from "@/features/discovery/components/add-missing-creator-dialog";
 import {
@@ -554,8 +556,8 @@ export function CreatorSearchWorkspace({
         : isExactCreatorSearch
           ? exactMatches
           : sortedCreators;
-    if (hiddenUnifiedIds.size === 0) return base;
-    return base.filter((creator) => !hiddenUnifiedIds.has(creator.unified_id));
+    return base.filter((creator) => !hiddenUnifiedIds.has(creator.unified_id) &&
+      (aiModeActive || matchesCreatorActivity(creator, filters.enrichmentFilter ?? "active")));
   }, [
     debouncedSearch,
     exactMatches,
@@ -564,6 +566,7 @@ export function CreatorSearchWorkspace({
     searchIntent.mode,
     sortedCreators,
     aiModeActive,
+    filters.enrichmentFilter,
   ]);
 
   const shortlistedIds = useMemo(
@@ -1479,6 +1482,13 @@ export function CreatorSearchWorkspace({
   }, [page, aiModeActive]);
 
   // Refetch when an import completes (same tab or another tab via localStorage).
+  useEffect(() => subscribeCreatorUpdates(() => {
+    pinnedCreatorsRef.current.clear();
+    normalContinuationRef.current = undefined;
+    setPage(1);
+    void fetchPageRef.current(1, false, undefined, { caller: "import_refresh" });
+  }), []);
+
   useEffect(() => {
     function refreshAfterImport() {
       // Import can insert/move creators across many browse pages — drop the namespace.

@@ -144,6 +144,11 @@ export async function invalidateDiscoveryBrowseCache(userId: string): Promise<nu
   return invalidateClientCacheByPrefix(discoveryBrowseCachePrefix(userId));
 }
 
+/** Enrichment can add a creator to cached Active pages that never contained its entity tag. */
+export async function invalidateDiscoveryActivityCaches(): Promise<number> {
+  return invalidateClientCacheByTag(DISCOVERY_BROWSE_TAG);
+}
+
 /**
  * Drop browse pages tagged with this creator (metrics / PR / commercial list upserts).
  * Prefer this when the affected creator id is known.

@@ -71,3 +71,13 @@ test("successful empty enrichment belongs only in Not active and All", () => {
   assert.equal(matchesCreatorActivity({ ...empty, platforms: [{ ...empty.platforms[0], avg_views: 25 }] }), true);
   assert.equal(matchesCreatorActivity({ ...empty, platforms: [{ ...empty.platforms[0], follower_count: NaN, avg_views: Infinity }] }), false);
 });
+
+test("collecting usable metrics automatically changes an inactive creator to active", () => {
+  const before = { ...neverEnriched(), metrics: {} as UnifiedCreatorResult["metrics"] };
+  const after = { ...before, enrichment_status: "enriched" as const,
+    platforms: [{ ...before.platforms[0], follower_count: 1250 }] };
+  assert.equal(matchesCreatorActivity(before, "inactive"), true);
+  assert.equal(matchesCreatorActivity(after, "inactive"), false);
+  assert.equal(matchesCreatorActivity(after, "active"), true);
+  assert.equal(matchesCreatorActivity(after, "all"), true);
+});
