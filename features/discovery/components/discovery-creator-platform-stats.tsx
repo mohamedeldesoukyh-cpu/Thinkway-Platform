@@ -137,6 +137,7 @@ export function DiscoveryCreatorPlatformStatsBox({
           <span key={row.key} className="rr">
             <span className="tw-pf">
               {brandIcons && row.platform ? <PlatformIcon platform={row.platform} size="xs" variant="logo" className="!size-[15px]" /> : <span className={mark.cls}>{mark.label}</span>}
+              {compact && row.platform ? <span className="creator-card-platform-name">{row.platform}</span> : null}
             </span>
             {showHint ? (
               <b className="z" style={{ gridColumn: "2 / -1", textAlign: "left" }} title={row.metricsHint ?? undefined}>

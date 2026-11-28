@@ -3839,3 +3839,15 @@
 .creator-picker-source-tabs { display:flex; gap:20px; margin-top:12px; border-bottom:1px solid var(--border); }
 .creator-picker-source-tabs > button { min-height:36px; border-radius:0; border-bottom:2px solid transparent; padding:0 2px; box-shadow:none; background:transparent; color:var(--muted-foreground); }
 .creator-picker-source-tabs > button[aria-pressed="true"] { border-bottom-color:#0057ff; color:#0057ff; }
+@media (min-width:880px) {
+  .creator-card-stats-heading,
+  .creator-picker-card__stats .tw-stx.creator-card-stats .rr,
+  .discovery-suite .tw-stx.creator-card-stats .rr { grid-template-columns:72px repeat(3,minmax(0,1fr)); }
+}
+.creator-picker-card__stats .tw-stx.creator-card-stats .tw-pf,
+.discovery-suite .tw-stx.creator-card-stats .tw-pf { display:flex; gap:4px; align-items:center; width:auto; }
+.creator-picker-card__stats .tw-pf .creator-card-platform-name,
+.discovery-suite .tw-pf .creator-card-platform-name { width:auto; height:auto; background:none; border:0; border-radius:0; color:var(--muted-foreground); font-size:10px; font-weight:500; text-transform:capitalize; }
+@media (max-width:879px) {
+  .creator-card-platform-name { display:none !important; }
+}
