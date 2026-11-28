@@ -40,7 +40,6 @@ import {
   isCreatorOnExistingList,
   useCreatorBrowse,
   useCreatorSelection,
-  useDebouncedValue,
 } from "./creator-selection-hooks";
 import {
   resolveCreatorPickerSearchDisplay,
@@ -55,7 +54,6 @@ import type {
 } from "./creator-selection-types";
 import type { ShortlistExistingItemKey } from "./creator-selection-utils";
 import {
-  CREATOR_PICKER_DEBOUNCE_MS,
   CREATOR_PICKER_DEFAULT_PAGE_SIZE,
 } from "./creator-selection-types";
 
@@ -133,20 +131,19 @@ export function CreatorPickerDialog({
   );
 
   const browse = useCreatorBrowse({
-    enabled: open && !bodyOverride,
+    enabled: open && !bodyOverride && search.trim().length > 0,
     filters: mergedFilters,
     pageSize,
     paginationMode,
   });
 
-  const debouncedSearch = useDebouncedValue(search, CREATOR_PICKER_DEBOUNCE_MS);
   const searchDisplay = useMemo(
     () =>
-      resolveCreatorPickerSearchDisplay(debouncedSearch, browse.creators, {
+      resolveCreatorPickerSearchDisplay(search, browse.creators, {
         loading: browse.loading,
         browseTotal: browse.total,
       }),
-    [debouncedSearch, browse.creators, browse.loading, browse.total]
+    [search, browse.creators, browse.loading, browse.total]
   );
   const displayCreators = searchDisplay.creators;
 
@@ -324,6 +321,8 @@ export function CreatorPickerDialog({
 
       <div className="creator-picker-scroll flex min-h-0 flex-1 flex-col overflow-hidden bg-[#f8fafc]">
         <CreatorSelectionTable
+          key={`${search.trim()}:${platform}`}
+          emptyMessage={search.trim() ? undefined : "Type a creator name or handle to search."}
           creators={displayCreators}
           selectedIds={selection.selectedIds}
           onToggle={handleToggle}
@@ -376,6 +375,8 @@ export function CreatorPickerDialog({
       {children}
 
       <CreatorSelectionTable
+        key={`${search.trim()}:${platform}`}
+        emptyMessage={search.trim() ? undefined : "Type a creator name or handle to search."}
         creators={displayCreators}
         selectedIds={selection.selectedIds}
         onToggle={handleToggle}
