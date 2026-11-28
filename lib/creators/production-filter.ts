@@ -34,12 +34,9 @@ export function hasCreatorEnrichment(creator: UnifiedCreatorResult): boolean {
   if (creator.last_enriched_at || ["enriched", "partial"].includes(creator.enrichment_status ?? "")) return true;
   if (["basic_enriched", "metrics_enriched", "ai_scored", "verified"].includes(creator.status ?? "")) return true;
   return creator.platforms.some(account => Boolean(
-    account.last_synced_at || account.metrics_last_synced_at ||
+    account.metrics_last_synced_at ||
     ["enriched", "partial"].includes(account.enrichment_status ?? "") ||
-    account.sync_status === "synced" || account.recent_publications?.length ||
-    // Legacy imports can contain enrichment without a recorded completion timestamp.
-    [account.follower_count, account.engagement_rate, account.avg_likes, account.avg_comments, account.avg_views]
-      .some(value => typeof value === "number" && value > 0)
+    (account.sync_status === "synced" && account.last_synced_at)
   ));
 }
 
