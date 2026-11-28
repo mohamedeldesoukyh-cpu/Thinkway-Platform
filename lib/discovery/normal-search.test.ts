@@ -51,11 +51,18 @@ test("no context means no Relevance field",async()=>assert.equal((await search([
 test("exact name",()=>assert.equal(evaluate({search:"Amina Beauty"}).relevance.score,100));
 test("relevance keeps exact identities first, then previously used matching creators", async () => {
   const result = await search([
-    creator("unused", { display_name: "Amina New", search_rank: 800 }),
+    creator("unused", { display_name: "Amina New", search_rank: 9800 }),
     creator("used", { display_name: "Amina Existing", search_rank: 10800 }),
     creator("exact", { display_name: "Amina", search_rank: 20900 }),
   ], { search: "amina" });
   assert.deepEqual(result.creators.map(c => c.unified_id), ["inf:exact", "inf:used", "inf:unused"]);
+});
+test("direct names stay above previously used bio-only matches", async () => {
+  const result = await search([
+    creator("bio", { display_name: "Different Creator", platforms: [], bio: "Knows Amina", search_rank: 1700 }),
+    creator("name", { display_name: "Amina New", search_rank: 9800 }),
+  ], { search: "amina" });
+  assert.deepEqual(result.creators.map(c => c.unified_id), ["inf:name", "inf:bio"]);
 });
 test("prior usage does not override an explicit name sort", async () => {
   const result = await search([
