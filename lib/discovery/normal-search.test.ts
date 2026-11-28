@@ -72,8 +72,8 @@ test("prior usage does not override an explicit name sort", async () => {
   assert.deepEqual(result.creators.map(c => c.unified_id), ["inf:unused", "inf:used"]);
 });
 test("partial handle",()=>assert.equal(evaluate({search:"amin"}).relevance.score,90));
-test("English keyword",()=>assert.equal(evaluate({search:"makeup"}).relevance.score,80));
-test("Arabic keyword",()=>assert.equal(evaluate({search:"مَكْيَاج"}).relevance.score,80));
+test("bio keywords do not boost name-search relevance",()=>assert.equal(evaluate({search:"makeup"}).relevance.score,40));
+test("Arabic bio keywords do not boost name-search relevance",()=>assert.equal(evaluate({search:"مَكْيَاج"}).relevance.score,40));
 test("Arabic normalization symmetrical",()=>assert.equal(normalizeDiscoverySearchText("إِبْداع"),normalizeDiscoverySearchText("ابداع")));
 for(const url of ["https://www.instagram.com/amina/","https://www.tiktok.com/@amina"]) test(`profile URL ${url}`,()=>assert.equal(normalRetrievalQuery(filters({search:url})),"@amina"));
 test("taxonomy removes country not categories",()=>assert.deepEqual(cleanDiscoveryCategories(["egypt","EG","Beauty","Fitness"]),["Beauty","Fitness"]));
