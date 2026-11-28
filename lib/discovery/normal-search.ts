@@ -107,13 +107,13 @@ export function evaluateNormalCandidate(c: Candidate, input: CreatorSearchFilter
     const q = norm(query);
     const exact = norm(c.display_name) === q || c.platforms.some(p => norm(p.handle) === q);
     const prefix = norm(c.display_name).startsWith(q) || c.platforms.some(p => norm(p.handle).startsWith(q));
-    const hay = norm([c.display_name, ...c.platforms.map(p => p.handle), c.bio, ...c.categories, c.ai_niche, ...(c.hashtags ?? []), c.content_text].filter(Boolean).join(" "));
+    const hay = norm([c.display_name, ...c.platforms.map(p => p.handle)].filter(Boolean).join(" "));
     const tokens = q.split(/\s+/).filter(Boolean);
     const coverage = tokens.length ? tokens.filter(t => hay.includes(t)).length / tokens.length : 0;
     // Retrieval rank proves lexical/fuzzy evidence even when the compact text omits an indexed field.
     const score = exact ? 100 : prefix ? 90 : coverage > 0 ? Math.round(80 * coverage) : (c.search_rank ?? 0) > 0 ? 40 : null;
     if (score != null) gradedScores.push(score);
-    reasons.push({ dimension: "Search text", outcome: score == null ? "Not available" : "Match", detail: exact ? "Exact name or handle" : prefix ? "Name or handle prefix" : coverage > 0 ? "Query terms in stored profile/content" : "Existing lexical/fuzzy retrieval" });
+    reasons.push({ dimension: "Search text", outcome: score == null ? "Not available" : "Match", detail: exact ? "Exact name or handle" : prefix ? "Name or handle prefix" : coverage > 0 ? "Query terms in name or handle" : "Indexed name or handle match" });
   }
   if (f.aiNiche.trim() && c.ai_niche) {
     gradedScores.push(norm(c.ai_niche) === norm(f.aiNiche) ? 100 : 80);
