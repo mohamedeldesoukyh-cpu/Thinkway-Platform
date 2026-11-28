@@ -45,10 +45,9 @@ export type CreatorActivityFilter = "active" | "inactive" | "all";
 export function hasUsableCreatorMetrics(creator: UnifiedCreatorResult): boolean {
   const positive = (value: unknown) => typeof value === "number" && Number.isFinite(value) && value > 0;
   const metrics = creator.metrics;
-  return [metrics?.followers?.value, metrics?.engagement_rate?.value, metrics?.avg_views?.value,
-    metrics?.avg_likes?.value, metrics?.avg_comments?.value].some(positive) ||
+  return [metrics?.followers?.value, metrics?.engagement_rate?.value, metrics?.avg_views?.value].some(positive) ||
     creator.platforms.some(account => [account.follower_count, account.engagement_rate,
-      account.avg_views, account.avg_likes, account.avg_comments].some(positive));
+      account.avg_views].some(positive));
 }
 
 export function matchesCreatorActivity(creator: UnifiedCreatorResult, filter: CreatorActivityFilter = "active"): boolean {
