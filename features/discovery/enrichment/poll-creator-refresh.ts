@@ -1,5 +1,7 @@
 import { logManualRefreshTrace } from "@/lib/creator-enrichment/manual-refresh-trace";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { invalidateDiscoveryActivityCaches } from "@/features/discovery/client-cache/discovery-browse-cache";
+import { notifyCreatorUpdated } from "./creator-updated-event";
 import type { CreatorMetricsSyncStatus } from "@/lib/services/creators/creator-enrichment-service";
 import type { CreatorRefreshPollStatus } from "@/lib/services/creators/creator-enrichment-service-shared";
 
@@ -155,7 +157,11 @@ export async function pollCreatorAfterRefresh(
         let creator: UnifiedCreatorResult | null = null;
         if (status === "completed" || status === "failed") {
           creator = await getUnifiedCreatorAfterRefreshAction(input.unifiedId);
-          if (creator) callbacks.onUpdated(creator);
+          if (creator) {
+            callbacks.onUpdated(creator);
+            await invalidateDiscoveryActivityCaches();
+            notifyCreatorUpdated();
+          }
         }
         callbacks.onComplete?.(status, creator, lastPoll);
         return status;
@@ -221,7 +227,11 @@ export async function pollCreatorsAfterBatchRefresh(
       });
       if (status === "completed") {
         const creator = await getUnifiedCreatorAfterRefreshAction(target.unifiedId);
-        if (creator) callbacks.onUpdated(creator);
+        if (creator) {
+          callbacks.onUpdated(creator);
+          await invalidateDiscoveryActivityCaches();
+          notifyCreatorUpdated();
+        }
       }
       pending.splice(i, 1);
     }

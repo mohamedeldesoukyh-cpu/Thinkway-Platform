@@ -7,6 +7,8 @@ import { filterExactCreatorMatches } from "@/features/discovery/components/creat
 import { mapDiscoverySearchError } from "@/lib/creators/discovery-search-error";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { upsertCreatorInResults } from "@/lib/discovery/creator-search-query";
+import { matchesCreatorActivity } from "@/lib/creators/production-filter";
+import { subscribeCreatorUpdates } from "@/features/discovery/enrichment/creator-updated-event";
 
 import {
   CREATOR_PICKER_DEBOUNCE_MS,
@@ -258,6 +260,11 @@ export function useCreatorBrowse({
     void fetchPage(nextPage, paginationMode === "infinite");
   }, [enabled, state, fetchPage, paginationMode]);
 
+  useEffect(() => subscribeCreatorUpdates(() => {
+    pinnedCreatorsRef.current.clear();
+    void fetchPage(1, false);
+  }), [fetchPage]);
+
   const goToPage = useCallback(
     (page: number) => {
       if (!enabled || page < 1) return;
@@ -303,6 +310,7 @@ export function useCreatorBrowse({
 
   return {
     ...state,
+    creators: state.creators.filter(creator => matchesCreatorActivity(creator, filters.enrichmentFilter ?? "active")),
     ...(!enabled || resolvedFiltersKey !== filtersKey ? {
       creators: [], total: 0, page: 1, hasMore: false,
       loading: enabled && !state.error, loadingMore: false,
