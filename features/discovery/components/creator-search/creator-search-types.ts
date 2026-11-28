@@ -17,6 +17,7 @@ import {
 export type { CreatorSearchFollowerRange };
 
 export type CreatorSearchFilters = {
+  enrichmentFilter?: "active" | "inactive" | "all";
   search: string;
   handle: string;
   platforms: string[];
@@ -61,6 +62,7 @@ export type CreatorSearchFilters = {
 };
 
 export const DEFAULT_CREATOR_SEARCH_FILTERS: CreatorSearchFilters = {
+  enrichmentFilter: "active",
   search: "",
   handle: "",
   platforms: [],
@@ -632,6 +634,7 @@ export function filtersToBrowseParams(filters: CreatorSearchFilters, page: numbe
     minAiScore,
     minThinkwayScore: filters.minThinkwayScore ? Number(filters.minThinkwayScore) : undefined,
     lastPostWithin: filters.lastPostWithin.trim() || undefined,
+    enrichmentFilter: filters.enrichmentFilter ?? "active",
     productionOnly: true as const,
     page,
     pageSize,

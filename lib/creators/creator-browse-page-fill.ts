@@ -147,7 +147,7 @@ function resolveBrowseCategoriesPresent(
 /**
  * FTS fill displayed total.
  * - Structured shrink → Phase 1B-1 fill total (never raw FTS total_count).
- * - Bare q → may retain raw FTS total_count when the RPC provided one.
+ * - Bare q → use qualified, deduplicated fill total too.
  */
 export function resolveCreatorBrowseFtsFillTotal(options: {
   structuredShrink: boolean;
@@ -155,11 +155,7 @@ export function resolveCreatorBrowseFtsFillTotal(options: {
   rawFtsTotalCount?: number | null;
   pageCreatorsLength: number;
 }): number {
-  if (options.structuredShrink) return options.fillTotal;
-  const raw = options.rawFtsTotalCount;
-  if (raw != null && Number.isFinite(raw) && raw >= 0) {
-    return Math.max(raw, options.pageCreatorsLength);
-  }
+  // Count qualified, deduplicated creators rather than raw search hits.
   return options.fillTotal;
 }
 

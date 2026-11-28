@@ -5,7 +5,7 @@ import { creatorMatchesBrowseCategories } from "@/lib/creators/category-filter";
 import { inferCountriesFromProfileSignals, resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import { resolveCountryCode } from "@/lib/creators/country-code";
 import { COUNTRY_OPTIONS } from "@/lib/master-data/constants";
-import { passesProductionCreatorGate } from "@/lib/creators/production-filter";
+import { passesProductionCreatorGate, matchesCreatorActivity } from "@/lib/creators/production-filter";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { resolveCreatorSearchFollowerRanges, toBrowseFollowerRanges } from "@/lib/creators/follower-range-filter";
 import type { CreatorSearchFilters, CreatorSearchSortState } from "@/features/discovery/components/creator-search/creator-search-types";
@@ -44,7 +44,7 @@ export function cleanDiscoveryCategories(xs: string[]): string[] {
 export function evaluateNormalCandidate(c: Candidate, input: CreatorSearchFilters, now = Date.now()) {
   const f = sanitizeNormalFilters(input);
   const reasons: RelevanceReason[] = [];
-  let eligible = passesProductionCreatorGate(c);
+  let eligible = passesProductionCreatorGate(c) && matchesCreatorActivity(c, f.enrichmentFilter ?? "active");
   const check = (dimension: string, active: boolean, known: boolean, match: boolean) => {
     if (!active) return;
     reasons.push({ dimension, outcome: !known ? "Not available" : match ? "Match" : "Does not match" });

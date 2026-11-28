@@ -40,7 +40,7 @@ import type {
   UnifiedCreatorResult,
 } from "@/lib/creators/types";
 import { resolveAggregatedCreatorEnrichmentStatus } from "@/lib/creator-enrichment/status-resolution";
-import { passesProductionCreatorGate } from "@/lib/creators/production-filter";
+import { passesProductionCreatorGate, matchesCreatorActivity } from "@/lib/creators/production-filter";
 import {
   findPlatformAccountById,
   mergeCreatorInterestTags,
@@ -372,7 +372,7 @@ function applyPostBrowseFilters(
   tracePath: SearchTracePath = "unknown"
 ): UnifiedCreatorResult[] {
   const pathOpt = { path: tracePath };
-  let results = merged;
+  let results = merged.filter(creator => matchesCreatorActivity(creator, filters.enrichmentFilter ?? "active"));
   const initialCount = results.length;
 
   if (filters.productionOnly !== false) {

@@ -243,6 +243,7 @@ export type UnifiedCreatorResult = {
 };
 
 export type UnifiedCreatorBrowseFilters = {
+  enrichmentFilter?: "active" | "inactive" | "all";
   /** Single-creator lookup (post-enrichment refresh). Not for browse UI. */
   influencerId?: string;
   /** Single discovery profile lookup (post-enrichment refresh). Not for browse UI. */
