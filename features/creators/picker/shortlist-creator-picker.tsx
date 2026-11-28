@@ -228,7 +228,7 @@ export function ShortlistCreatorPicker({
           <Button
             onClick={handlePaste}
             disabled={isPasting || pasteCount === 0}
-            className="creator-picker-add-btn relative h-9 flex-1 overflow-hidden rounded-lg border-0 bg-gradient-to-br from-blue-600 to-indigo-600 text-[13px] font-bold tracking-tight text-white shadow-[0_2px_12px_rgba(37,99,235,0.3)] hover:brightness-110 hover:shadow-[0_4px_20px_rgba(37,99,235,0.45)] disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-300 disabled:shadow-none"
+            className="cc-add"
           >
             {isPasting ? <Loader2Icon className="size-4 animate-spin" /> : null}
             {pasteCount > 0

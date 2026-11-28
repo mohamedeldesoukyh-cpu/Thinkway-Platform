@@ -50,7 +50,7 @@ export function CreatorSearchPanel({
     return (
       <div
         className={cn(
-          "creator-picker-search-bar flex shrink-0 items-center gap-2 border-b border-[#e2e8f0] bg-white px-4 py-3.5",
+          "cc-search flex shrink-0 items-center gap-2 border-b border-[#e2e8f0] bg-white px-4 py-3.5",
           className
         )}
       >
