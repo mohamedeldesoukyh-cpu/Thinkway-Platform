@@ -1487,5 +1487,13 @@
       "features/finance-assistant/workspace.tsx"
     ],
     "file": "features/finance-assistant/document-journal-workspace.tsx"
+  },
+  {
+    "file": "features/discovery/components/creator-card-identity.tsx",
+    "parents": [
+      "features/creators/picker/creator-picker-panel-row.tsx",
+      "features/creators/picker/creator-selection-table.tsx",
+      "features/discovery/components/creator-search/creator-search-suite-row.tsx"
+    ]
   }
 ]

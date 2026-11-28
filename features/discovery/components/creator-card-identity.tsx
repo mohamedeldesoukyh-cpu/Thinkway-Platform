@@ -1,5 +1,3 @@
-"use client";
-
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import { CountryFlagsStack } from "@/components/creator/country-flags-stack";
 import { buildDiscoveryCreatorViewModel } from "@/features/discovery/view-models/discovery-creator-view-model";
